@@ -2,24 +2,22 @@ import requests
 import csv
 from datetime import date
 
-today = date.today()
-year = today.year
-
 #gather historical chicago data
+today = date.today()
 results = True
-year = 2024
+year = 2025
 csv_file = "weather_data.csv"
 is_first_batch = True
 
 while results == True:
   NOAA_KEY = "snGAmCkqxGSTXWnipGGsRwRdJvoiFkTM"
   headers = {"token": NOAA_KEY}
-  
+
   if year == today.year:
     end_date = today.strftime("%Y-%m-%d")  # e.g., "2025-12-02"
   else:
       end_date = f"{year}-12-31"
-  
+
   params = {
       "datasetid": "GHCND", #Global Historical Climatology Network Daily
       "stationid": "GHCND:USW00014819", #Code for Chicago
@@ -43,7 +41,7 @@ while results == True:
       break
   else:
       data = response.json()
-      records = data['results']
+      records = data.get('results', [])
 
       if records:
           mode = 'w' if is_first_batch else 'a'
@@ -55,6 +53,10 @@ while results == True:
               writer.writerows(records)
 
           print(f"Wrote {len(records)} records for year {year}")
+      else:
+          print(f"No records found for year {year}")
+          results = False
+          break
 
       year = year - 1
 
