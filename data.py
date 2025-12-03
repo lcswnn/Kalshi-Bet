@@ -1,6 +1,9 @@
 import requests
-import json
 import csv
+from datetime import date
+
+today = date.today()
+year = today.year
 
 #gather historical chicago data
 results = True
@@ -11,12 +14,18 @@ is_first_batch = True
 while results == True:
   NOAA_KEY = "snGAmCkqxGSTXWnipGGsRwRdJvoiFkTM"
   headers = {"token": NOAA_KEY}
+  
+  if year == today.year:
+    end_date = today.strftime("%Y-%m-%d")  # e.g., "2025-12-02"
+  else:
+      end_date = f"{year}-12-31"
+  
   params = {
       "datasetid": "GHCND", #Global Historical Climatology Network Daily
       "stationid": "GHCND:USW00014819", #Code for Chicago
       "datatypeid": "TMAX",
       "startdate": f"{year}-01-01",
-      "enddate": f"{year}-12-02",
+      "enddate": f"{year}-12-31",
       "units": "standard",
       "limit": 1000
   }
