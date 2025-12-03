@@ -1,6 +1,7 @@
 import requests
 import csv
 from datetime import date
+import time
 
 #gather historical chicago data
 today = date.today()
@@ -59,4 +60,3 @@ while results == True:
           break
 
       year = year - 1
-
