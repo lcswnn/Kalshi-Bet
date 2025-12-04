@@ -7,6 +7,15 @@ from datetime import datetime, timedelta
 import re
 from scipy import stats
 
+# ============ HRRR/HERBIE IMPORTS ============
+try:
+    from herbie import Herbie
+    HERBIE_AVAILABLE = True
+except ImportError:
+    HERBIE_AVAILABLE = False
+    print("⚠️ Herbie not installed. Install with: pip install herbie-data")
+    print("   Also need: pip install xarray cfgrib")
+
 # ============ CITY CONFIGURATION ============
 cities = {
     "chicago": {
@@ -38,13 +47,15 @@ selected_cities = ["chicago", "nyc", "miami"]
 
 # ============ RUN ALL CITIES ============
 print("=" * 60)
-print("KALSHI WEATHER BETTING MODEL v3")
-print("(Mixture Model: Spike + Uncertainty)")
+print("KALSHI WEATHER BETTING MODEL v4")
+print("(HRRR via NOAA Open Data Dissemination)")
 print("=" * 60)
 print(f"\nAnalyzing: Chicago, New York City, Miami")
+print(f"Data Source: NOAA HRRR (3km resolution, hourly updates)")
 
 # ============ FUNCTIONS ============
 def load_and_prepare_data(city_config):
+    """Load historical temperature data from CSV."""
     df = pd.read_csv(city_config["csv_file"])
     df["date"] = pd.to_datetime(df["date"])
     df = df.sort_values("date").reset_index(drop=True)
@@ -53,30 +64,190 @@ def load_and_prepare_data(city_config):
     return df
 
 
-def fetch_open_meteo(lat, lon):
-    open_meteo_url = "https://api.open-meteo.com/v1/forecast"
-    params = {
-        "latitude": lat,
-        "longitude": lon,
-        "daily": [
-            "temperature_2m_max",
-            "temperature_2m_min",
-            "wind_speed_10m_max",
-            "wind_direction_10m_dominant",
-            "precipitation_sum",
-            "pressure_msl_mean",
-        ],
-        "past_days": 7,
-        "forecast_days": 3,
-        "temperature_unit": "fahrenheit",
-        "wind_speed_unit": "mph",
-        "timezone": "America/Chicago"
+def fetch_hrrr_forecast(lat, lon, target_date):
+    """
+    Fetch HRRR forecast data using Herbie.
+    Returns forecasted daily high temperature for the target date.
+    
+    HRRR runs every hour with forecasts out to 18h (most runs) or 48h (00, 06, 12, 18 UTC).
+    We'll use the latest available 12Z or 00Z run for best coverage.
+    """
+    if not HERBIE_AVAILABLE:
+        return None, None
+    
+    today = datetime.now().date()
+    
+    # Determine which model run to use
+    # For tomorrow's forecast, use today's 12Z run (gives us ~36h forecast)
+    # or today's 00Z run if 12Z isn't available yet
+    current_hour = datetime.now().hour
+    
+    if current_hour >= 14:  # 12Z run should be available by 14:00 local
+        model_run_date = today
+        model_run_hour = 12
+    elif current_hour >= 2:  # 00Z run available by 02:00 local
+        model_run_date = today
+        model_run_hour = 0
+    else:  # Use yesterday's 12Z
+        model_run_date = today - timedelta(days=1)
+        model_run_hour = 12
+    
+    model_run_str = f"{model_run_date.strftime('%Y-%m-%d')} {model_run_hour:02d}:00"
+    
+    print(f"\n  📡 Fetching HRRR data...")
+    print(f"     Model run: {model_run_str} UTC")
+    
+    # Calculate forecast hours needed to cover the target date
+    # We want to sample temperatures throughout the day (local time)
+    # Target date high temp typically occurs between 12:00-18:00 local
+    
+    # Hours from model run to target date afternoon
+    model_run_datetime = datetime.combine(model_run_date, datetime.min.time().replace(hour=model_run_hour))
+    target_noon = datetime.combine(target_date, datetime.min.time().replace(hour=12))
+    target_evening = datetime.combine(target_date, datetime.min.time().replace(hour=18))
+    
+    # Forecast hours to check (covering the warmest part of the day)
+    hours_to_noon = int((target_noon - model_run_datetime).total_seconds() / 3600)
+    hours_to_evening = int((target_evening - model_run_datetime).total_seconds() / 3600)
+    
+    # Sample every 3 hours during the day for efficiency
+    forecast_hours = list(range(max(1, hours_to_noon - 6), min(48, hours_to_evening + 1), 3))
+    
+    print(f"     Forecast hours: {forecast_hours[0]}h to {forecast_hours[-1]}h")
+    
+    temperatures = []
+    wind_speeds = []
+    wind_dirs = []
+    
+    for fxx in forecast_hours:
+        try:
+            H = Herbie(
+                model_run_str,
+                model='hrrr',
+                product='sfc',
+                fxx=fxx
+            )
+            
+            # Get 2-meter temperature
+            ds = H.xarray("TMP:2 m", remove_grib=True)
+            
+            # Extract temperature at the specific lat/lon
+            # HRRR uses Lambert Conformal projection, need to find nearest point
+            temp_data = ds['t2m']
+            
+            # Get lat/lon arrays
+            lats = ds['latitude'].values
+            lons = ds['longitude'].values
+            
+            # Convert longitude to match HRRR convention (0-360)
+            target_lon = lon if lon > 0 else lon + 360
+            
+            # Find nearest grid point
+            dist = np.sqrt((lats - lat)**2 + (lons - target_lon)**2)
+            min_idx = np.unravel_index(np.argmin(dist), dist.shape)
+            
+            # Get temperature in Kelvin, convert to Fahrenheit
+            temp_k = float(temp_data.values[min_idx])
+            temp_f = (temp_k - 273.15) * 9/5 + 32
+            temperatures.append(temp_f)
+            
+            # Try to get wind data too
+            try:
+                ds_wind = H.xarray("UGRD:10 m|VGRD:10 m", remove_grib=True)
+                u = float(ds_wind['u10'].values[min_idx])
+                v = float(ds_wind['v10'].values[min_idx])
+                wind_speed = np.sqrt(u**2 + v**2) * 2.237  # m/s to mph
+                wind_dir = (np.arctan2(-u, -v) * 180 / np.pi) % 360
+                wind_speeds.append(wind_speed)
+                wind_dirs.append(wind_dir)
+            except:
+                pass
+                
+        except Exception as e:
+            print(f"     ⚠️ Error fetching hour {fxx}: {str(e)[:50]}")
+            continue
+    
+    if not temperatures:
+        print("     ❌ No HRRR data retrieved")
+        return None, None
+    
+    # Calculate daily high from sampled temperatures
+    forecast_high = max(temperatures)
+    avg_wind_dir = np.mean(wind_dirs) if wind_dirs else None
+    avg_wind_speed = np.mean(wind_speeds) if wind_speeds else None
+    
+    print(f"     ✅ Retrieved {len(temperatures)} temperature samples")
+    print(f"     📊 Temperature range: {min(temperatures):.1f}°F to {max(temperatures):.1f}°F")
+    
+    weather_data = {
+        'forecast_high': forecast_high,
+        'forecast_temps': temperatures,
+        'wind_speed': avg_wind_speed,
+        'wind_dir': avg_wind_dir,
+        'model_run': model_run_str
     }
-    response = requests.get(open_meteo_url, params=params)
-    return response.json()
+    
+    return forecast_high, weather_data
+
+
+def fetch_hrrr_recent_temps(lat, lon, num_days=7):
+    """
+    Fetch recent actual high temperatures from HRRR analysis (F00) files.
+    These are essentially observed temperatures.
+    """
+    if not HERBIE_AVAILABLE:
+        return []
+    
+    recent_temps = []
+    today = datetime.now().date()
+    
+    print(f"\n  📡 Fetching recent HRRR observations...")
+    
+    for days_ago in range(1, num_days + 1):
+        date = today - timedelta(days=days_ago)
+        date_str = date.strftime('%Y-%m-%d')
+        
+        daily_temps = []
+        
+        # Sample temperatures at peak heating hours (18Z-00Z typically warmest for US)
+        for hour in [15, 18, 21]:  # 3pm, 6pm, 9pm UTC
+            try:
+                H = Herbie(
+                    f"{date_str} {hour:02d}:00",
+                    model='hrrr',
+                    product='sfc',
+                    fxx=0  # Analysis (observed)
+                )
+                
+                ds = H.xarray("TMP:2 m", remove_grib=True)
+                temp_data = ds['t2m']
+                lats = ds['latitude'].values
+                lons = ds['longitude'].values
+                
+                target_lon = lon if lon > 0 else lon + 360
+                dist = np.sqrt((lats - lat)**2 + (lons - target_lon)**2)
+                min_idx = np.unravel_index(np.argmin(dist), dist.shape)
+                
+                temp_k = float(temp_data.values[min_idx])
+                temp_f = (temp_k - 273.15) * 9/5 + 32
+                daily_temps.append(temp_f)
+                
+            except Exception as e:
+                continue
+        
+        if daily_temps:
+            daily_high = max(daily_temps)
+            recent_temps.append({
+                'date': date,
+                'temp': daily_high
+            })
+            print(f"     {date_str}: {daily_high:.1f}°F")
+    
+    return recent_temps
 
 
 def build_features(df):
+    """Build ML features from historical data."""
     df["day_of_year"] = df["date"].dt.dayofyear
     df["month"] = df["date"].dt.month
     df["day"] = df["date"].dt.day
@@ -95,6 +266,7 @@ def build_features(df):
 
 
 def train_model(df):
+    """Train the gradient boosting model."""
     feature_cols = [
         "day_of_year", "month", "day", 
         "temp_lag1", "temp_lag2", "temp_lag3", 
@@ -128,13 +300,10 @@ def train_model(df):
 
 def get_bin_for_temp(temp):
     """Get the Kalshi bin that contains this temperature."""
-    # Kalshi uses 2-degree bins: 16-17, 18-19, 20-21, etc.
-    # Bins start at odd numbers
     lower = int(temp) if int(temp) % 2 == 0 else int(temp) - 1
     if temp < 0:
         lower = int(temp) - 1 if int(temp) % 2 == 0 else int(temp)
     
-    # Adjust for Kalshi's bin structure (odd-start)
     if lower % 2 == 0:
         lower -= 1
     
@@ -145,62 +314,44 @@ def mixture_probability(contract_low, contract_high, forecast_temp, uncertainty_
                         spike_weight=0.55, cold_front=False):
     """
     Mixture Model: Combines a "spike" at the forecast bin with normal distribution uncertainty.
-    
-    - spike_weight: probability mass on the exact forecast bin (default 55%)
-    - remaining weight: spread via normal distribution for uncertainty
-    - cold_front: if True, reduce spike weight (more uncertainty)
     """
-    
-    if cold_front:
-        spike_weight = 0.45  # Less confident during cold fronts
-        uncertainty_std = uncertainty_std * 1.3  # Wider uncertainty
-    
-    spread_weight = 1 - spike_weight
-    
-    # Get the forecast bin
-    forecast_bin = get_bin_for_temp(forecast_temp)
-    
-    # Check if this contract IS the forecast bin
-    is_forecast_bin = (contract_low == forecast_bin[0] or 
-                       contract_low == forecast_bin[0] - 1 or
-                       contract_low == forecast_bin[0] + 1)
-    
-    # More precise check: does the forecast fall in this bin?
-    forecast_in_this_bin = contract_low <= forecast_temp <= contract_high
-    
-    # Calculate spread probability (normal distribution)
-    spread_prob = stats.norm.cdf(contract_high, forecast_temp, uncertainty_std) - \
-                  stats.norm.cdf(contract_low, forecast_temp, uncertainty_std)
-    
-    if forecast_in_this_bin:
-        # This IS the forecast bin - gets the spike
-        total_prob = spike_weight + (spread_weight * spread_prob)
-    else:
-        # Not the forecast bin - only gets spread probability
-        total_prob = spread_weight * spread_prob
-    
-    return min(total_prob, 0.99)  # Cap at 99%
-
-
-def mixture_below_probability(threshold, forecast_temp, uncertainty_std, 
-                              spike_weight=0.55, cold_front=False):
-    """Mixture probability for 'X or below' contracts."""
-    
     if cold_front:
         spike_weight = 0.45
         uncertainty_std = uncertainty_std * 1.3
     
     spread_weight = 1 - spike_weight
+    forecast_bin = get_bin_for_temp(forecast_temp)
     
-    # Spread probability
-    spread_prob = stats.norm.cdf(threshold + 0.5, forecast_temp, uncertainty_std)
+    is_forecast_bin = (contract_low == forecast_bin[0] or 
+                       contract_low == forecast_bin[0] - 1 or
+                       contract_low == forecast_bin[0] + 1)
     
-    # Does forecast fall below threshold?
-    if forecast_temp <= threshold:
-        # Forecast is below - spike goes here
+    forecast_in_this_bin = contract_low <= forecast_temp <= contract_high
+    
+    spread_prob = stats.norm.cdf(contract_high, forecast_temp, uncertainty_std) - \
+                  stats.norm.cdf(contract_low, forecast_temp, uncertainty_std)
+    
+    if forecast_in_this_bin:
         total_prob = spike_weight + (spread_weight * spread_prob)
     else:
-        # Forecast is above - no spike, just spread
+        total_prob = spread_weight * spread_prob
+    
+    return min(total_prob, 0.99)
+
+
+def mixture_below_probability(threshold, forecast_temp, uncertainty_std, 
+                              spike_weight=0.55, cold_front=False):
+    """Mixture probability for 'X or below' contracts."""
+    if cold_front:
+        spike_weight = 0.45
+        uncertainty_std = uncertainty_std * 1.3
+    
+    spread_weight = 1 - spike_weight
+    spread_prob = stats.norm.cdf(threshold + 0.5, forecast_temp, uncertainty_std)
+    
+    if forecast_temp <= threshold:
+        total_prob = spike_weight + (spread_weight * spread_prob)
+    else:
         total_prob = spread_weight * spread_prob
     
     return min(total_prob, 0.99)
@@ -209,35 +360,30 @@ def mixture_below_probability(threshold, forecast_temp, uncertainty_std,
 def mixture_above_probability(threshold, forecast_temp, uncertainty_std, 
                               spike_weight=0.55, cold_front=False):
     """Mixture probability for 'X or above' contracts."""
-    
     if cold_front:
         spike_weight = 0.45
         uncertainty_std = uncertainty_std * 1.3
     
     spread_weight = 1 - spike_weight
-    
-    # Spread probability
     spread_prob = 1 - stats.norm.cdf(threshold - 0.5, forecast_temp, uncertainty_std)
     
-    # Does forecast fall above threshold?
     if forecast_temp >= threshold:
-        # Forecast is above - spike goes here
         total_prob = spike_weight + (spread_weight * spread_prob)
     else:
-        # Forecast is below - no spike, just spread
         total_prob = spread_weight * spread_prob
     
     return min(total_prob, 0.99)
 
 
 def analyze_city(city_key):
+    """Main analysis function for a single city."""
     city = cities[city_key]
     
     print(f"\n{'='*60}")
     print(f"ANALYZING: {city['name'].upper()}")
     print(f"{'='*60}")
     
-    # Load data
+    # Load historical data
     try:
         df = load_and_prepare_data(city)
         print(f"Loaded {len(df)} historical records")
@@ -246,34 +392,39 @@ def analyze_city(city_key):
         print(f"   Run the weather fetch script for {city['name']} first.")
         return
     
-    # Fetch Open-Meteo data
-    print("Fetching Open-Meteo data...")
-    meteo_data = fetch_open_meteo(city["lat"], city["lon"])
-    
-    meteo_dates = meteo_data["daily"]["time"]
-    meteo_temps = meteo_data["daily"]["temperature_2m_max"]
-    meteo_temps_min = meteo_data["daily"]["temperature_2m_min"]
-    meteo_wind = meteo_data["daily"]["wind_speed_10m_max"]
-    meteo_wind_dir = meteo_data["daily"]["wind_direction_10m_dominant"]
-    
-    # Display weather data
-    print(f"\nOpen-Meteo Data:")
-    print(f"{'Date':<12} {'High':>6} {'Low':>6} {'Wind':>6} {'Dir':>5}")
-    print("-" * 40)
-    for i, d in enumerate(meteo_dates):
-        print(f"{d:<12} {meteo_temps[i]:>5.1f}° {meteo_temps_min[i]:>5.1f}° {meteo_wind[i]:>5.1f} {meteo_wind_dir[i]:>5.0f}°")
-    
     # Set target date (tomorrow)
     today = datetime.now().date()
     target_date = today + timedelta(days=1)
     target_str = target_date.strftime("%Y-%m-%d")
     
-    # Add recent data
-    for i, date_str in enumerate(meteo_dates):
-        date_obj = datetime.strptime(date_str, "%Y-%m-%d").date()
-        if meteo_temps[i] is not None and date_obj < target_date:
-            new_row = pd.DataFrame({"date": [pd.to_datetime(date_str)], "temp": [meteo_temps[i]]})
-            df = pd.concat([df, new_row], ignore_index=True)
+    # Fetch HRRR forecast
+    forecast_temp, weather_data = fetch_hrrr_forecast(
+        city["lat"], city["lon"], target_date
+    )
+    
+    if forecast_temp is None:
+        print("❌ Could not retrieve HRRR forecast. Skipping city.")
+        return
+    
+    # Display HRRR data
+    print(f"\n  HRRR Forecast Data:")
+    print(f"  {'='*50}")
+    print(f"  Model Run: {weather_data['model_run']} UTC")
+    print(f"  Target Date: {target_str}")
+    print(f"  Forecast High: {forecast_temp:.1f}°F")
+    if weather_data['wind_speed']:
+        print(f"  Avg Wind: {weather_data['wind_speed']:.1f} mph @ {weather_data['wind_dir']:.0f}°")
+    
+    # Fetch recent temps to update our historical data
+    recent_temps = fetch_hrrr_recent_temps(city["lat"], city["lon"], num_days=5)
+    
+    # Add recent data to dataframe
+    for rt in recent_temps:
+        new_row = pd.DataFrame({
+            "date": [pd.to_datetime(rt['date'])], 
+            "temp": [rt['temp']]
+        })
+        df = pd.concat([df, new_row], ignore_index=True)
     
     df = df.drop_duplicates(subset=["date"], keep="last")
     df = df.sort_values("date").reset_index(drop=True)
@@ -282,52 +433,56 @@ def analyze_city(city_key):
     df = build_features(df)
     model, model_error_std, mae, feature_cols = train_model(df)
     
-    print(f"\nModel trained: MAE = {mae:.2f}°F")
-    
-    # Get indices
-    today_idx = None
-    target_idx = None
-    
-    for i, d in enumerate(meteo_dates):
-        if d == today.strftime("%Y-%m-%d"):
-            today_idx = i
-        if d == target_str:
-            target_idx = i
-    
-    # Get forecast
-    forecast_temp = meteo_temps[target_idx] if target_idx is not None else None
+    print(f"\n  Model trained: MAE = {mae:.2f}°F")
     
     # Weather change indicators
     cold_front_detected = False
-    if today_idx is not None and target_idx is not None:
-        temp_drop = meteo_temps[today_idx] - meteo_temps[target_idx]
-        wind_dir_target = meteo_wind_dir[target_idx]
-        cold_wind = 1 if (wind_dir_target > 270 or wind_dir_target < 90) else 0
+    if recent_temps and len(recent_temps) >= 2:
+        yesterday_temp = recent_temps[0]['temp']  # Most recent
+        temp_change = yesterday_temp - forecast_temp
         
-        print(f"\n{'='*60}")
-        print("WEATHER CHANGE INDICATORS")
-        print(f"{'='*60}")
-        print(f"Today: {meteo_temps[today_idx]}°F → Tomorrow: {meteo_temps[target_idx]}°F")
-        print(f"Temperature change: {temp_drop:+.1f}°F {'🥶 COLD FRONT' if temp_drop > 5 else '🌡️ WARMING' if temp_drop < -5 else ''}")
-        print(f"Wind direction: {'❄️ Cold (N/NW)' if cold_wind else '🌡️ Warm (S/SW)'}")
+        print(f"\n  {'='*50}")
+        print("  WEATHER CHANGE INDICATORS")
+        print(f"  {'='*50}")
+        print(f"  Yesterday: {yesterday_temp:.1f}°F → Tomorrow: {forecast_temp:.1f}°F")
+        print(f"  Temperature change: {-temp_change:+.1f}°F", end="")
         
-        cold_front_detected = temp_drop > 5
+        if temp_change > 10:
+            print(" 🥶 COLD FRONT")
+            cold_front_detected = True
+        elif temp_change < -10:
+            print(" 🌡️ WARMING")
+        else:
+            print()
+        
+        # Check wind direction for cold air advection
+        if weather_data['wind_dir']:
+            wind_dir = weather_data['wind_dir']
+            cold_wind = wind_dir > 270 or wind_dir < 90
+            print(f"  Wind direction: {'❄️ Cold (N/NW)' if cold_wind else '🌡️ Warm (S/SW)'}")
+            if cold_wind and temp_change > 5:
+                cold_front_detected = True
     
     # ============ MIXTURE MODEL PARAMETERS ============
     UNCERTAINTY_STD = 2.5  # Base uncertainty
     SPIKE_WEIGHT = 0.55    # 55% weight on forecast bin
     
+    # HRRR is more accurate than Open-Meteo, so we can be slightly more confident
+    # But still account for uncertainty
+    SPIKE_WEIGHT = 0.60  # Increased confidence for HRRR
+    UNCERTAINTY_STD = 2.2  # Slightly tighter uncertainty
+    
     forecast_bin = get_bin_for_temp(forecast_temp)
     
-    print(f"\n{'='*60}")
-    print("MIXTURE MODEL (v3)")
-    print(f"{'='*60}")
-    print(f"Open-Meteo Forecast: {forecast_temp}°F")
-    print(f"Forecast Bin: {forecast_bin[0]}° to {forecast_bin[1]}°")
-    print(f"Spike Weight: {SPIKE_WEIGHT*100:.0f}% on forecast bin")
-    print(f"Spread Weight: {(1-SPIKE_WEIGHT)*100:.0f}% distributed by uncertainty (±{UNCERTAINTY_STD}°F)")
+    print(f"\n  {'='*50}")
+    print("  MIXTURE MODEL (v4 - HRRR)")
+    print(f"  {'='*50}")
+    print(f"  HRRR Forecast: {forecast_temp:.1f}°F")
+    print(f"  Forecast Bin: {forecast_bin[0]}° to {forecast_bin[1]}°")
+    print(f"  Spike Weight: {SPIKE_WEIGHT*100:.0f}% on forecast bin")
+    print(f"  Spread Weight: {(1-SPIKE_WEIGHT)*100:.0f}% distributed (±{UNCERTAINTY_STD}°F)")
     if cold_front_detected:
-        print(f"🥶 Cold front adjustment: spike reduced to 45%, wider uncertainty")
+        print(f"  🥶 Cold front adjustment: spike reduced to 50%, wider uncertainty")
     
     # Get Kalshi markets
     BASE_URL = "https://api.elections.kalshi.com/trade-api/v2"
@@ -337,6 +492,10 @@ def analyze_city(city_key):
     
     target_kalshi = target_date.strftime("%y%b%d").upper()
     target_markets = [m for m in markets if target_kalshi in m["ticker"]]
+    
+    if not target_markets:
+        print(f"\n  ⚠️ No Kalshi markets found for {target_str}")
+        return
     
     # Find Kalshi's top prediction
     kalshi_top_contract = None
@@ -352,31 +511,31 @@ def analyze_city(city_key):
         if "to" in kalshi_top_contract and len(numbers) >= 2:
             kalshi_implied_temp = (int(numbers[0]) + int(numbers[1])) / 2
     
-    print(f"\n{'='*60}")
-    print("MARKET EFFICIENCY CHECK")
-    print(f"{'='*60}")
-    print(f"Open-Meteo Forecast: {forecast_temp}°F")
-    print(f"Kalshi Top Contract: {kalshi_top_contract} ({kalshi_top_prob}%)")
+    print(f"\n  {'='*50}")
+    print("  MARKET EFFICIENCY CHECK")
+    print(f"  {'='*50}")
+    print(f"  HRRR Forecast: {forecast_temp:.1f}°F")
+    print(f"  Kalshi Top Contract: {kalshi_top_contract} ({kalshi_top_prob}%)")
     
     market_efficient = False
     if kalshi_implied_temp:
-        print(f"Kalshi Implied Temp: ~{kalshi_implied_temp}°F")
+        print(f"  Kalshi Implied Temp: ~{kalshi_implied_temp}°F")
         forecast_vs_kalshi_diff = abs(forecast_temp - kalshi_implied_temp)
-        print(f"Forecast vs Kalshi Diff: {forecast_vs_kalshi_diff:.1f}°F")
+        print(f"  Forecast vs Kalshi Diff: {forecast_vs_kalshi_diff:.1f}°F")
         
         if forecast_vs_kalshi_diff <= 2:
-            print("\n✅ MARKET IS EFFICIENTLY PRICED")
+            print("\n  ✅ MARKET IS EFFICIENTLY PRICED")
             market_efficient = True
         else:
-            print(f"\n🎯 POTENTIAL MISPRICING: {forecast_vs_kalshi_diff:.1f}°F difference!")
+            print(f"\n  🎯 POTENTIAL MISPRICING: {forecast_vs_kalshi_diff:.1f}°F difference!")
     
-    # Compare with Kalshi using MIXTURE MODEL
-    print(f"\n{'='*60}")
-    print("MODEL vs KALSHI COMPARISON (Mixture Model)")
-    print(f"{'='*60}\n")
+    # Compare with Kalshi
+    print(f"\n  {'='*50}")
+    print("  MODEL vs KALSHI COMPARISON")
+    print(f"  {'='*50}\n")
     
-    print(f"{'Contract':<20} {'Model':>10} {'Kalshi':>10} {'Edge':>10}")
-    print("-" * 55)
+    print(f"  {'Contract':<20} {'Model':>10} {'Kalshi':>10} {'Edge':>10}")
+    print("  " + "-" * 55)
     
     results = []
     
@@ -393,7 +552,6 @@ def analyze_city(city_key):
             high = int(numbers[1])
             model_prob = mixture_probability(low, high + 1, forecast_temp, UNCERTAINTY_STD, 
                                             SPIKE_WEIGHT, cold_front_detected)
-            # Check if this is the forecast bin
             is_forecast_bin = low <= forecast_temp <= high + 1
             
         elif "or below" in subtitle and len(numbers) >= 1:
@@ -421,21 +579,21 @@ def analyze_city(city_key):
         })
         
         marker = "📍" if is_forecast_bin else "  "
-        print(f"{marker}{subtitle:<18} {model_prob:>9.1%} {kalshi_prob:>9.0%} {edge:>+9.1%}")
+        print(f"  {marker}{subtitle:<18} {model_prob:>9.1%} {kalshi_prob:>9.0%} {edge:>+9.1%}")
     
     # Betting recommendations
-    print(f"\n{'='*60}")
-    print("BETTING RECOMMENDATIONS")
-    print(f"{'='*60}\n")
+    print(f"\n  {'='*50}")
+    print("  BETTING RECOMMENDATIONS")
+    print(f"  {'='*50}\n")
     
     bankroll = 20
-    model_confidence = 0.80
+    model_confidence = 0.85  # Higher confidence with HRRR
     good_bets = []
     
     for r in sorted(results, key=lambda x: abs(x["edge"]), reverse=True):
         edge = r["edge"]
         
-        # CRITICAL FILTER: Never bet NO on the forecast bin
+        # Never bet NO on the forecast bin
         if edge < 0 and r["is_forecast_bin"]:
             continue
         
@@ -482,40 +640,45 @@ def analyze_city(city_key):
     
     if len(good_bets) == 0:
         if market_efficient:
-            print("📊 NO CLEAR EDGE TODAY")
-            print(f"   Market matches forecast (both ~{forecast_temp:.0f}°F)")
-            print("   Consider skipping or small hedge bet")
+            print("  📊 NO CLEAR EDGE TODAY")
+            print(f"     Market matches forecast (both ~{forecast_temp:.0f}°F)")
+            print("     Consider skipping or small hedge bet")
         else:
-            print("⚠️ NO RECOMMENDED BETS")
-            print("   Edges too small or contradict forecast")
+            print("  ⚠️ NO RECOMMENDED BETS")
+            print("     Edges too small or contradict forecast")
     else:
         for bet in good_bets:
             forecast_marker = " 📍 (FORECAST BIN)" if bet["is_forecast_bin"] else ""
-            print(f"{bet['subtitle']}:{forecast_marker}")
-            print(f"  Bet: {bet['bet_side']} at {bet['market_price']:.0%}")
-            print(f"  Model prob: {bet['model_prob']:.1%}")
-            print(f"  Edge: {bet['edge']:+.1%}")
-            print(f"  Odds: {bet['odds']:.2f}:1")
-            print(f"  Half Kelly: {bet['half_kelly']:.1%}")
-            print(f"  Suggested bet: ${bet['bet_amount']:.2f}")
-            print(f"  Potential profit: ${bet['potential_profit']:.2f}")
+            print(f"  {bet['subtitle']}:{forecast_marker}")
+            print(f"    Bet: {bet['bet_side']} at {bet['market_price']:.0%}")
+            print(f"    Model prob: {bet['model_prob']:.1%}")
+            print(f"    Edge: {bet['edge']:+.1%}")
+            print(f"    Odds: {bet['odds']:.2f}:1")
+            print(f"    Half Kelly: {bet['half_kelly']:.1%}")
+            print(f"    Suggested bet: ${bet['bet_amount']:.2f}")
+            print(f"    Potential profit: ${bet['potential_profit']:.2f}")
             print()
     
     # Summary
-    print(f"{'='*60}")
-    print(f"SUMMARY - {city['name'].upper()}")
-    print(f"{'='*60}")
-    print(f"Target Date: {target_str}")
-    print(f"Open-Meteo Forecast: {forecast_temp}°F → Bin: {forecast_bin[0]}-{forecast_bin[1]}°")
-    print(f"Kalshi Top Pick: {kalshi_top_contract} ({kalshi_top_prob}%)")
-    print(f"Market Efficiency: {'✅ Efficient' if market_efficient else '🎯 Potential Edge'}")
-    print(f"Recommended Bets: {len(good_bets)}")
+    print(f"  {'='*50}")
+    print(f"  SUMMARY - {city['name'].upper()}")
+    print(f"  {'='*50}")
+    print(f"  Target Date: {target_str}")
+    print(f"  HRRR Forecast: {forecast_temp:.1f}°F → Bin: {forecast_bin[0]}-{forecast_bin[1]}°")
+    print(f"  Kalshi Top Pick: {kalshi_top_contract} ({kalshi_top_prob}%)")
+    print(f"  Market Efficiency: {'✅ Efficient' if market_efficient else '🎯 Potential Edge'}")
+    print(f"  Recommended Bets: {len(good_bets)}")
     
     all_bets.extend(good_bets)
 
 
 # ============ RUN ANALYSIS ============
 if __name__ == "__main__":
+    if not HERBIE_AVAILABLE:
+        print("\n❌ Cannot run without Herbie. Please install:")
+        print("   pip install herbie-data xarray cfgrib eccodes")
+        exit(1)
+    
     for city_key in selected_cities:
         analyze_city(city_key)
     
@@ -524,12 +687,12 @@ if __name__ == "__main__":
     print(f"\n{'='*60}")
     print(f"💰 BETTING SUMMARY - ALL CITIES")
     print(f"📅 Target Date: {target_date}")
+    print(f"📡 Data Source: NOAA HRRR (3km resolution)")
     print(f"{'='*60}\n")
 
     if len(all_bets) == 0:
         print("No recommended bets today. Consider skipping.")
     else:
-        # Sort by edge (best opportunities first)
         all_bets_sorted = sorted(all_bets, key=lambda x: abs(x["edge"]), reverse=True)
         
         total_suggested = 0
@@ -549,7 +712,6 @@ if __name__ == "__main__":
         
         print(f"\n📍 = Forecast bin (highest confidence)")
         
-        # Top picks (positive edge only)
         positive_edge_bets = [bet for bet in all_bets_sorted if bet["edge"] > 0]
         
         if len(positive_edge_bets) > 0:

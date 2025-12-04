@@ -6,9 +6,9 @@ from datetime import date
 NOAA_KEY = "snGAmCkqxGSTXWnipGGsRwRdJvoiFkTM"
 headers = {"token": NOAA_KEY}
 
-city_name = "Los Angeles"
-station_id = "GHCND:USW00023174"  # LA International Airport
-csv_file = "weather_data_la.csv"
+city_name = "Miami"
+station_id = "GHCND:USW00012839"  # Miami International Airport
+csv_file = "weather_data_miami.csv"
 
 print(f"Fetching data for {city_name}...")
 
@@ -85,6 +85,6 @@ while year >= end_year:
     print(f"  Wrote {len(records)} records (total: {total_records})")
     
     year -= 1
-    time.sleep(2)
+    time.sleep(1.3)
 
 print(f"\n✅ {city_name}: {total_records} records saved to {csv_file}")
