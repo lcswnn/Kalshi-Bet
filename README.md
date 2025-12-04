@@ -17,6 +17,16 @@
    - Windows: ``
 7. Enjoy the generational wealth.
 
+## Stats
+- According to the backtesting python file, we are reaching a 25.6% Return On Investment (ROI)
+- We are winning 665.9% of the bets we are making
+   - Notes on Backtesting:
+   - This backtest uses simulated forecasts (actual temp + noise).
+   - Real performance depends on actual forecast quality.
+- We begin by using Half Kelly Criterion, then going from there once we establish Ensemble_V8 winning statistics
+- Model has a sweet spot of stats that we want to hit, making sure that the prices are within a range we can maximize our edge within.
+- If there is a price that is too low, we don't bet on it, as well as a price that is not too high or within our sweet spot of betting.
+  
 
 
 
