@@ -1,0 +1,145 @@
+:root {
+  --green: rgba(9, 194, 133, 1);
+  --white: rgba(255, 255, 255, 0.9);
+  --black: rgba(0, 0, 0, 1);
+}
+
+.inter-semibold,
+.inter-medium {
+  font-family: "Inter", sans-serif;
+  font-optical-sizing: auto;
+}
+
+/* Weight fixes */
+.inter-semibold {
+  font-weight: 700;
+}
+.inter-medium {
+  font-weight: 500;
+}
+
+html {
+  background-color: var(--green);
+}
+
+.titles-container {
+  margin: 100px 0 40px 0;
+}
+
+h1 {
+  text-align: center;
+  font-size: 5rem; /* Large desktop size */
+  color: var(--black);
+}
+
+h3 {
+  text-align: center;
+  font-size: 2.5rem; /* Large desktop size */
+  color: var(--black);
+}
+
+.content-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+  /* Add padding for small screens to prevent button touching edges */
+  padding: 0 20px;
+}
+
+.button {
+  padding: 15px 40px;
+  font-size: 1.2rem;
+  border-radius: 1.3rem;
+  background-color: var(--white);
+  color: var(--black);
+  border: none;
+  cursor: pointer;
+  transition: transform 0.15s ease, background-color 0.2s ease;
+}
+
+.button:hover {
+  transform: scale(1.05);
+  background-color: rgba(255, 255, 255, 1);
+}
+
+.loader {
+  margin: 30px auto;
+  border: 8px solid rgba(255, 255, 255, 0.3);
+  border-top: 8px solid var(--white);
+  border-radius: 50%;
+  width: 60px;
+  height: 60px;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* FIX: Correct spelling + center content */
+.output-container {
+  margin: 40px auto;
+  max-width: 800px;
+  text-align: center;
+  /* Add horizontal padding to prevent output box from touching edges */
+  padding: 0 20px;
+}
+
+/* Style the box */
+#outputBox {
+  width: 100%;
+  height: 350px;
+  padding: 20px;
+  border-radius: 1rem;
+  border: none;
+  resize: none;
+  background-color: var(--white);
+  color: var(--black);
+  font-family: "Inter", sans-serif;
+  font-size: 1rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  display: block;
+  margin: 0 auto;
+}
+
+@media (max-width: 768px) {
+  .titles-container {
+    margin: 60px 0 30px 0;
+  }
+
+  h1 {
+    font-size: 3rem;
+  }
+
+  h3 {
+    font-size: 1.5rem;
+  }
+
+  .button {
+    padding: 18px 45px;
+    font-size: 1.1rem;
+  }
+
+  #outputBox {
+    height: 300px; 
+  }
+
+  .output-container {
+    margin: 30px auto;
+  }
+}
+
+@media (max-width: 480px) {
+  h1 {
+    font-size: 2.5rem;
+  }
+
+  h3 {
+    font-size: 1.3rem;
+  }
+
+  .button {
+    width: 90%;
+    padding: 18px 0;
+  }
+}
