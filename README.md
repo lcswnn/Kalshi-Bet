@@ -19,7 +19,7 @@
 
 ## Stats
 - According to the backtesting python file, we are reaching a 25.6% Return On Investment (ROI)
-- We are winning 665.9% of the bets we are making
+- We are winning 65.9% of the bets we are making
    - Notes on Backtesting:
    - This backtest uses simulated forecasts (actual temp + noise).
    - Real performance depends on actual forecast quality.
