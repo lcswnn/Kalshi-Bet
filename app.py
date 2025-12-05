@@ -11,8 +11,8 @@ def home():
 
 @app.route("/run-model", methods=["GET"])
 def run_model():
-    # Path to ensemble_v8.py (adjust if needed)
-    script_path = os.path.join(os.path.dirname(__file__), "ensemble_v8.py")
+    # Path to ensemble_v9.py (adjust if needed)
+    script_path = os.path.join(os.path.dirname(__file__), "ensemble_v9.py")
 
     # Run the script and capture output
     result = subprocess.run(

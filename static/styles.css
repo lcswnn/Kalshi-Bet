@@ -118,12 +118,13 @@ h3 {
   }
 
   #outputBox {
-    height: 300px; 
+    height: 300px;
+    font-size: 0.85rem;
   }
 
   .output-container {
     margin: 30px auto;
-    padding: 0 15px; 
+    padding: 0 15px;
   }
 }
 
@@ -139,6 +140,10 @@ h3 {
   .button {
     width: 90%;
     padding: 18px 0;
+  }
+
+  #outputBox {
+    font-size: 0.75rem;
   }
 
   .output-container {
