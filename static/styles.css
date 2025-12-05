@@ -10,7 +10,6 @@
   font-optical-sizing: auto;
 }
 
-/* Weight fixes */
 .inter-semibold {
   font-weight: 700;
 }
@@ -28,13 +27,13 @@ html {
 
 h1 {
   text-align: center;
-  font-size: 5rem; /* Large desktop size */
+  font-size: 5rem; 
   color: var(--black);
 }
 
 h3 {
   text-align: center;
-  font-size: 2.5rem; /* Large desktop size */
+  font-size: 2.5rem;
   color: var(--black);
 }
 
@@ -42,7 +41,6 @@ h3 {
   display: flex;
   justify-content: center;
   margin-top: 20px;
-  /* Add padding for small screens to prevent button touching edges */
   padding: 0 20px;
 }
 
@@ -76,22 +74,21 @@ h3 {
   to { transform: rotate(360deg); }
 }
 
-/* FIX: Correct spelling + center content */
 .output-container {
   margin: 40px auto;
   max-width: 800px;
   text-align: center;
-  /* Add horizontal padding to prevent output box from touching edges */
   padding: 0 20px;
+  box-sizing: border-box;
 }
 
-/* Style the box */
 #outputBox {
   width: 100%;
   height: 350px;
   padding: 20px;
   border-radius: 1rem;
   border: none;
+  box-sizing: border-box;
   resize: none;
   background-color: var(--white);
   color: var(--black);
@@ -126,6 +123,7 @@ h3 {
 
   .output-container {
     margin: 30px auto;
+    padding: 0 15px; 
   }
 }
 
@@ -141,5 +139,9 @@ h3 {
   .button {
     width: 90%;
     padding: 18px 0;
+  }
+
+  .output-container {
+    padding: 0 10px;
   }
 }
