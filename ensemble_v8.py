@@ -1,5 +1,5 @@
 """
-KALSHI WEATHER BETTING MODEL v7
+KALSHI WEATHER BETTING MODEL v8
 ================================
 IMPROVED VERSION based on backtest analysis.
 
@@ -108,7 +108,7 @@ selected_cities = ["chicago", "nyc", "miami"]
 
 # ============ HEADER ============
 print("=" * 70)
-print("KALSHI WEATHER BETTING MODEL v7")
+print("KALSHI WEATHER BETTING MODEL v8")
 print("(Improved: Price Filters + Calibrated Probabilities)")
 print("=" * 70)
 print(f"\nAnalyzing: Chicago, New York City, Miami")
@@ -542,7 +542,7 @@ def analyze_city(city_key):
     
     # ============ BETTING RECOMMENDATIONS ============
     print(f"\n  {'='*60}")
-    print("  BETTING RECOMMENDATIONS (Improved v7)")
+    print("  BETTING RECOMMENDATIONS (Improved v8)")
     print(f"  {'='*60}\n")
     
     # Bankroll settings
@@ -660,7 +660,7 @@ if __name__ == "__main__":
     # ============ BETTING SUMMARY ============
     target_date = (datetime.now().date() + timedelta(days=1)).strftime("%A, %B %d, %Y")
     print(f"\n{'='*70}")
-    print(f"💰 BETTING SUMMARY - ALL CITIES (v7 Improved)")
+    print(f"💰 BETTING SUMMARY - ALL CITIES (v8 Improved)")
     print(f"📅 Target Date: {target_date}")
     print(f"🎯 Price Filter: {MIN_CONTRACT_PRICE*100:.0f}¢-{MAX_CONTRACT_PRICE*100:.0f}¢")
     print(f"{'='*70}\n")
@@ -697,5 +697,5 @@ if __name__ == "__main__":
         print(f"\n📊 Legend: 🎯 = Sweet spot (15-50¢), 📊 = Outside sweet spot")
     
     print(f"\n{'='*70}")
-    print("ANALYSIS COMPLETE (v7 - Improved Price Filtering)")
+    print("ANALYSIS COMPLETE (v8 - Improved Price Filtering)")
     print(f"{'='*70}")
