@@ -51,12 +51,12 @@ SUPER_CONFIDENT_EDGE_RATIO = 2.5       # What counts as "super confident"
 
 # ============ KELLY CRITERION CONFIGURATION ============
 STARTING_BANKROLL = 40        # Your bankroll
-KELLY_FRACTION = 0.70         # Half Kelly (balanced risk/reward)
+KELLY_FRACTION = 0.75         # Half Kelly (balanced risk/reward)
 MIN_BET_SIZE = 0.50           # Don't bet less than 50¢
 MAX_BET_FRACTION = 0.15       # Never bet more than 15% of bankroll
 
 # ============ ENSEMBLE CONFIGURATION ============
-ENSEMBLE_AGREEMENT_THRESHOLD = 2.0  # °F - models should agree within this
+ENSEMBLE_AGREEMENT_THRESHOLD = 3.0  # °F - models should agree within this
 CONFIDENCE_BOOST_THRESHOLD = 2.0    # °F - boost confidence if within this
 CALIBRATED_FORECAST_STD = 2.8       # °F - typical day-ahead forecast error
 
@@ -180,7 +180,7 @@ def print_header():
     print(f"Price Filter: {MIN_CONTRACT_PRICE*100:.0f}¢ - {MAX_CONTRACT_PRICE*100:.0f}¢")
     print(f"Sweet Spot: {SWEET_SPOT_LOW*100:.0f}¢ - {SWEET_SPOT_HIGH*100:.0f}¢")
     print(f"\n🎯 SMART BET SELECTION:")
-    print("   • Different cities: Bet freely (uncorrelated)")
+    print(f"   • Different cities: Bet freely (uncorrelated)")
     print(f"   • Same city: Only stack if edge ratio ≥ {SAME_CITY_MULTI_BET_THRESHOLD}x")
     print(f"   • Max {MAX_BETS_PER_CITY} bets/city, {MAX_TOTAL_BETS_PER_DAY} total/day")
     print(f"\n💰 BANKROLL: ${STARTING_BANKROLL:.2f} | {KELLY_FRACTION:.0%} Kelly")
@@ -319,13 +319,29 @@ def fetch_hrrr_forecast_fixed(lat, lon, target_date, utc_offset):
 
 
 def get_bin_for_temp(temp):
-    """Get the Kalshi bin that contains this temperature."""
-    lower = int(temp) if int(temp) % 2 == 0 else int(temp) - 1
-    if temp < 0:
-        lower = int(temp) - 1 if int(temp) % 2 == 0 else int(temp)
+    """
+    Get the Kalshi bin that contains this temperature.
     
-    if lower % 2 == 0:
-        lower -= 1
+    Kalshi uses 2-degree bins with ODD lower bounds:
+    ..., 27-28, 29-30, 31-32, 33-34, ...
+    
+    Examples:
+        27.5°F → bin (27, 28)
+        29.0°F → bin (29, 30)
+        29.9°F → bin (29, 30)
+        30.0°F → bin (29, 30)  # 30 is the upper bound of 29-30
+        30.1°F → bin (31, 32)  # Just above 30 goes to next bin
+    """
+    # Floor to get the integer part
+    temp_floor = int(np.floor(temp))
+    
+    # Find the odd number that starts the bin containing this temp
+    # If temp_floor is odd, that's our lower bound
+    # If temp_floor is even, the bin started at temp_floor - 1
+    if temp_floor % 2 == 1:  # odd
+        lower = temp_floor
+    else:  # even
+        lower = temp_floor - 1
     
     return (lower, lower + 1)
 
@@ -553,7 +569,8 @@ def analyze_city(city_key, bankroll):
             high = int(numbers[1])
             model_prob = calibrated_probability(low, high, ensemble_forecast, 
                                                 CALIBRATED_FORECAST_STD, agreement_level)
-            is_forecast_bin = forecast_bin[0] <= ensemble_forecast <= forecast_bin[1] and low == forecast_bin[0]
+            # Check if this contract IS our forecast bin
+            is_forecast_bin = (low == forecast_bin[0])
             contract_type = "range"
 
         elif "or below" in subtitle and len(numbers) >= 1:
@@ -658,7 +675,7 @@ def smart_select_bets(all_bets):
     """
     if not all_bets:
         return []
-
+    
     # Group bets by city
     bets_by_city = {}
     for bet in all_bets:
@@ -666,42 +683,45 @@ def smart_select_bets(all_bets):
         if city not in bets_by_city:
             bets_by_city[city] = []
         bets_by_city[city].append(bet)
-
+    
     # Select bets from each city
     selected_bets = []
-
-    for city_bets in bets_by_city.values():
+    
+    for city, city_bets in bets_by_city.items():
         # Sort by edge ratio (best first)
         city_bets = sorted(city_bets, key=lambda x: -x["edge_ratio"])
-
+        
         # Always take the best bet from each city
         best_bet = city_bets[0]
         best_bet["selection_reason"] = "best_in_city"
         selected_bets.append(best_bet)
-
+        
         # Add additional same-city bets ONLY if super confident
         for bet in city_bets[1:MAX_BETS_PER_CITY]:
             if bet["edge_ratio"] >= SAME_CITY_MULTI_BET_THRESHOLD:
                 bet["selection_reason"] = "super_confident_stack"
                 selected_bets.append(bet)
-
+    
     # Sort final selection by edge ratio
     selected_bets = sorted(selected_bets, key=lambda x: -x["edge_ratio"])
-
-    return selected_bets[:MAX_TOTAL_BETS_PER_DAY]
+    
+    # Cap total bets
+    selected_bets = selected_bets[:MAX_TOTAL_BETS_PER_DAY]
+    
+    return selected_bets
 
 
 def print_recommendations(selected_bets, all_bets, city_summaries, bankroll):
     """Print the final betting recommendations in a clear format."""
     
     target_date = (datetime.now().date() + timedelta(days=1)).strftime("%A, %B %d, %Y")
-
+    
     print(f"\n{'='*70}")
     print("🎯 TODAY'S BETTING RECOMMENDATIONS")
     print(f"📅 Target Date: {target_date}")
     print(f"💰 Bankroll: ${bankroll:.2f}")
     print(f"{'='*70}")
-
+    
     if not selected_bets:
         print("\n🛑 NO BETS RECOMMENDED TODAY")
         print("\nThis could mean:")
@@ -710,16 +730,13 @@ def print_recommendations(selected_bets, all_bets, city_summaries, bankroll):
         print("  • Market is efficiently priced")
         print("\n💡 Sitting out is a valid strategy!")
         return
-
+    
     # Analyze what we're recommending
-    cities_with_bets = {b["city"] for b in selected_bets}
+    cities_with_bets = set(b["city"] for b in selected_bets)
     num_cities = len(cities_with_bets)
-
-    super_confident_count = sum(
-        b.get("selection_reason") == "super_confident_stack"
-        for b in selected_bets
-    )
-
+    
+    super_confident_count = sum(1 for b in selected_bets if b.get("selection_reason") == "super_confident_stack")
+    
     # Print the recommendation header
     if num_cities > 1:
         print(f"\n✅ Found bets in {num_cities} DIFFERENT CITIES (uncorrelated):")
@@ -732,13 +749,13 @@ def print_recommendations(selected_bets, all_bets, city_summaries, bankroll):
         city_name = list(cities_with_bets)[0]
         print(f"\n⭐ Found 1 great bet in {city_name}:")
         print("   → This is your best opportunity today.")
-
+    
     print()
-
+    
     # Print each bet
     total_wager = 0
     total_potential = 0
-
+    
     for i, bet in enumerate(selected_bets, 1):
         # Confidence indicator
         if bet["edge_ratio"] >= SUPER_CONFIDENT_EDGE_RATIO:
@@ -747,19 +764,19 @@ def print_recommendations(selected_bets, all_bets, city_summaries, bankroll):
             confidence = "✓ High confidence"
         else:
             confidence = "⭐ Best opportunity"
-
+        
         # Selection reason
         if bet.get("selection_reason") == "super_confident_stack":
             reason = "(stacked - high edge)"
         else:
             reason = "(best in city)"
-
+        
         bucket_emoji = "🎯" if bet["price_bucket"] == "sweet_spot" else "📊"
         forecast_marker = "📍" if bet.get("is_forecast_bin") else ""
-
+        
         odds = bet["kelly_info"].get("odds", 0)
         potential_profit = bet["bet_size"] * odds
-
+        
         print(f"   ┌─ BET #{i}: {bet['city']} {reason}")
         print(f"   │  {confidence}")
         print(f"   │  Contract: {bet['subtitle']} {forecast_marker}")
@@ -767,28 +784,28 @@ def print_recommendations(selected_bets, all_bets, city_summaries, bankroll):
         print(f"   │  Your probability: {bet['our_prob_win']*100:.1f}%")
         print(f"   │  Edge: {bet['edge']*100:+.1f}% ({bet['edge_ratio']:.1f}x minimum)")
         print(f"   │  Kelly: {bet['kelly_info'].get('fractional_kelly_pct', 0):.1f}% of bankroll")
-        print("   │")
+        print(f"   │")
         print(f"   │  💰 BET: ${bet['bet_size']:.2f}")
         print(f"   │  📈 Potential profit: ${potential_profit:.2f}")
         print(f"   └{'─'*50}")
         print()
-
+        
         total_wager += bet["bet_size"]
         total_potential += potential_profit
-
+    
     # Summary
     print(f"   {'='*55}")
     print(f"   TOTAL WAGER: ${total_wager:.2f} ({100*total_wager/bankroll:.1f}% of bankroll)")
     print(f"   POTENTIAL PROFIT: ${total_potential:.2f}")
     print(f"   {'='*55}")
-
+    
     # City forecasts summary
     print(f"\n📊 FORECAST SUMMARY:")
     for summary in city_summaries:
         if summary:
             agreement_emoji = "✅" if summary["agreement_level"] == "high" else "⚠️" if summary["agreement_level"] == "medium" else "❌"
             print(f"   {summary['city']}: {summary['ensemble_forecast']:.1f}°F → Bin {summary['forecast_bin'][0]}-{summary['forecast_bin'][1]}° {agreement_emoji} {summary['agreement_level'].upper()}")
-
+    
     # Show what we didn't bet on
     not_selected = [b for b in all_bets if b not in selected_bets]
     if not_selected:

@@ -188,13 +188,25 @@ SUPER_CONFIDENT_EDGE_RATIO = 2.5     # 2.5x minimum edge = very confident
 def get_bin(temp):
     """
     Get the Kalshi temperature bin for a given temperature.
-    Kalshi uses 2-degree bins with odd lower bounds (e.g., 73-74, 75-76).
     
-    Example: 75.3°F -> bin (75, 76)
+    Kalshi uses 2-degree bins with ODD lower bounds:
+    ..., 27-28, 29-30, 31-32, 33-34, ...
+    
+    Examples:
+        27.5°F → bin (27, 28)
+        29.0°F → bin (29, 30)
+        29.9°F → bin (29, 30)
+        75.3°F → bin (75, 76)
     """
-    lower = int(np.floor(temp))
-    if lower % 2 == 0:
-        lower -= 1
+    temp_floor = int(np.floor(temp))
+    
+    # If floor is odd, that's our lower bound
+    # If floor is even, the bin started at floor - 1
+    if temp_floor % 2 == 1:  # odd
+        lower = temp_floor
+    else:  # even
+        lower = temp_floor - 1
+    
     return (lower, lower + 1)
 
 
@@ -205,7 +217,10 @@ def get_price_bucket(price):
     Sweet spot (15-50¢): Where we see the best historical returns
     High price (50-90¢): Still tradeable but less attractive
     """
-    return "sweet_spot" if price <= SWEET_SPOT_HIGH else "high_price"
+    if price <= SWEET_SPOT_HIGH:
+        return "sweet_spot"
+    else:
+        return "high_price"
 
 
 def get_min_edge(price):
@@ -348,37 +363,43 @@ def generate_daily_recommendation(bets_by_city, bankroll):
         recommendation_text: Human-readable recommendation
     """
     all_bets = []
-
+    
     for city, city_bets in bets_by_city.items():
         if not city_bets:
             continue
-
+            
         # Sort by edge ratio
         city_bets = sorted(city_bets, key=lambda x: -x["edge_ratio"])
-
+        
         # Always include best bet from each city
         best_bet = city_bets[0]
-        _extracted_from_generate_daily_recommendation_35(
-            city, best_bet, "best_in_city", all_bets
-        )
+        best_bet["city"] = city
+        best_bet["recommendation_type"] = "best_in_city"
+        all_bets.append(best_bet)
+        
         # Add super confident stacks from same city
         for bet in city_bets[1:MAX_BETS_PER_CITY]:
             if bet["edge_ratio"] >= SAME_CITY_MULTI_BET_THRESHOLD:
-                _extracted_from_generate_daily_recommendation_35(
-                    city, bet, "super_confident_stack", all_bets
-                )
+                bet["city"] = city
+                bet["recommendation_type"] = "super_confident_stack"
+                all_bets.append(bet)
+    
     if not all_bets:
         return "📊 No good bets found today. Sitting this one out.\n"
-
+    
     # Sort all bets by edge ratio for display
     all_bets = sorted(all_bets, key=lambda x: -x["edge_ratio"])
-
+    
     # Count cities
-    cities_with_bets = {b["city"] for b in all_bets}
+    cities_with_bets = set(b["city"] for b in all_bets)
     num_cities = len(cities_with_bets)
-
+    
     # Build recommendation message
-    lines = ["=" * 60, "🎯 TODAY'S BETTING RECOMMENDATIONS", "=" * 60]
+    lines = []
+    lines.append("=" * 60)
+    lines.append("🎯 TODAY'S BETTING RECOMMENDATIONS")
+    lines.append("=" * 60)
+    
     if num_cities > 1:
         lines.append(f"\n✅ Found good bets in {num_cities} DIFFERENT CITIES (uncorrelated):")
         lines.append("   → Safe to bet on all of these!\n")
@@ -388,12 +409,12 @@ def generate_daily_recommendation(bets_by_city, bankroll):
     else:
         lines.append(f"\n⭐ Found 1 great bet in {list(cities_with_bets)[0]}:")
         lines.append("   → This is your best opportunity today.\n")
-
+    
     for i, bet in enumerate(all_bets, 1):
         # Calculate Kelly bet size
         our_prob_win = bet["our_prob"] if bet["side"] == "YES" else (1 - bet["our_prob"])
         bet_size, _ = calculate_kelly_bet(bankroll, our_prob_win, bet["bet_price"], KELLY_FRACTION)
-
+        
         confidence = ""
         if bet["edge_ratio"] >= SUPER_CONFIDENT_EDGE_RATIO:
             confidence = "🔥 SUPER CONFIDENT"
@@ -401,7 +422,7 @@ def generate_daily_recommendation(bets_by_city, bankroll):
             confidence = "✓ High confidence"
         else:
             confidence = "• Good edge"
-
+        
         lines.append(f"   BET #{i}: {bet['city']}")
         lines.append(f"   {confidence}")
         lines.append(f"   Contract: {bet.get('contract_name', 'Temperature range')}")
@@ -410,7 +431,7 @@ def generate_daily_recommendation(bets_by_city, bankroll):
         lines.append(f"   Edge: {bet['edge']*100:+.1f}% ({bet['edge_ratio']:.1f}x minimum)")
         lines.append(f"   💰 RECOMMENDED BET: ${bet_size:.2f}")
         lines.append("")
-
+    
     # Summary
     total_bet = sum(
         calculate_kelly_bet(
@@ -420,23 +441,13 @@ def generate_daily_recommendation(bets_by_city, bankroll):
             KELLY_FRACTION
         )[0] for b in all_bets
     )
-
-    lines.extend(
-        (
-            "-" * 60,
-            f"   Total to wager: ${total_bet:.2f} ({100 * total_bet / bankroll:.1f}% of bankroll)",
-            f"   Current bankroll: ${bankroll:.2f}",
-            "=" * 60,
-        )
-    )
+    
+    lines.append("-" * 60)
+    lines.append(f"   Total to wager: ${total_bet:.2f} ({100*total_bet/bankroll:.1f}% of bankroll)")
+    lines.append(f"   Current bankroll: ${bankroll:.2f}")
+    lines.append("=" * 60)
+    
     return "\n".join(lines)
-
-
-# TODO Rename this here and in `generate_daily_recommendation`
-def _extracted_from_generate_daily_recommendation_35(city, arg1, arg2, all_bets):
-    arg1["city"] = city
-    arg1["recommendation_type"] = arg2
-    all_bets.append(arg1)
 
 
 def calculate_bet_outcome(bet_size, price, won):
