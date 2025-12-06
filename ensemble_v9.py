@@ -779,6 +779,7 @@ def print_recommendations(selected_bets, all_bets, city_summaries, bankroll):
         
         print(f"   ┌─ BET #{i}: {bet['city']} {reason}")
         print(f"   │  {confidence}")
+        print(f"   │  🌡️  Model predicts high: {bet['ensemble_forecast']:.1f}°F")
         print(f"   │  Contract: {bet['subtitle']} {forecast_marker}")
         print(f"   │  Side: {bet['side']} at {bet['bet_price']*100:.0f}¢ {bucket_emoji}")
         print(f"   │  Your probability: {bet['our_prob_win']*100:.1f}%")
