@@ -24,6 +24,7 @@ import requests
 from datetime import datetime, timedelta
 import re
 from scipy import stats
+import argparse
 
 # ============ HRRR/HERBIE IMPORTS ============
 try:
@@ -817,24 +818,38 @@ def print_recommendations(selected_bets, all_bets, city_summaries, bankroll):
 # ============ MAIN ============
 
 def main():
+    global STARTING_BANKROLL, KELLY_FRACTION
+
+    # Parse command-line arguments
+    parser = argparse.ArgumentParser(description='Kalshi Weather Betting Model v9')
+    parser.add_argument('--kelly', type=float, default=KELLY_FRACTION,
+                        help=f'Kelly fraction (default: {KELLY_FRACTION})')
+    parser.add_argument('--bankroll', type=float, default=STARTING_BANKROLL,
+                        help=f'Starting bankroll in dollars (default: {STARTING_BANKROLL})')
+    args = parser.parse_args()
+
+    # Update global settings from command-line args
+    KELLY_FRACTION = args.kelly
+    STARTING_BANKROLL = args.bankroll
+
     print_header()
-    
+
     bankroll = STARTING_BANKROLL
     all_bets = []
     city_summaries = []
-    
+
     # Analyze each city
     for city_key in selected_cities:
         city_bets, city_summary = analyze_city(city_key, bankroll)
         all_bets.extend(city_bets)
         city_summaries.append(city_summary)
-    
+
     # Smart bet selection across all cities
     selected_bets = smart_select_bets(all_bets)
-    
+
     # Print recommendations
     print_recommendations(selected_bets, all_bets, city_summaries, bankroll)
-    
+
     print(f"\n{'='*70}")
     print("ANALYSIS COMPLETE (v9 - Smart Bet Selection)")
     print(f"{'='*70}")

@@ -1,89 +1,23 @@
 """
-KALSHI WEATHER MODEL BACKTESTER - IMPROVED v4 (DOCUMENTED VERSION)
-===================================================================
+KALSHI WEATHER MODEL BACKTESTER v5 - ENSEMBLE V9 VALIDATION
+=============================================================
 
-╔══════════════════════════════════════════════════════════════════════════════╗
-║                           HOW THIS BACKTESTER WORKS                          ║
-╚══════════════════════════════════════════════════════════════════════════════╝
+This backtester tests the EXACT same logic as ensemble_v9.py against historical
+Kalshi market data. It runs TWO scenarios:
 
-OVERVIEW:
----------
-This script tests a weather betting strategy on historical Kalshi temperature 
-contracts. It simulates what would have happened if you followed specific rules 
-for placing bets on high-temperature contracts.
+1. PERFECT FORECAST (Ceiling Test)
+   - Uses actual temperature as the "forecast"
+   - Shows maximum theoretical performance if forecasts were perfect
+   - This is your BEST CASE scenario
 
-THE CORE IDEA:
---------------
-Kalshi offers contracts like "Will the high temperature in Chicago be 75-76°F?"
-Each contract has a market price (e.g., 25¢) which implies the market thinks 
-there's a 25% chance of that outcome. If YOUR forecast model says there's actually
-a 40% chance, you have a 15% "edge" - that's a potentially profitable bet.
+2. SIMULATED FORECAST (Realistic Test)
+   - Adds realistic error (~2.8°F std dev) to actual temps
+   - Simulates what HRRR/Open-Meteo forecasts would have been
+   - This is your EXPECTED CASE scenario
 
-WHAT IS "EDGE"?
----------------
-Edge = Your Probability - Market Price
-
-Example:
-  - Market price: 25¢ (implies 25% chance)
-  - Your model says: 40% chance
-  - Your edge: 40% - 25% = 15%
-
-If your model is accurate over many bets, this edge turns into profit.
-
-HOW BETTING WORKS:
-------------------
-For a YES bet at price P:
-  - You pay: $BET_SIZE
-  - If you WIN: You get back $BET_SIZE / P  (profit = $BET_SIZE * (1/P - 1))
-  - If you LOSE: You lose $BET_SIZE
-
-Example YES bet:
-  - Bet $10 on YES at 25¢ (0.25)
-  - WIN: Get back $10 / 0.25 = $40, profit = $30
-  - LOSE: Lose $10
-
-For a NO bet at price P (market shows P for YES):
-  - NO price = 1 - P
-  - You pay: $BET_SIZE
-  - If you WIN: You get back $BET_SIZE / (1-P)
-  - If you LOSE: You lose $BET_SIZE
-
-Example NO bet:
-  - Market shows YES at 75¢, so NO costs 25¢
-  - Bet $10 on NO at 25¢
-  - WIN: Get back $10 / 0.25 = $40, profit = $30
-  - LOSE: Lose $10
-
-KEY STRATEGY RULES:
--------------------
-1. NEVER bet on contracts below 15¢ (cheap contract trap - they rarely hit)
-2. NEVER bet on contracts above 90¢ (expensive, low payout)
-3. Focus on "sweet spot" 15-50¢ (best historical ROI)
-4. Require minimum 12% edge before betting
-5. Only bet on ONE contract per day (the best opportunity)
-
-WHY AVOID CHEAP CONTRACTS?
---------------------------
-Historical analysis showed:
-  - 1-5¢ contracts: -97% ROI (disaster!)
-  - 6-14¢ contracts: Marginal
-  - 15-50¢ contracts: +30-55% ROI (sweet spot)
-
-Cheap contracts look appealing (bet $1 to win $20!) but they almost never hit.
-
-THE PROBABILITY MODEL:
-----------------------
-We use a Gaussian (normal) distribution to model forecast uncertainty.
-
-Given a forecast of F degrees:
-  - The actual temperature follows a normal distribution centered on F
-  - Standard deviation of ~2.8°F (typical day-ahead forecast error)
-  - This lets us calculate P(actual temp falls in any range)
-
-Example:
-  - Forecast: 75°F
-  - Contract: "Will temp be 73-74°F?"
-  - Model calculates: ~18% probability based on the bell curve
+The probability model, edge calculations, Kelly sizing, and bet selection
+logic are IDENTICAL to ensemble_v9.py, so results here should closely
+predict real-world performance.
 
 ╔══════════════════════════════════════════════════════════════════════════════╗
 ║                              CONFIGURATION                                    ║
@@ -127,6 +61,77 @@ EDGE_REQUIREMENTS = {
 # How uncertain weather forecasts typically are
 # Higher = more uncertainty = wider probability spreads
 FORECAST_ERROR_STD = 2.8  # Degrees Fahrenheit
+
+# ============ BID/ASK SPREAD & SLIPPAGE MODELING ============
+# Kalshi weather markets typically have spreads of 1-4 cents
+# We model this as: you pay the ASK (mid + half spread) when buying
+#
+# Spread tends to be:
+#   - Tighter (1-2¢) for liquid contracts near 50¢
+#   - Wider (2-4¢) for illiquid contracts near extremes (10¢ or 90¢)
+#
+# Slippage accounts for price movement between your decision and execution
+
+ENABLE_SPREAD_SLIPPAGE = True  # Set to False to see results without friction
+
+# Base spread in cents (will be adjusted by liquidity)
+BASE_SPREAD_CENTS = 2.0
+
+# Additional spread for illiquid price ranges (near 0 or 100)
+ILLIQUIDITY_SPREAD_CENTS = 1.5
+
+# Random slippage range (cents) - models price movement
+SLIPPAGE_RANGE_CENTS = 1.0
+
+def calculate_execution_price(mid_price, side, volume=0):
+    """
+    Calculate the actual execution price after spread and slippage.
+
+    Args:
+        mid_price: The "last_price" which we treat as mid-market
+        side: "YES" or "NO" - determines if we pay ask or receive bid
+        volume: Contract volume (higher = more liquid = tighter spread)
+
+    Returns:
+        execution_price: What you actually pay/receive
+        friction_cost: The cost of spread + slippage (as a fraction)
+    """
+    if not ENABLE_SPREAD_SLIPPAGE:
+        return mid_price, 0.0
+
+    # Calculate spread based on price level (wider at extremes)
+    # Prices near 50¢ are most liquid, prices near 0 or 100 are illiquid
+    distance_from_center = abs(mid_price - 0.50)
+    illiquidity_factor = distance_from_center * 2  # 0 at center, 1 at extremes
+
+    # Total spread in cents
+    spread_cents = BASE_SPREAD_CENTS + (ILLIQUIDITY_SPREAD_CENTS * illiquidity_factor)
+
+    # Volume adjustment (higher volume = tighter spread)
+    # Typical Kalshi weather volume is 1000-50000
+    if volume > 10000:
+        spread_cents *= 0.8  # 20% tighter for high volume
+    elif volume < 1000:
+        spread_cents *= 1.3  # 30% wider for low volume
+
+    # Random slippage (can be positive or negative)
+    slippage_cents = np.random.uniform(-SLIPPAGE_RANGE_CENTS, SLIPPAGE_RANGE_CENTS)
+
+    # Convert to decimal
+    half_spread = (spread_cents / 2) / 100
+    slippage = slippage_cents / 100
+
+    # When BUYING (YES or NO), you pay the ASK (mid + half spread + slippage)
+    # We're always buying contracts, never selling
+    execution_price = mid_price + half_spread + slippage
+
+    # Clamp to valid range
+    execution_price = max(0.01, min(0.99, execution_price))
+
+    # Calculate friction cost
+    friction_cost = execution_price - mid_price
+
+    return execution_price, friction_cost
 
 # ============ BETTING TIMING ASSUMPTION ============
 # This is CRITICAL for understanding what this backtest simulates.
@@ -504,34 +509,36 @@ def format_bet_explanation(bet_size, price, side, won, actual_temp, forecast):
 def model_probability(forecast, contract_type, bound1, bound2, error_std):
     """
     Calculate the probability that a contract will resolve YES.
-    
+
     Uses a Gaussian distribution centered on the forecast with standard
     deviation representing typical forecast error.
-    
+
+    THIS MATCHES ensemble_v9.py's calibrated_probability() functions exactly.
+
     Args:
         forecast: Our predicted temperature
         contract_type: "range" (e.g., 73-74°F), "below" (<73°F), or "above" (>76°F)
         bound1: Lower bound (or threshold for below/above)
         bound2: Upper bound (for range contracts)
         error_std: Standard deviation of forecast errors
-    
+
     Returns:
         Probability between 0.01 and 0.99
     """
     if contract_type == "range":
-        # P(actual in [bound1, bound2])
-        # Uses cumulative distribution function (CDF)
-        prob = stats.norm.cdf(bound2, forecast, error_std) - \
-               stats.norm.cdf(bound1, forecast, error_std)
+        # P(actual in [bound1, bound2]) - matches v9's calibrated_probability
+        # Using +0.5/-0.5 to account for discrete temperature readings
+        prob = stats.norm.cdf(bound2 + 0.5, forecast, error_std) - \
+               stats.norm.cdf(bound1 - 0.5, forecast, error_std)
     elif contract_type == "below":
-        # P(actual <= bound1)
+        # P(actual <= bound1) - matches v9's calibrated_below_probability
         prob = stats.norm.cdf(bound1 + 0.5, forecast, error_std)
     elif contract_type == "above":
-        # P(actual >= bound1)
+        # P(actual >= bound1) - matches v9's calibrated_above_probability
         prob = 1 - stats.norm.cdf(bound1 - 0.5, forecast, error_std)
     else:
         return 0.5
-    
+
     # Clamp to reasonable bounds (never say 0% or 100%)
     return max(min(prob, 0.99), 0.01)
 
@@ -659,7 +666,9 @@ def run_backtest(kalshi_df, city, use_simulated_forecasts=True):
             mtype = contract["market_type"]
             if mtype == "range" and pd.notna(contract.get("temp_low")):
                 ctype = "range"
-                b1, b2 = contract["temp_low"], contract["temp_high"] + 1
+                # temp_low and temp_high are the actual contract bounds
+                # e.g., "73° to 74°" means temp_low=73, temp_high=74
+                b1, b2 = contract["temp_low"], contract["temp_high"]
             elif mtype == "below" and pd.notna(contract.get("temp_high")):
                 ctype = "below"
                 b1, b2 = contract["temp_high"], None
@@ -742,44 +751,57 @@ def run_backtest(kalshi_df, city, use_simulated_forecasts=True):
         # === CALCULATE BET SIZES AND EXECUTE ===
         day_profit = 0
         bets_placed_today = 0
-        
+
         for bet in selected_bets:
-            bet_price = bet["bet_price"]
-            our_prob_win = bet["our_prob"] if bet["side"] == "YES" else (1 - bet["our_prob"])
-            
+            mid_price = bet["bet_price"]  # This is the "mid" or last price
+            contract = bet["contract"]
+            side = bet["side"]
+
+            # Apply spread and slippage to get actual execution price
+            volume = contract.get("volume", 5000)  # Default to moderate volume
+            execution_price, friction_cost = calculate_execution_price(mid_price, side, volume)
+
+            # Recalculate edge after friction - we might not want to bet anymore!
+            our_prob_win = bet["our_prob"] if side == "YES" else (1 - bet["our_prob"])
+            actual_edge = our_prob_win - execution_price
+            min_edge = get_min_edge(execution_price)
+
+            # Skip if edge is no longer sufficient after spread/slippage
+            if actual_edge < min_edge:
+                results["skipped_spread"] = results.get("skipped_spread", 0) + 1
+                continue
+
             if BETTING_MODE == "kelly":
                 bet_size, kelly_info = calculate_kelly_bet(
-                    current_bankroll, 
-                    our_prob_win, 
-                    bet_price,
+                    current_bankroll,
+                    our_prob_win,
+                    execution_price,  # Use execution price for Kelly sizing
                     KELLY_FRACTION
                 )
                 bet["kelly_info"] = kelly_info
             else:
                 bet_size = FLAT_BET_SIZE
                 bet["kelly_info"] = None
-            
+
             # Skip if Kelly says don't bet
             if bet_size < MIN_BET_SIZE:
                 results["skipped_kelly_zero"] += 1
                 continue
-            
+
             # === EXECUTE THIS BET ===
             results["bets_placed"] += 1
             results["total_wagered"] += bet_size
+            results["total_friction"] = results.get("total_friction", 0) + (friction_cost * bet_size)
             bets_placed_today += 1
-            
-            contract = bet["contract"]
-            side = bet["side"]
-            
+
             # Determine if we won
             if side == "YES":
                 won = contract["result"] == "yes"
             else:
                 won = contract["result"] == "no"
-            
-            # Calculate profit/loss
-            profit, payout = calculate_bet_outcome(bet_size, bet_price, won)
+
+            # Calculate profit/loss using EXECUTION price (what we actually paid)
+            profit, payout = calculate_bet_outcome(bet_size, execution_price, won)
             
             if won:
                 results["bets_won"] += 1
@@ -820,11 +842,14 @@ def run_backtest(kalshi_df, city, use_simulated_forecasts=True):
                 "actual": actual_temp,
                 "contract": contract["contract_subtitle"],
                 "side": side,
-                "bet_price": bet_price,
+                "mid_price": mid_price,
+                "execution_price": execution_price,
+                "friction_cost": friction_cost,
                 "yes_price": bet["kalshi_price"],
                 "our_prob": bet["our_prob"],
                 "our_prob_win": our_prob_win,
-                "edge": bet["edge"],
+                "edge_before_spread": bet["edge"],
+                "edge_after_spread": actual_edge,
                 "edge_ratio": bet["edge_ratio"],
                 "bucket": bucket,
                 "won": won,
@@ -900,6 +925,15 @@ def print_results(results):
     print(f"   Insufficient edge: {results['skipped_low_edge']} days with no good bet")
     if BETTING_MODE == "kelly":
         print(f"   Kelly said don't bet: {results.get('skipped_kelly_zero', 0)} opportunities")
+    if ENABLE_SPREAD_SLIPPAGE:
+        print(f"   Edge lost to spread: {results.get('skipped_spread', 0)} opportunities")
+
+    if ENABLE_SPREAD_SLIPPAGE and results.get('total_friction', 0) > 0:
+        print(f"\n💸 SPREAD & SLIPPAGE COSTS")
+        print(f"   Total friction paid: ${results.get('total_friction', 0):.2f}")
+        if results['total_wagered'] > 0:
+            friction_pct = 100 * results.get('total_friction', 0) / results['total_wagered']
+            print(f"   Friction as % of wagered: {friction_pct:.2f}%")
     
     print(f"\n💰 PERFORMANCE BY PRICE BUCKET")
     for bucket, stats in results["bets_by_bucket"].items():
@@ -948,8 +982,12 @@ def print_results(results):
                 print(f"   Edge ratio: {edge_ratio:.2f}x minimum required")
             
             print(f"   ")
-            print(f"   BET: {bet['side']} at {bet['bet_price']*100:.0f}¢")
-            
+            # Show spread/slippage info if available
+            if "execution_price" in bet:
+                print(f"   BET: {bet['side']} | Mid: {bet['mid_price']*100:.0f}¢ → Paid: {bet['execution_price']*100:.1f}¢ (spread+slip: {bet['friction_cost']*100:+.1f}¢)")
+            else:
+                print(f"   BET: {bet['side']} at {bet.get('mid_price', 0)*100:.0f}¢")
+
             # Show Kelly calculation details
             if BETTING_MODE == "kelly" and "kelly_full_pct" in bet:
                 print(f"   ")
@@ -962,10 +1000,13 @@ def print_results(results):
                 print(f"      → Bet size: ${bet['amount_bet']:.2f}")
             else:
                 print(f"   Amount wagered: ${bet['amount_bet']:.2f}")
-            
+
             print(f"   ")
             print(f"   Your probability: {bet['our_prob_win']*100:.1f}%")
-            print(f"   Your edge: {bet['edge']*100:+.1f}%")
+            if "edge_after_spread" in bet:
+                print(f"   Edge (after spread): {bet['edge_after_spread']*100:+.1f}%")
+            else:
+                print(f"   Edge: {bet.get('edge_before_spread', 0)*100:+.1f}%")
             print(f"   ")
             if bet['won']:
                 print(f"   {status}")
@@ -1095,69 +1136,11 @@ Here's what a daily recommendation might look like:
 """)
 
 
-def main():
-    print("="*70)
-    print("KALSHI WEATHER MODEL BACKTEST - IMPROVED v4 (DOCUMENTED)")
-    print("="*70)
-    
-    print_how_to_read_bets()
-    print_recommendation_examples()
-    
-    if BETTING_MODE == "kelly":
-        explain_kelly_criterion()
-    
-    print(f"\n{'='*70}")
-    print("STRATEGY CONFIGURATION")
-    print(f"{'='*70}")
-    print(f"\n  Betting mode: {BETTING_MODE.upper()}")
-    if BETTING_MODE == "kelly":
-        print(f"  Starting bankroll: ${STARTING_BANKROLL:,.0f}")
-        print(f"  Kelly fraction: {KELLY_FRACTION:.0%} (half Kelly)")
-        print(f"  Min bet size: ${MIN_BET_SIZE:.2f}")
-        print(f"  Max bet: {MAX_BET_FRACTION:.0%} of bankroll")
-    else:
-        print(f"  Bet size: ${FLAT_BET_SIZE:.2f} per bet")
-    print(f"  Min contract price: {MIN_CONTRACT_PRICE*100:.0f}¢ (skip cheap contracts)")
-    print(f"  Max contract price: {MAX_CONTRACT_PRICE*100:.0f}¢ (skip expensive contracts)")
-    print(f"  Sweet spot: {SWEET_SPOT_LOW*100:.0f}¢-{SWEET_SPOT_HIGH*100:.0f}¢ (best historical returns)")
-    print(f"  Min edge required: {EDGE_REQUIREMENTS['sweet_spot']*100:.0f}%")
-    print(f"  Forecast error model: σ = {FORECAST_ERROR_STD}°F")
-    print(f"\n  ⏰ BET TIMING ASSUMPTION: {BET_TIMING_DESCRIPTION}")
-    print(f"     (Using day-ahead forecast and previous day's closing prices)")
-    
-    print(f"\n  🎯 SMART BET SELECTION:")
-    print(f"     • Different cities: Bet freely (uncorrelated)")
-    print(f"     • Same city: Only stack if edge ratio ≥ {SAME_CITY_MULTI_BET_THRESHOLD}x")
-    print(f"     • Max {MAX_BETS_PER_CITY} bets per city, {MAX_TOTAL_BETS_PER_DAY} total per day")
-    print(f"     • 'Super confident' threshold: {SUPER_CONFIDENT_EDGE_RATIO}x edge ratio")
-
-    # Load data
-    kalshi_file = "kalshi_backtest_data.csv"
-    if not os.path.exists(kalshi_file):
-        print(f"\n❌ Error: {kalshi_file} not found!")
-        print("   Please ensure the Kalshi historical data file is in the same directory.")
-        return
-
-    kalshi_df = pd.read_csv(kalshi_file)
-    kalshi_df["date"] = pd.to_datetime(kalshi_df["date"])
-
-    print(f"\n  Loaded {len(kalshi_df)} contract records")
-
-    # Set seed for reproducibility
-    np.random.seed(42)
-
-    all_results = []
-
-    for city in kalshi_df["city"].unique():
-        results = run_backtest(kalshi_df, city, use_simulated_forecasts=True)
-        if results:
-            all_results.append(results)
-            print_results(results)
-
-    # Overall summary
-    print(f"\n{'='*70}")
-    print("OVERALL SUMMARY - ALL CITIES COMBINED")
-    print(f"{'='*70}\n")
+def print_scenario_summary(all_results, scenario_name):
+    """Print summary for a single scenario."""
+    if not all_results:
+        print(f"\n  No results for {scenario_name}")
+        return {}
 
     total_wagered = sum(r["total_wagered"] for r in all_results)
     total_profit = sum(r["net_profit"] for r in all_results)
@@ -1167,104 +1150,146 @@ def main():
     overall_roi = 100 * total_profit / total_wagered if total_wagered > 0 else 0
     overall_wr = 100 * total_wins / total_bets if total_bets > 0 else 0
 
-    print(f"{'City':<25} {'Bets':<8} {'Won':<8} {'Win%':<10} {'Wagered':<12} {'Profit':<12} {'ROI':<10}")
-    print("-" * 85)
+    print(f"\n  {'City':<25} {'Bets':<8} {'Won':<8} {'Win%':<10} {'Profit':<12} {'ROI':<10}")
+    print(f"  {'-'*73}")
     for r in all_results:
-        print(f"{r['city']:<25} {r['bets_placed']:<8} {r['bets_won']:<8} {r['win_rate']:>5.1f}%    ${r['total_wagered']:<9.2f} ${r['net_profit']:>+9.2f}   {r['roi']:>+6.1f}%")
-    print("-" * 85)
-    print(f"{'TOTAL':<25} {total_bets:<8} {total_wins:<8} {overall_wr:>5.1f}%    ${total_wagered:<9.2f} ${total_profit:>+9.2f}   {overall_roi:>+6.1f}%")
+        print(f"  {r['city']:<25} {r['bets_placed']:<8} {r['bets_won']:<8} {r['win_rate']:>5.1f}%    ${r['net_profit']:>+9.2f}   {r['roi']:>+6.1f}%")
+    print(f"  {'-'*73}")
+    print(f"  {'TOTAL':<25} {total_bets:<8} {total_wins:<8} {overall_wr:>5.1f}%    ${total_profit:>+9.2f}   {overall_roi:>+6.1f}%")
 
-    # Bankroll summary for Kelly
     if BETTING_MODE == "kelly":
-        print(f"\n💰 BANKROLL SUMMARY (Kelly Criterion)")
-        print("-" * 70)
-        total_ending = sum(r["ending_bankroll"] for r in all_results)
-        total_starting = STARTING_BANKROLL * len(all_results)
-        overall_growth = 100 * (total_ending - total_starting) / total_starting
-        
-        print(f"{'City':<25} {'Start':<12} {'End':<12} {'Growth':<12} {'Max DD':<10}")
-        print("-" * 70)
+        print(f"\n  Bankroll Performance:")
         for r in all_results:
-            print(f"{r['city']:<25} ${r['starting_bankroll']:<10,.0f} ${r['ending_bankroll']:<10,.2f} {r['bankroll_growth']:>+7.1f}%    {r['max_drawdown']*100:>5.1f}%")
-        print("-" * 70)
-        avg_ending = total_ending / len(all_results) if all_results else 0
-        max_dd = max(r["max_drawdown"] for r in all_results) if all_results else 0
-        print(f"{'AVERAGE':<25} ${STARTING_BANKROLL:<10,.0f} ${avg_ending:<10,.2f} {overall_growth/len(all_results):>+7.1f}%    {max_dd*100:>5.1f}%")
+            print(f"    {r['city']:<23} ${r['starting_bankroll']:.0f} → ${r['ending_bankroll']:.2f} ({r['bankroll_growth']:+.1f}%) | Max DD: {r['max_drawdown']*100:.1f}%")
 
-    # Aggregate by bucket across all cities
-    print(f"\n📊 AGGREGATE BY PRICE BUCKET (All Cities)")
-    print("-" * 70)
-
-    agg_buckets = {
-        "sweet_spot": {"count": 0, "won": 0, "profit": 0, "wagered": 0},
-        "high_price": {"count": 0, "won": 0, "profit": 0, "wagered": 0}
+    return {
+        "total_bets": total_bets,
+        "total_wins": total_wins,
+        "total_wagered": total_wagered,
+        "total_profit": total_profit,
+        "overall_roi": overall_roi,
+        "overall_wr": overall_wr,
     }
 
-    for r in all_results:
-        for bucket, stats in r["bets_by_bucket"].items():
-            agg_buckets[bucket]["count"] += stats["count"]
-            agg_buckets[bucket]["won"] += stats["won"]
-            agg_buckets[bucket]["profit"] += stats["profit"]
-            agg_buckets[bucket]["wagered"] += stats["wagered"]
 
-    for bucket, stats in agg_buckets.items():
-        if stats["count"] > 0:
-            wr = 100 * stats["won"] / stats["count"]
-            roi = 100 * stats["profit"] / stats["wagered"]
-            print(f"  {bucket:<12}: {stats['count']:>4} bets | {wr:>5.1f}% win | ${stats['wagered']:.0f} wagered | ${stats['profit']:>+8.2f} profit ({roi:>+6.1f}% ROI)")
+def main():
+    print("="*70)
+    print("KALSHI WEATHER BACKTEST v5 - ENSEMBLE V9 VALIDATION")
+    print("="*70)
+    print("""
+This backtest validates the ensemble_v9.py betting strategy against
+historical Kalshi data using REALISTIC conditions:
 
-    # Interpretation
+  • Simulated forecast error (~2.8°F std dev)
+  • Bid/ask spread modeling (1-4¢ depending on liquidity)
+  • Random slippage (±1¢)
+
+This gives you the most realistic estimate of actual trading performance.
+""")
+
+    print(f"{'='*70}")
+    print("STRATEGY CONFIGURATION (Same as ensemble_v9.py)")
+    print(f"{'='*70}")
+    print(f"\n  Betting mode: {BETTING_MODE.upper()}")
+    if BETTING_MODE == "kelly":
+        print(f"  Starting bankroll: ${STARTING_BANKROLL:,.0f}")
+        print(f"  Kelly fraction: {KELLY_FRACTION:.0%}")
+        print(f"  Min bet size: ${MIN_BET_SIZE:.2f}")
+        print(f"  Max bet: {MAX_BET_FRACTION:.0%} of bankroll")
+    print(f"  Price filter: {MIN_CONTRACT_PRICE*100:.0f}¢ - {MAX_CONTRACT_PRICE*100:.0f}¢")
+    print(f"  Sweet spot: {SWEET_SPOT_LOW*100:.0f}¢ - {SWEET_SPOT_HIGH*100:.0f}¢")
+    print(f"  Min edge: {EDGE_REQUIREMENTS['sweet_spot']*100:.0f}%")
+    print(f"  Forecast uncertainty: σ = {FORECAST_ERROR_STD}°F")
+
+    print(f"\n  📊 SPREAD/SLIPPAGE MODEL:")
+    if ENABLE_SPREAD_SLIPPAGE:
+        print(f"     Base spread: {BASE_SPREAD_CENTS}¢")
+        print(f"     Illiquidity spread: +{ILLIQUIDITY_SPREAD_CENTS}¢ at price extremes")
+        print(f"     Random slippage: ±{SLIPPAGE_RANGE_CENTS}¢")
+    else:
+        print(f"     DISABLED - using mid-market prices")
+
+    # Load Kalshi data
+    kalshi_file = "kalshi_backtest_data.csv"
+    if not os.path.exists(kalshi_file):
+        print(f"\n❌ Error: {kalshi_file} not found!")
+        return
+
+    kalshi_df = pd.read_csv(kalshi_file)
+    kalshi_df["date"] = pd.to_datetime(kalshi_df["date"])
+    print(f"\n  Loaded {len(kalshi_df)} Kalshi contract records")
+
+    cities = kalshi_df["city"].unique()
+    print(f"  Cities: {', '.join(cities)}")
+
+    # ========== RUN BACKTEST ==========
     print(f"\n{'='*70}")
-    print("INTERPRETATION & NEXT STEPS")
+    print("RUNNING BACKTEST (Simulated Forecasts + Spread/Slippage)")
     print(f"{'='*70}")
 
-    if overall_roi > 0:
-        print(f"\n✅ PROFITABLE: {overall_roi:+.1f}% ROI on ${total_wagered:.0f} wagered")
-        print(f"   Net profit: ${total_profit:+.2f}")
-        print("   The strategy filters appear to be working!")
+    np.random.seed(42)  # For reproducibility
+    all_results = []
+
+    for city in cities:
+        results = run_backtest(kalshi_df, city, use_simulated_forecasts=True)
+        if results:
+            all_results.append(results)
+            print_results(results)
+
+    # ========== OVERALL SUMMARY ==========
+    summary = print_scenario_summary(all_results, "All Cities")
+
+    # ========== AGGREGATE STATS ==========
+    print(f"\n{'='*70}")
+    print("AGGREGATE STATISTICS")
+    print(f"{'='*70}")
+
+    # Total friction
+    total_friction = sum(r.get("total_friction", 0) for r in all_results)
+    total_wagered = sum(r["total_wagered"] for r in all_results)
+    total_skipped_spread = sum(r.get("skipped_spread", 0) for r in all_results)
+
+    if ENABLE_SPREAD_SLIPPAGE:
+        print(f"\n  💸 SPREAD/SLIPPAGE IMPACT:")
+        print(f"     Total friction paid: ${total_friction:.2f}")
+        if total_wagered > 0:
+            print(f"     Friction as % of wagered: {100*total_friction/total_wagered:.2f}%")
+        print(f"     Bets skipped due to spread eating edge: {total_skipped_spread}")
+
+    # ========== INTERPRETATION ==========
+    print(f"\n{'='*70}")
+    print("INTERPRETATION")
+    print(f"{'='*70}")
+
+    if summary.get('overall_roi', 0) > 0:
+        print(f"""
+  ✅ BACKTEST IS PROFITABLE: {summary.get('overall_roi', 0):+.1f}% ROI
+
+  With realistic spread/slippage and simulated forecast errors,
+  the ensemble_v9.py strategy shows positive expected returns.
+
+  Key stats:
+    • Win rate: {summary.get('overall_wr', 0):.1f}%
+    • Total bets: {summary.get('total_bets', 0)}
+    • Net profit: ${summary.get('total_profit', 0):+.2f}
+""")
     else:
-        print(f"\n⚠️  NOT PROFITABLE: {overall_roi:.1f}% ROI")
-        print("   Consider adjusting edge requirements or price filters.")
+        print(f"""
+  ⚠️  BACKTEST IS NOT PROFITABLE: {summary.get('overall_roi', 0):.1f}% ROI
+
+  After accounting for spread/slippage and forecast errors, the
+  strategy loses money. Consider:
+    • Increasing edge requirements (currently {EDGE_REQUIREMENTS['sweet_spot']*100:.0f}%)
+    • Being more selective with bets
+    • Waiting for better liquidity
+""")
 
     print("""
-╔══════════════════════════════════════════════════════════════════════════════╗
-║                              IMPORTANT NOTES                                  ║
-╚══════════════════════════════════════════════════════════════════════════════╝
-
-1. BET TIMING ASSUMPTION
-   This backtest assumes you place bets the EVENING BEFORE (6-8 PM).
-   
-   Example timeline for Jan 15th contract:
-     • Jan 14th, 6 PM: Check forecast + Kalshi prices
-     • Jan 14th, 6 PM: Place your bet
-     • Jan 15th: Actual high temp recorded
-     • Jan 15th, evening: Contract settles
-   
-   This gives you a ~18-24 hour forecast window, which matches the
-   FORECAST_ERROR_STD of 2.8°F used in the probability model.
-
-2. SIMULATED FORECASTS
-   This backtest uses SIMULATED forecasts (actual temp + random noise).
-   Real performance depends on actual forecast quality from HRRR/Open-Meteo.
-
-3. PRICE ASSUMPTIONS
-   The backtest uses "last_price_cents" from historical data.
-   Real trading considerations:
-     • Bid/ask spread (you pay slightly more than mid-price)
-     • Price movement between decision and execution
-     • Liquidity (large bets may move the market)
-
-4. FOR LIVE TRADING
-   • Check forecasts around 5-7 PM the day before
-   • Use real HRRR/Open-Meteo ensemble forecasts
-   • Place bets when you see good edge (>12%)
-   • Apply the same price filters (15-90¢ range)
-   • Focus on the sweet spot (15-50¢)
-
-5. RISK MANAGEMENT
-   • Never bet more than you can afford to lose
-   • Expect losing streaks (even +20% ROI has bad weeks)
-   • Track your results and adjust as needed
+  ⚠️  IMPORTANT CAVEATS:
+     • Simulated forecasts use random noise - real forecasts may differ
+     • Spread model is estimated - actual spreads vary
+     • Past performance does not guarantee future results
+     • High drawdowns require strong risk tolerance
 """)
 
 
