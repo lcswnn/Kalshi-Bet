@@ -25,6 +25,10 @@ from datetime import datetime, timedelta
 import re
 from scipy import stats
 import argparse
+try:
+    from zoneinfo import ZoneInfo
+except ImportError:
+    from backports.zoneinfo import ZoneInfo  # type: ignore
 
 # ============ HRRR/HERBIE IMPORTS ============
 try:
@@ -50,8 +54,15 @@ MAX_BETS_PER_CITY = 2                  # Never more than 2 bets in same city
 MAX_TOTAL_BETS_PER_DAY = 6             # Cap total daily bets across all cities
 SUPER_CONFIDENT_EDGE_RATIO = 2.5       # What counts as "super confident"
 
+# ============ TIMEZONE CONFIGURATION ============
+# Kalshi markets are based on US Eastern time
+KALSHI_TIMEZONE = ZoneInfo("America/New_York")
+# After this hour (Eastern), look at "today's" markets instead of "tomorrow's"
+# (e.g., after 6 PM ET, you probably want to see today's markets for last-minute bets)
+EVENING_CUTOFF_HOUR = 18  # 6 PM Eastern
+
 # ============ KELLY CRITERION CONFIGURATION ============
-STARTING_BANKROLL = 40        # Your bankroll
+STARTING_BANKROLL = 100        # Your bankroll
 KELLY_FRACTION = 0.75         # Half Kelly (balanced risk/reward)
 MIN_BET_SIZE = 0.50           # Don't bet less than 50¢
 MAX_BET_FRACTION = 0.15       # Never bet more than 15% of bankroll
@@ -170,12 +181,55 @@ all_qualifying_bets = []
 selected_cities = ["chicago", "nyc", "miami"]
 
 
+# ============ TIMEZONE HELPERS ============
+def get_eastern_now():
+    """Get the current datetime in US Eastern time."""
+    return datetime.now(KALSHI_TIMEZONE)
+
+def get_target_date(force_today=False):
+    """
+    Get the target date for market lookup.
+
+    By default:
+    - Before EVENING_CUTOFF_HOUR Eastern: look at tomorrow's markets
+    - After EVENING_CUTOFF_HOUR Eastern: look at today's markets
+
+    Args:
+        force_today: If True, always look at today's markets
+
+    Returns:
+        target_date: The date to look up markets for
+        is_today: Whether we're looking at today's markets
+    """
+    eastern_now = get_eastern_now()
+    eastern_today = eastern_now.date()
+
+    if force_today:
+        return eastern_today, True
+
+    # After evening cutoff, look at today's markets for last-minute bets
+    if eastern_now.hour >= EVENING_CUTOFF_HOUR:
+        return eastern_today, True
+    else:
+        return eastern_today + timedelta(days=1), False
+
 # ============ HEADER ============
-def print_header():
+def print_header(target_date, is_today):
     print("=" * 70)
     print("KALSHI WEATHER BETTING MODEL v9")
     print("(Smart Bet Selection + Kelly Criterion)")
     print("=" * 70)
+
+    eastern_now = get_eastern_now()
+    local_now = datetime.now()
+    print(f"\nYour local time: {local_now.strftime('%Y-%m-%d %H:%M')}")
+    print(f"US Eastern time: {eastern_now.strftime('%Y-%m-%d %H:%M')}")
+
+    if is_today:
+        print(f"Looking at: TODAY's markets ({target_date.strftime('%Y-%m-%d')})")
+    else:
+        print(f"Looking at: TOMORROW's markets ({target_date.strftime('%Y-%m-%d')})")
+
     print(f"\nAnalyzing: Chicago, New York City, Miami")
     print(f"Agreement Threshold: ±{ENSEMBLE_AGREEMENT_THRESHOLD}°F")
     print(f"Price Filter: {MIN_CONTRACT_PRICE*100:.0f}¢ - {MAX_CONTRACT_PRICE*100:.0f}¢")
@@ -392,10 +446,15 @@ def calibrated_above_probability(threshold, forecast, uncertainty_std, agreement
 
 # ============ CITY ANALYSIS ============
 
-def analyze_city(city_key, bankroll):
+def analyze_city(city_key, bankroll, target_date):
     """
     Analyze a single city and return all qualifying bets.
     Does NOT make final bet selection - that happens across all cities.
+
+    Args:
+        city_key: Key for the city in the cities dict
+        bankroll: Current bankroll amount
+        target_date: The date to analyze markets for (in US Eastern time)
     """
     city = cities[city_key]
     qualifying_bets = []
@@ -412,9 +471,7 @@ def analyze_city(city_key, bankroll):
         print(f"❌ Error: {city['csv_file']} not found.")
         return qualifying_bets, None
 
-    # Set target date
-    today = datetime.now().date()
-    target_date = today + timedelta(days=1)
+    # Use the target date passed in (already in US Eastern time)
     target_str = target_date.strftime("%Y-%m-%d")
 
     # ============ FETCH FORECASTS ============
@@ -712,14 +769,14 @@ def smart_select_bets(all_bets):
     return selected_bets
 
 
-def print_recommendations(selected_bets, all_bets, city_summaries, bankroll):
+def print_recommendations(selected_bets, all_bets, city_summaries, bankroll, target_date):
     """Print the final betting recommendations in a clear format."""
-    
-    target_date = (datetime.now().date() + timedelta(days=1)).strftime("%A, %B %d, %Y")
+
+    target_date_str = target_date.strftime("%A, %B %d, %Y")
     
     print(f"\n{'='*70}")
     print("🎯 TODAY'S BETTING RECOMMENDATIONS")
-    print(f"📅 Target Date: {target_date}")
+    print(f"📅 Target Date: {target_date_str}")
     print(f"💰 Bankroll: ${bankroll:.2f}")
     print(f"{'='*70}")
     
@@ -826,13 +883,36 @@ def main():
                         help=f'Kelly fraction (default: {KELLY_FRACTION})')
     parser.add_argument('--bankroll', type=float, default=STARTING_BANKROLL,
                         help=f'Starting bankroll in dollars (default: {STARTING_BANKROLL})')
+    parser.add_argument('--today', action='store_true',
+                        help="Look at today's markets instead of tomorrow's")
+    parser.add_argument('--tomorrow', action='store_true',
+                        help="Force looking at tomorrow's markets (even if it's evening)")
+    parser.add_argument('--date', type=str, default=None,
+                        help="Specify a specific date (format: YYYY-MM-DD, e.g., 2025-12-10)")
     args = parser.parse_args()
 
     # Update global settings from command-line args
     KELLY_FRACTION = args.kelly
     STARTING_BANKROLL = args.bankroll
 
-    print_header()
+    # Determine target date based on US Eastern time
+    if args.date:
+        # Use the specific date provided
+        target_date = datetime.strptime(args.date, "%Y-%m-%d").date()
+        eastern_today = get_eastern_now().date()
+        is_today = (target_date == eastern_today)
+    elif args.today:
+        target_date, is_today = get_target_date(force_today=True)
+    elif args.tomorrow:
+        # Force tomorrow regardless of time
+        eastern_now = get_eastern_now()
+        target_date = eastern_now.date() + timedelta(days=1)
+        is_today = False
+    else:
+        # Auto-detect based on Eastern time
+        target_date, is_today = get_target_date()
+
+    print_header(target_date, is_today)
 
     bankroll = STARTING_BANKROLL
     all_bets = []
@@ -840,7 +920,7 @@ def main():
 
     # Analyze each city
     for city_key in selected_cities:
-        city_bets, city_summary = analyze_city(city_key, bankroll)
+        city_bets, city_summary = analyze_city(city_key, bankroll, target_date)
         all_bets.extend(city_bets)
         city_summaries.append(city_summary)
 
@@ -848,7 +928,7 @@ def main():
     selected_bets = smart_select_bets(all_bets)
 
     # Print recommendations
-    print_recommendations(selected_bets, all_bets, city_summaries, bankroll)
+    print_recommendations(selected_bets, all_bets, city_summaries, bankroll, target_date)
 
     print(f"\n{'='*70}")
     print("ANALYSIS COMPLETE (v9 - Smart Bet Selection)")

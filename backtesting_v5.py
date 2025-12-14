@@ -38,8 +38,8 @@ BETTING_MODE = "kelly"
 FLAT_BET_SIZE = 10  # $10 per bet (used if BETTING_MODE = "flat")
 
 # Kelly Criterion settings
-STARTING_BANKROLL = 40    # Starting bankroll for Kelly sizing ($20-$40 range)
-KELLY_FRACTION = 0.50     # Use 1/2 Kelly (balanced risk/reward)
+STARTING_BANKROLL = 80    # Starting bankroll for Kelly sizing ($20-$40 range)
+KELLY_FRACTION = 0.75     # Use 1/2 Kelly (balanced risk/reward)
 MIN_BET_SIZE = 0.50       # Minimum bet size (don't bet less than 50¢)
 MAX_BET_FRACTION = 0.15   # Never bet more than 15% of bankroll on one bet on one bet
 

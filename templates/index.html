@@ -25,6 +25,16 @@
         <label class="inter-medium" for="startingBankroll">Starting Bankroll ($):</label>
         <input type="number" id="startingBankroll" value="40" min="1" step="1">
       </div>
+      <div class="setting-group">
+        <label class="inter-medium" for="targetDate">Target Date:</label>
+        <select id="targetDate">
+          <option value="auto">Auto (based on time)</option>
+          <option value="today">Today</option>
+          <option value="tomorrow">Tomorrow</option>
+          <option value="custom">Custom Date</option>
+        </select>
+        <input type="date" id="customDate" style="display: none;">
+      </div>
     </div>
     <button class="inter-medium button" onclick="runModel()">Generate Picks</button>
   </div>
@@ -37,10 +47,32 @@
 
 
   <script>
+    // Show/hide custom date picker based on selection
+    document.getElementById("targetDate").addEventListener("change", function() {
+      const customDateInput = document.getElementById("customDate");
+      if (this.value === "custom") {
+        customDateInput.style.display = "block";
+        // Set default to tomorrow
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        customDateInput.value = tomorrow.toISOString().split('T')[0];
+      } else {
+        customDateInput.style.display = "none";
+      }
+    });
+
     function runModel() {
       // Get settings values
       const kellyFraction = document.getElementById("kellyFraction").value;
       const startingBankroll = document.getElementById("startingBankroll").value;
+      const targetDate = document.getElementById("targetDate").value;
+      const customDate = document.getElementById("customDate").value;
+
+      // Build URL with date parameter
+      let url = `/run-model?kelly=${kellyFraction}&bankroll=${startingBankroll}&dateOption=${targetDate}`;
+      if (targetDate === "custom" && customDate) {
+        url += `&customDate=${customDate}`;
+      }
 
       // Show loader
       document.getElementById("loader").style.display = "block";
@@ -48,7 +80,7 @@
       // Clear output
       document.getElementById("outputBox").value = "Running Ensemble V9...";
 
-      fetch(`/run-model?kelly=${kellyFraction}&bankroll=${startingBankroll}`)
+      fetch(url)
         .then(response => response.json())
         .then(data => {
           // Hide loader

@@ -65,7 +65,8 @@ h3 {
   font-size: 1rem;
 }
 
-.setting-group input {
+.setting-group input,
+.setting-group select {
   width: 120px;
   padding: 10px 15px;
   font-size: 1.1rem;
@@ -78,7 +79,18 @@ h3 {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.setting-group input:focus {
+.setting-group select {
+  width: 150px;
+  cursor: pointer;
+}
+
+.setting-group input[type="date"] {
+  width: 150px;
+  margin-top: 8px;
+}
+
+.setting-group input:focus,
+.setting-group select:focus {
   outline: 2px solid var(--black);
   outline-offset: 2px;
 }
