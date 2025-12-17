@@ -18,7 +18,7 @@ def run_model():
     custom_date = request.args.get("customDate", "")
 
     # Path to ensemble_v9.py (adjust if needed)
-    script_path = os.path.join(os.path.dirname(__file__), "ensemble_v9.py")
+    script_path = os.path.join(os.path.dirname(__file__), "ensemble_v10.py")
 
     # Build command with date arguments
     cmd = [sys.executable, script_path, "--kelly", kelly_fraction, "--bankroll", starting_bankroll]
