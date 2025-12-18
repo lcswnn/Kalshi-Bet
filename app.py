@@ -7,7 +7,15 @@ app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return render_template("index.html")
+    return render_template("weather.html")
+
+@app.route('/weather')
+def weather():
+    return render_template("weather.html")
+
+@app.route('/sports')
+def sports():
+    return render_template("sports.html")
 
 @app.route("/run-model", methods=["GET"])
 def run_model():
@@ -17,7 +25,7 @@ def run_model():
     date_option = request.args.get("dateOption", "auto")
     custom_date = request.args.get("customDate", "")
 
-    # Path to ensemble_v9.py (adjust if needed)
+    # Path to ensemble_v10.py
     script_path = os.path.join(os.path.dirname(__file__), "ensemble_v10.py")
 
     # Build command with date arguments
@@ -43,7 +51,32 @@ def run_model():
         "output": result.stdout,
         "error": result.stderr
     })
-    
+
+@app.route("/run-sports-model", methods=["GET"])
+def run_sports_model():
+    # Get parameters from query string
+    kelly_fraction = request.args.get("kelly", "0.50")
+    starting_bankroll = request.args.get("bankroll", "100")
+
+    # Path to sports_betting_model.py
+    script_path = os.path.join(os.path.dirname(__file__), "sports_betting_model.py")
+
+    # Build command
+    cmd = [sys.executable, script_path, "--kelly", kelly_fraction, "--bankroll", starting_bankroll]
+
+    # Run the script and capture output
+    result = subprocess.run(
+        cmd,
+        capture_output=True,
+        text=True
+    )
+
+    # Return the printed output (stdout)
+    return jsonify({
+        "output": result.stdout,
+        "error": result.stderr
+    })
+
 @app.route('/about')
 def about():
   return render_template('about.html')
