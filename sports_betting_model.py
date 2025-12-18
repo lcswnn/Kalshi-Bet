@@ -62,20 +62,21 @@ MIN_BET_SIZE = 1.0          # Minimum $1 bet
 MAX_BET_FRACTION = 0.10     # Never bet more than 10% of bankroll
 MAX_TOTAL_BETS_PER_DAY = 5  # Cap daily bet count
 
-# Elo Rating Configuration
+# Elo Rating Configuration (FiveThirtyEight methodology)
 INITIAL_ELO = 1500          # Starting Elo rating
-K_FACTOR = 32               # How quickly ratings adjust (20-40 typical)
-HOME_ADVANTAGE = 100        # Home court Elo boost (varies by sport)
+K_FACTOR = 20               # FiveThirtyEight uses K=20 for NBA
+HOME_ADVANTAGE = 100        # FiveThirtyEight: 100 Elo = ~3.5 points
 ELO_SCALE = 400             # Logistic scaling factor
+POINT_SPREAD_DIVISOR = 28   # FiveThirtyEight: (Elo_diff + 100) / 28 = spread
 
 # League-Specific Settings (can be customized per sport)
 LEAGUE_SETTINGS = {
     "NBA": {
-        "home_advantage": 100,
-        "k_factor": 32,
-        "rest_advantage_per_day": 10,  # Elo boost per extra rest day
-        "back_to_back_penalty": 40,    # Elo penalty for back-to-back games
-        "win_streak_boost": 5,         # Elo boost per game in win streak (max 3 games)
+        "home_advantage": 100,         # FiveThirtyEight uses 100 Elo points
+        "k_factor": 20,                # FiveThirtyEight: K=20 for NBA
+        "rest_advantage_per_day": 0,   # FiveThirtyEight doesn't use this
+        "back_to_back_penalty": 0,     # FiveThirtyEight doesn't use this
+        "win_streak_boost": 0,         # FiveThirtyEight doesn't use this
     },
     "NFL": {
         "home_advantage": 65,
@@ -334,14 +335,18 @@ class KalshiClient:
         try:
             url = f"{self.base_url}/markets"
             
-            # Make a single API call to avoid rate limiting
+            # Kalshi NBA markets use the KXNBAGAME series
             params = {
                 "status": status,
                 "limit": 200,
+                "series_ticker": "KXNBAGAME",  # This is the NBA series!
             }
             
             # Add small delay to avoid rate limiting
             time.sleep(0.5)
+            
+            if debug:
+                print(f"   Searching for series: KXNBAGAME")
             
             response = self.session.get(url, params=params)
             response.raise_for_status()
@@ -350,56 +355,13 @@ class KalshiClient:
             markets = data.get("markets", [])
             
             if debug:
-                print(f"   API returned {len(markets)} total markets")
+                print(f"   Found {len(markets)} markets in KXNBAGAME series")
+                if markets:
+                    print(f"   Sample markets:")
+                    for m in markets[:3]:
+                        print(f"      {m.get('ticker', 'N/A')}: {m.get('title', 'N/A')}")
             
-            # Filter to actual game markets
-            sports_markets = []
-            for market in markets:
-                ticker = market.get("ticker", "")
-                title = market.get("title", "")
-                subtitle = market.get("subtitle", "")
-                
-                title_lower = title.lower()
-                subtitle_lower = subtitle.lower()
-                
-                # Look for actual game matchup patterns
-                has_vs = " vs " in title_lower or " v " in title_lower or "@" in title
-                has_game_keyword = ("win" in title_lower or "beat" in title_lower or 
-                                   "game" in subtitle_lower or "winner" in title_lower)
-                
-                # Exclude non-sports markets
-                exclude_keywords = [
-                    "video game", "cover athlete", "election", "pope", "mars", 
-                    "climate", "hockey", "football", "soccer", "cricket", "tennis",
-                    "2 degrees", "restoring underlying", "kagame", "turkish"
-                ]
-                is_excluded = any(exclude in title_lower for exclude in exclude_keywords)
-                
-                # Check for NBA team names
-                nba_teams = [
-                    "lakers", "celtics", "warriors", "heat", "knicks", "nets",
-                    "bucks", "76ers", "sixers", "clippers", "mavericks", "hawks", 
-                    "hornets", "bulls", "cavaliers", "pistons", "pacers", "grizzlies", 
-                    "pelicans", "magic", "raptors", "thunder", "blazers", "kings", 
-                    "spurs", "suns", "timberwolves", "wolves", "jazz", "nuggets", 
-                    "rockets", "wizards", "atlanta", "brooklyn", "charlotte", "chicago",
-                    "cleveland", "dallas", "denver", "detroit", "golden state", 
-                    "houston", "indiana", "los angeles", "memphis", "miami", 
-                    "milwaukee", "minnesota", "new orleans", "new york", "oklahoma",
-                    "orlando", "philadelphia", "phoenix", "portland", "sacramento",
-                    "san antonio", "toronto", "utah", "washington"
-                ]
-                has_nba_team = any(team in title_lower for team in nba_teams)
-                
-                if ((has_vs and has_game_keyword) or has_nba_team) and not is_excluded:
-                    sports_markets.append(market)
-                    if debug:
-                        print(f"   ✅ Found: {title[:70]}")
-            
-            if debug:
-                print(f"   Total basketball markets found: {len(sports_markets)}")
-            
-            return sports_markets
+            return markets
             
         except requests.exceptions.HTTPError as e:
             if e.response.status_code == 429:
@@ -412,13 +374,12 @@ class KalshiClient:
                     data = response.json()
                     markets = data.get("markets", [])
                     print(f"   Retry successful. Got {len(markets)} markets")
-                    # Filter same as above (simplified for retry)
-                    return [m for m in markets if "win" in m.get("title", "").lower()]
+                    return markets
                 except:
                     print(f"❌ Still rate limited. Please wait a minute and try again.")
                     return []
             else:
-                print(f"❌ Error fetching Kalshi markets: {e}")
+                print(f"❌ HTTP Error: {e}")
                 return []
         except Exception as e:
             print(f"❌ Error fetching Kalshi markets: {e}")
@@ -456,6 +417,11 @@ def parse_game_from_market(market):
     """
     Extract game information from Kalshi market data.
     
+    Kalshi NBA format:
+    - Ticker: KXNBAGAME-25DEC18NYKIND-NYK
+    - Format: YYMMMDD (25DEC18 = 2025, December, 18th)
+    - Title: "New York vs Indiana Winner?"
+    
     Returns:
         dict with keys: team_a, team_b, team_a_home, game_date, market_ticker, 
                         bet_price, subtitle, market_type
@@ -465,53 +431,156 @@ def parse_game_from_market(market):
     subtitle = market.get("subtitle", "")
     ticker = market.get("ticker", "")
     
-    # Try to parse team matchup from title
-    # Common patterns: "Team A vs Team B", "Team A @ Team B", "Will Team A beat Team B"
-    
+    # Parse teams from TITLE: "New York vs Indiana Winner?"
+    # IMPORTANT: In Kalshi format, first team is AWAY, second team is HOME
     teams = None
-    team_a_home = None
+    original_team_a_home = False  # First team in title is AWAY
+    original_team_b_home = True   # Second team in title is HOME
     
-    # Pattern 1: "Team A @ Team B" (Team B is home)
-    if "@" in title:
-        parts = title.split("@")
-        if len(parts) == 2:
-            team_a = parts[0].strip()
-            team_b = parts[1].strip()
-            team_a_home = False
+    if " vs " in title:
+        # Remove " Winner?" from end and split
+        title_clean = title.replace(" Winner?", "").strip()
+        team_parts = title_clean.split(" vs ")
+        
+        if len(team_parts) == 2:
+            team_name_a = team_parts[0].strip()
+            team_name_b = team_parts[1].strip()
+            
+            # Map short names to full names
+            team_map = {
+                "Atlanta": "Atlanta Hawks",
+                "Boston": "Boston Celtics",
+                "Brooklyn": "Brooklyn Nets",
+                "Charlotte": "Charlotte Hornets",
+                "Chicago": "Chicago Bulls",
+                "Cleveland": "Cleveland Cavaliers",
+                "Dallas": "Dallas Mavericks",
+                "Denver": "Denver Nuggets",
+                "Detroit": "Detroit Pistons",
+                "Golden State": "Golden State Warriors",
+                "Houston": "Houston Rockets",
+                "Indiana": "Indiana Pacers",
+                "Los Angeles C": "Los Angeles Clippers",
+                "Los Angeles L": "Los Angeles Lakers",
+                "Memphis": "Memphis Grizzlies",
+                "Miami": "Miami Heat",
+                "Milwaukee": "Milwaukee Bucks",
+                "Minnesota": "Minnesota Timberwolves",
+                "New Orleans": "New Orleans Pelicans",
+                "New York": "New York Knicks",
+                "Oklahoma City": "Oklahoma City Thunder",
+                "Orlando": "Orlando Magic",
+                "Philadelphia": "Philadelphia 76ers",
+                "Phoenix": "Phoenix Suns",
+                "Portland": "Portland Trail Blazers",
+                "Sacramento": "Sacramento Kings",
+                "San Antonio": "San Antonio Spurs",
+                "Toronto": "Toronto Raptors",
+                "Utah": "Utah Jazz",
+                "Washington": "Washington Wizards",
+            }
+            
+            team_a = team_map.get(team_name_a, team_name_a)
+            team_b = team_map.get(team_name_b, team_name_b)
             teams = (team_a, team_b)
-    
-    # Pattern 2: "Team A vs Team B" or "Team A v Team B"
-    elif " vs " in title.lower() or " v " in title.lower():
-        parts = title.lower().replace(" vs ", "|").replace(" v ", "|").split("|")
-        if len(parts) == 2:
-            team_a = parts[0].strip().title()
-            team_b = parts[1].strip().title()
-            team_a_home = True  # Assume first team is home in "vs" format
-            teams = (team_a, team_b)
-    
-    # Pattern 3: "Will [Team A] beat [Team B]" or "Will [Team A] win"
-    elif "will" in title.lower() and ("beat" in title.lower() or "defeat" in title.lower()):
-        # Extract team names from subtitle or title
-        pass  # More complex parsing needed
     
     if not teams:
         return None
     
-    # Parse game date from close_time or expiration
-    close_time = market.get("close_time")
+    # Parse game date from TICKER
+    # Format: KXNBAGAME-25DEC18NYKIND-NYK
+    # Date part: 25DEC18 means Year 2025, December, Day 18 (YYMMMDD)
     game_date = None
-    if close_time:
-        try:
-            game_date = datetime.fromisoformat(close_time.replace("Z", "+00:00"))
-        except:
-            pass
+    parts = None
+    try:
+        parts = ticker.split("-")
+        if len(parts) >= 2:
+            date_and_teams = parts[1]  # "25DEC18NYKIND"
+            # Extract date: first 7 chars "25DEC18"
+            date_str = date_and_teams[:7]  # "25DEC18"
+            
+            # Parse: YYMMMDD
+            year_short = date_str[:2]  # "25"
+            month_abbr = date_str[2:5]  # "DEC"
+            day = date_str[5:7]          # "18"
+            
+            # Convert month abbreviation
+            month_map = {
+                "JAN": "01", "FEB": "02", "MAR": "03", "APR": "04",
+                "MAY": "05", "JUN": "06", "JUL": "07", "AUG": "08",
+                "SEP": "09", "OCT": "10", "NOV": "11", "DEC": "12"
+            }
+            month = month_map.get(month_abbr, "01")
+            
+            # Year: 25 -> 2025, 26 -> 2026, etc.
+            year = f"20{year_short}"
+            
+            # Create date string and parse
+            from datetime import datetime, timezone
+            date_str_full = f"{year}-{month}-{day}"
+            game_date = datetime.strptime(date_str_full, "%Y-%m-%d")
+            
+            # Use close_time for the TIME component
+            close_time = market.get("close_time")
+            if close_time:
+                try:
+                    close_dt = datetime.fromisoformat(close_time.replace("Z", "+00:00"))
+                    # Combine ticker date with close_time's time
+                    game_date = game_date.replace(
+                        hour=close_dt.hour,
+                        minute=close_dt.minute,
+                        tzinfo=close_dt.tzinfo
+                    )
+                except:
+                    game_date = game_date.replace(tzinfo=timezone.utc)
+    except Exception as e:
+        # If date parsing fails, use close_time as fallback
+        close_time = market.get("close_time")
+        if close_time:
+            try:
+                from datetime import datetime
+                game_date = datetime.fromisoformat(close_time.replace("Z", "+00:00"))
+            except:
+                pass
     
     # Get market price (yes_bid is what we'd pay to bet "yes")
     yes_bid = market.get("yes_bid")
     no_bid = market.get("no_bid")
     
-    # Determine which side we're betting
-    # If it's "Will Team A win", yes = Team A wins
+    # CRITICAL: Determine which team this market is for
+    # The last part of ticker tells us: KXNBAGAME-25DEC18NYKIND-NYK
+    # This means we're betting on NYK (New York Knicks)
+    betting_on_team = None
+    if parts and len(parts) >= 3:
+        betting_on_code = parts[-1]  # Last part is the team code (e.g., "NYK")
+        
+        # Extract team codes from middle part for comparison
+        date_and_teams = parts[1]
+        team_codes = date_and_teams[7:] if len(date_and_teams) > 7 else ""
+        
+        # Team codes are typically 3 letters each
+        if len(team_codes) == 6:
+            team_a_code = team_codes[:3]  # First 3 letters
+            team_b_code = team_codes[3:]  # Last 3 letters
+            
+            # Determine which team we're betting on
+            if betting_on_code == team_a_code:
+                betting_on_team = "team_a"
+            elif betting_on_code == team_b_code:
+                betting_on_team = "team_b"
+    
+    # If we're betting on team_b, swap teams so team_a is always the betting target
+    # REMEMBER: Original team_a = away, team_b = home
+    team_a_home = original_team_a_home  # False (away)
+    
+    if betting_on_team == "team_b":
+        # We're betting on the home team (team_b)
+        # Swap so our betting target becomes team_a
+        teams = (teams[1], teams[0])
+        # Now team_a is the home team
+        team_a_home = original_team_b_home  # True (home)
+    # else: we're betting on team_a (the away team), so team_a_home stays False
+    
     bet_price = yes_bid / 100 if yes_bid else None
     
     return {
@@ -524,7 +593,7 @@ def parse_game_from_market(market):
         "no_price": no_bid / 100 if no_bid else None,
         "subtitle": subtitle,
         "title": title,
-        "market_type": "moneyline",  # Can be expanded for spreads, totals
+        "market_type": "moneyline",
     }
 
 
@@ -605,6 +674,10 @@ def analyze_betting_opportunity(elo_system, game_info, bankroll):
     team_a_rest = 1
     team_b_rest = 1
     
+    # Get base Elo ratings
+    elo_a = elo_system.get_rating(team_a)
+    elo_b = elo_system.get_rating(team_b)
+    
     # Calculate our win probability using Elo
     our_prob_a_wins = elo_system.calculate_win_probability(
         team_a, team_b, 
@@ -612,6 +685,13 @@ def analyze_betting_opportunity(elo_system, game_info, bankroll):
         team_a_rest_days=team_a_rest,
         team_b_rest_days=team_b_rest
     )
+    
+    # DEBUG: Print calculation details
+    # print(f"DEBUG {team_a} vs {team_b}:")
+    # print(f"  Base Elo: {elo_a:.0f} vs {elo_b:.0f}")
+    # print(f"  Home: {team_a_home}")
+    # print(f"  Calculated prob: {our_prob_a_wins*100:.1f}%")
+    # print(f"  Market price: {bet_price*100:.0f}¢")
     
     # Market implied probability
     market_prob = bet_price
@@ -653,8 +733,8 @@ def analyze_betting_opportunity(elo_system, game_info, bankroll):
         "title": game_info["title"],
         "game_date": game_info.get("game_date"),
         "price_bucket": price_bucket,
-        "elo_a": elo_system.get_rating(team_a),
-        "elo_b": elo_system.get_rating(team_b),
+        "elo_a": elo_a,
+        "elo_b": elo_b,
     }
 
 
@@ -801,8 +881,15 @@ def print_recommendations(bets, bankroll, elo_system):
         home_marker = "🏠" if bet["team_a_home"] else "✈️"
         bucket_emoji = "🎯" if bet["price_bucket"] == "sweet_spot" else "📊"
         
+        # CLEAR BET INDICATION
+        bet_team = bet["team_a"]  # We're always betting on team_a after the fix
+        opponent = bet["team_b"]
+        
         print(f"\n   ┌─ BET #{i}: {bet['title']}")
-        print(f"   │  {home_marker} {bet['team_a']} (Elo: {bet['elo_a']:.0f}) vs {bet['team_b']} (Elo: {bet['elo_b']:.0f})")
+        print(f"   │")
+        print(f"   │  🎰 BET ON: {bet_team} {home_marker}")
+        print(f"   │  🆚 OPPONENT: {opponent}")
+        print(f"   │  📊 Elo: {bet['elo_a']:.0f} (betting on) vs {bet['elo_b']:.0f} (opponent)")
         print(f"   │")
         print(f"   │  🎲 Model probability: {bet['our_prob']*100:.1f}%")
         print(f"   │  💰 Market price: {bet['bet_price']*100:.0f}¢ (implies {bet['market_prob']*100:.1f}%)")
@@ -859,6 +946,8 @@ def main():
                        help='Use Kalshi demo API instead of production')
     parser.add_argument('--debug', action='store_true',
                        help='Show debug information about API responses')
+    parser.add_argument('--show-all', action='store_true',
+                       help='Show all parsed games, even without sufficient edge')
     
     args = parser.parse_args()
     
@@ -909,22 +998,50 @@ def main():
     
     print(f"   Found {len(markets)} potential markets")
     
+    # Get today's date in Eastern time
+    eastern_now = get_eastern_now()
+    today = eastern_now.date()
+    
+    print(f"   Filtering to games on {today.strftime('%B %d, %Y')} only...")
+    
     # Parse and analyze each market
     all_bets = []
     parsed_count = 0
+    skipped_future = 0
     
     for market in markets:
-        game_info = parse_game_from_market(market)
+        if args.debug:
+            print(f"\n   ═══ RAW MARKET DATA ═══")
+            print(f"   Ticker: {market.get('ticker')}")
+            print(f"   Title: {market.get('title')}")
+            print(f"   Subtitle: {market.get('subtitle')}")
+            print(f"   Yes bid: {market.get('yes_bid')}¢")
+            print(f"   No bid: {market.get('no_bid')}¢")
+            print(f"   Close time: {market.get('close_time')}")
         
-        if args.debug and game_info:
-            print(f"\n   📋 Parsed market: {market.get('title')}")
-            print(f"      {game_info['team_a']} vs {game_info['team_b']}")
-            print(f"      Price: {game_info.get('bet_price', 'N/A')}")
+        game_info = parse_game_from_market(market)
         
         if not game_info:
             if args.debug:
-                print(f"\n   ⚠️  Could not parse: {market.get('title')}")
+                print(f"   ⚠️  Could not parse")
             continue
+        
+        # FILTER: Only show TODAY's games
+        game_date = game_info.get('game_date')
+        if game_date:
+            game_day = game_date.date()
+            if game_day != today:
+                skipped_future += 1
+                if args.debug:
+                    print(f"   ⏭️  Skipping (game on {game_day}, not today)")
+                continue
+        
+        if args.debug:
+            print(f"   ─── PARSED ───")
+            print(f"   Team A: {game_info['team_a']}")
+            print(f"   Team B: {game_info['team_b']}")
+            print(f"   Price: {game_info.get('bet_price', 'N/A')}")
+            print(f"   Date: {game_info.get('game_date')}")
         
         parsed_count += 1
         
@@ -933,7 +1050,7 @@ def main():
         
         if bet:
             all_bets.append(bet)
-        elif args.debug and game_info.get('bet_price'):
+        elif args.show_all and game_info.get('bet_price'):
             # Show why it didn't qualify
             team_a = game_info["team_a"]
             team_b = game_info["team_b"]
@@ -944,10 +1061,18 @@ def main():
                 team_b_rest_days=1
             )
             edge = our_prob - game_info.get('bet_price', 0)
-            print(f"      Our prob: {our_prob*100:.1f}%, Edge: {edge*100:+.1f}% (need {BASE_MIN_EDGE*100:.0f}%+)")
+            edge_pct = edge * 100
+            min_edge_needed = BASE_MIN_EDGE * 100
+            
+            print(f"\n   ⚠️  {team_a} vs {team_b}")
+            print(f"      Model: {our_prob*100:.1f}% | Market: {game_info['bet_price']*100:.0f}¢ | Edge: {edge_pct:+.1f}%")
+            print(f"      Need {min_edge_needed:.0f}%+ edge (insufficient)")
+            print(f"      Date: {game_info.get('game_date', 'N/A')}")
     
-    if args.debug:
-        print(f"\n   Successfully parsed {parsed_count}/{len(markets)} markets")
+    if args.show_all:
+        print(f"\n   Successfully parsed {parsed_count} games for today")
+        if skipped_future > 0:
+            print(f"   Skipped {skipped_future} games on future dates")
     
     # Sort by edge (highest first)
     all_bets.sort(key=lambda x: x["edge"], reverse=True)
@@ -956,17 +1081,56 @@ def main():
     selected_bets = all_bets[:MAX_TOTAL_BETS_PER_DAY]
     
     # Print recommendations
+    if not selected_bets:
+        print(f"\n❌ NO BETTING OPPORTUNITIES TODAY ({today.strftime('%B %d, %Y')})")
+        if parsed_count == 0:
+            print(f"   No games found for today.")
+        else:
+            print(f"   Found {parsed_count} games today, but none meet edge requirements.")
+            print(f"   All games are priced too efficiently (need {BASE_MIN_EDGE*100:.0f}%+ edge)")
+        return
+    
+    # Print recommendations for today's games
     print_recommendations(selected_bets, STARTING_BANKROLL, elo_system)
     
     # Show current ratings
     if elo_system.ratings:
         elo_system.print_rankings(top_n=10)
     
+    # ============ QUICK BET SUMMARY ============
+    if selected_bets:
+        print(f"\n{'='*70}")
+        print("🎯 QUICK BET SUMMARY - TOP 3 PICKS")
+        print(f"{'='*70}")
+        
+        for i, bet in enumerate(selected_bets[:3], 1):
+            home_away = "🏠 HOME" if bet["team_a_home"] else "✈️  AWAY"
+            
+            # Confidence based on edge
+            if bet["edge_pct"] > 15:
+                confidence = "🔥 HIGH CONFIDENCE"
+            elif bet["edge_pct"] > 10:
+                confidence = "✅ GOOD"
+            else:
+                confidence = "⚠️  MODERATE"
+            
+            print(f"\n#{i}. BET ${bet['bet_size']:.0f} → {bet['team_a']} {home_away} {confidence}")
+            print(f"    vs {bet['team_b']}")
+            print(f"    Win probability: {bet['our_prob']*100:.0f}% | Edge: {bet['edge_pct']:+.0f}%")
+            print(f"    Market price: {bet['bet_price']*100:.0f}¢ | Potential profit: ${bet['potential_profit']:.2f}")
+            print(f"    Kalshi ticker: {bet['market_ticker']}")
+        
+        print(f"\n{'─'*70}")
+        top_3_wager = sum(b['bet_size'] for b in selected_bets[:3])
+        top_3_profit = sum(b['potential_profit'] for b in selected_bets[:3])
+        print(f"💰 TOTAL FOR TOP 3: Bet ${top_3_wager:.2f} → Potential ${top_3_profit:.2f} profit")
+        print(f"{'='*70}")
+    
     print(f"\n{'='*70}")
     print("ANALYSIS COMPLETE")
     print(f"{'='*70}")
     print(f"\n💡 TIP: Update Elo ratings regularly with:")
-    print(f"   python {Path(__file__).name} --update-elo historical_games.csv")
+    print(f"   python3 {Path(__file__).name} --update-elo Games.csv")
 
 
 if __name__ == "__main__":
