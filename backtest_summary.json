@@ -1,0 +1,25 @@
+{
+  "parameters": {
+    "initial_bankroll": 1000.0,
+    "kelly_fraction": 0.25,
+    "min_edge": 0.05,
+    "k_factor": 20,
+    "home_advantage": 100
+  },
+  "results": {
+    "initial_bankroll": 1000.0,
+    "final_bankroll": 1575.557149310141,
+    "total_return": 575.5571493101411,
+    "roi": 57.555714931014116,
+    "bets_made": 40,
+    "bets_won": 27,
+    "win_rate": 67.5,
+    "total_wagered": 2886.6052651849386,
+    "total_profit": 575.5571493101404,
+    "avg_bet_size": 72.16513162962346,
+    "sharpe_ratio": 3.053533855153652,
+    "max_drawdown": -15.98315230816497,
+    "test_games": 1104
+  },
+  "timestamp": "2025-12-19T17:24:23.223856"
+}

@@ -51,15 +51,15 @@ SWEET_SPOT_LOW = 0.20       # Preferred range lower bound
 SWEET_SPOT_HIGH = 0.60      # Preferred range upper bound
 
 # Edge Requirements
-BASE_MIN_EDGE = 0.08        # 8% minimum edge required
-SWEET_SPOT_MIN_EDGE = 0.06  # 6% edge for sweet spot prices
-HIGH_CONFIDENCE_EDGE = 0.12 # 12% edge for aggressive betting
+BASE_MIN_EDGE = 0.05        # 5% minimum edge required (optimized)
+SWEET_SPOT_MIN_EDGE = 0.04  # 4% edge for sweet spot prices
+HIGH_CONFIDENCE_EDGE = 0.10 # 10% edge for aggressive betting
 
 # Kelly Criterion Configuration
 STARTING_BANKROLL = 100.0
-KELLY_FRACTION = 0.5        # Half Kelly (conservative)
+KELLY_FRACTION = 0.25        # Quarter Kelly (optimized from backtesting)
 MIN_BET_SIZE = 1.0          # Minimum $1 bet
-MAX_BET_FRACTION = 0.10     # Never bet more than 10% of bankroll
+MAX_BET_FRACTION = 0.08     # Never bet more than 8% of bankroll (optimized)
 MAX_TOTAL_BETS_PER_DAY = 5  # Cap daily bet count
 
 # Elo Rating Configuration (FiveThirtyEight methodology)
@@ -145,6 +145,10 @@ class EloRatingSystem:
         self.games_played = {}  # {team_name: count}
         self.win_streaks = {}  # {team_name: current_streak}
         self.last_game_date = {}  # {team_name: datetime}
+        self.recent_form = {}  # {team_name: [last 10 game results (1=win, 0=loss)]}
+        self.head_to_head = {}  # {(team_a, team_b): [results]}
+        self.rating_variance = {}  # {team_name: volatility measure}
+        self.rating_history = {}  # {team_name: [historical ratings]}
         
     def get_rating(self, team):
         """Get current Elo rating for a team."""
@@ -152,6 +156,9 @@ class EloRatingSystem:
             self.ratings[team] = INITIAL_ELO
             self.games_played[team] = 0
             self.win_streaks[team] = 0
+            self.recent_form[team] = []
+            self.rating_variance[team] = 0
+            self.rating_history[team] = [INITIAL_ELO]
         return self.ratings[team]
     
     def expected_score(self, rating_a, rating_b):
@@ -205,6 +212,32 @@ class EloRatingSystem:
         if self.win_streaks.get(team_b, 0) > 0:
             rating_b += streak_b * self.settings["win_streak_boost"]
         
+        # Recent form adjustment (last 10 games)
+        form_a = self.recent_form.get(team_a, [])
+        form_b = self.recent_form.get(team_b, [])
+        if len(form_a) >= 5:
+            form_pct_a = sum(form_a[-10:]) / len(form_a[-10:])
+            # Boost/penalize based on recent performance (max ±15 Elo)
+            form_adj_a = (form_pct_a - 0.5) * 30
+            rating_a += form_adj_a
+        if len(form_b) >= 5:
+            form_pct_b = sum(form_b[-10:]) / len(form_b[-10:])
+            form_adj_b = (form_pct_b - 0.5) * 30
+            rating_b += form_adj_b
+        
+        # Head-to-head adjustment
+        h2h_key = tuple(sorted([team_a, team_b]))
+        if h2h_key in self.head_to_head:
+            h2h_results = self.head_to_head[h2h_key]
+            if len(h2h_results) >= 3:  # Need at least 3 meetings
+                # Calculate team_a's win rate in recent matchups (last 5)
+                recent_h2h = h2h_results[-5:]
+                team_a_wins = sum(1 for winner, _ in recent_h2h if winner == team_a)
+                h2h_rate = team_a_wins / len(recent_h2h)
+                # Apply modest adjustment (max ±20 Elo)
+                h2h_adj = (h2h_rate - 0.5) * 40
+                rating_a += h2h_adj
+        
         # Calculate probability
         win_prob = self.expected_score(rating_a, rating_b)
         
@@ -256,6 +289,43 @@ class EloRatingSystem:
             current_streak = self.win_streaks.get(team_a, 0)
             self.win_streaks[team_a] = current_streak - 1 if current_streak <= 0 else -1
         
+        # Update recent form (keep last 10 games)
+        if team_a not in self.recent_form:
+            self.recent_form[team_a] = []
+        if team_b not in self.recent_form:
+            self.recent_form[team_b] = []
+        
+        self.recent_form[team_a].append(1 if team_a_won else 0)
+        self.recent_form[team_b].append(0 if team_a_won else 1)
+        
+        # Keep only last 10 games
+        self.recent_form[team_a] = self.recent_form[team_a][-10:]
+        self.recent_form[team_b] = self.recent_form[team_b][-10:]
+        
+        # Update head-to-head history
+        h2h_key = tuple(sorted([team_a, team_b]))
+        if h2h_key not in self.head_to_head:
+            self.head_to_head[h2h_key] = []
+        winner = team_a if team_a_won else team_b
+        self.head_to_head[h2h_key].append((winner, game_date))
+        
+        # Update rating history for variance calculation
+        if team_a not in self.rating_history:
+            self.rating_history[team_a] = []
+        if team_b not in self.rating_history:
+            self.rating_history[team_b] = []
+        
+        self.rating_history[team_a].append(self.ratings[team_a])
+        self.rating_history[team_b].append(self.ratings[team_b])
+        
+        # Calculate rating variance (last 20 games)
+        if len(self.rating_history[team_a]) >= 10:
+            recent_ratings = self.rating_history[team_a][-20:]
+            self.rating_variance[team_a] = np.std(recent_ratings)
+        if len(self.rating_history[team_b]) >= 10:
+            recent_ratings = self.rating_history[team_b][-20:]
+            self.rating_variance[team_b] = np.std(recent_ratings)
+        
         # Update last game dates
         if game_date:
             self.last_game_date[team_a] = game_date
@@ -271,6 +341,10 @@ class EloRatingSystem:
             "games_played": self.games_played,
             "win_streaks": self.win_streaks,
             "last_game_date": self.last_game_date,
+            "recent_form": self.recent_form,
+            "head_to_head": self.head_to_head,
+            "rating_variance": self.rating_variance,
+            "rating_history": self.rating_history,
         }
         with open(filepath, 'wb') as f:
             pickle.dump(data, f)
@@ -292,6 +366,12 @@ class EloRatingSystem:
             elo_system.games_played = data["games_played"]
             elo_system.win_streaks = data["win_streaks"]
             elo_system.last_game_date = data["last_game_date"]
+            
+            # Load new tracking data if available (backward compatible)
+            elo_system.recent_form = data.get("recent_form", {})
+            elo_system.head_to_head = data.get("head_to_head", {})
+            elo_system.rating_variance = data.get("rating_variance", {})
+            elo_system.rating_history = data.get("rating_history", {})
             
             print(f"✅ Loaded Elo ratings for {len(elo_system.ratings)} teams")
             return elo_system
