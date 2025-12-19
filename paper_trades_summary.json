@@ -1,0 +1,14 @@
+{
+  "total_trades": 0,
+  "completed_trades": 0,
+  "pending_trades": 4,
+  "wins": 0,
+  "losses": 0,
+  "win_rate": 0,
+  "total_profit": 0,
+  "total_wagered": 0,
+  "roi": 0,
+  "current_bankroll": 1000.0,
+  "initial_bankroll": 1000.0,
+  "return_pct": 0
+}
