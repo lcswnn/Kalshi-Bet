@@ -24,9 +24,10 @@ def run_model():
     starting_bankroll = request.args.get("bankroll", "40")
     date_option = request.args.get("dateOption", "auto")
     custom_date = request.args.get("customDate", "")
+    city_filter = request.args.get("city", "all")
 
-    # Path to ensemble_v10.py
-    script_path = os.path.join(os.path.dirname(__file__), "ensemble_v10.py")
+    # Path to ensemble_v11.py
+    script_path = os.path.join(os.path.dirname(__file__), "ensemble_v11.py")
 
     # Build command with date arguments
     cmd = [sys.executable, script_path, "--kelly", kelly_fraction, "--bankroll", starting_bankroll]
@@ -38,6 +39,10 @@ def run_model():
     elif date_option == "custom" and custom_date:
         cmd.extend(["--date", custom_date])
     # "auto" uses the script's default behavior (no flag needed)
+
+    # Add city filter if not "all"
+    if city_filter and city_filter != "all":
+        cmd.extend(["--cities", city_filter])
 
     # Run the script and capture output, passing parameters as command-line args
     result = subprocess.run(

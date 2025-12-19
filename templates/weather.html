@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
-  <title>Kalshi Bets Ensemble V10</title>
+  <title>Kalshi Bets Ensemble V11</title>
 </head>
 <body>
   <nav class="navbar">
@@ -17,7 +17,7 @@
 
   <div class="titles-container">
     <h1 class="inter-semibold">Kalshi Weather Bets</h1>
-    <h3 class="inter-medium">With Ensemble V10</h3>
+    <h3 class="inter-medium">With Ensemble V11</h3>
   </div>
 
   <div class="content-container">
@@ -39,6 +39,15 @@
           <option value="custom">Custom Date</option>
         </select>
         <input type="date" id="customDate" style="display: none;">
+      </div>
+      <div class="setting-group">
+        <label class="inter-medium" for="cityFilter">City:</label>
+        <select id="cityFilter">
+          <option value="all">All Cities</option>
+          <option value="chicago">Chicago</option>
+          <option value="nyc">New York City</option>
+          <option value="miami">Miami</option>
+        </select>
       </div>
     </div>
     <button class="inter-medium button" onclick="runModel()">Generate Picks</button>
@@ -72,9 +81,10 @@
       const startingBankroll = document.getElementById("startingBankroll").value;
       const targetDate = document.getElementById("targetDate").value;
       const customDate = document.getElementById("customDate").value;
+      const cityFilter = document.getElementById("cityFilter").value;
 
-      // Build URL with date parameter
-      let url = `/run-model?kelly=${kellyFraction}&bankroll=${startingBankroll}&dateOption=${targetDate}`;
+      // Build URL with parameters
+      let url = `/run-model?kelly=${kellyFraction}&bankroll=${startingBankroll}&dateOption=${targetDate}&city=${cityFilter}`;
       if (targetDate === "custom" && customDate) {
         url += `&customDate=${customDate}`;
       }
@@ -83,7 +93,7 @@
       document.getElementById("loader").style.display = "block";
 
       // Clear output
-      document.getElementById("outputBox").value = "Running Ensemble V10...";
+      document.getElementById("outputBox").value = "Running Ensemble V11...";
 
       fetch(url)
         .then(response => response.json())

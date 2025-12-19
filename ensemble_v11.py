@@ -1642,18 +1642,21 @@ def main():
     parser.add_argument('--train', action='store_true',
                         help="Build and train atmospheric models from historical data")
     
-    parser.add_argument('--cities', nargs='+', default=None,
-                        help="Specify cities to analyze (chicago, nyc, miami)")
+    parser.add_argument('--cities', type=str, default=None,
+                        help="Comma-separated list of cities to analyze (default: all). Options: chicago, nyc, miami")
     args = parser.parse_args()
 
     # Update global settings from command-line args
     KELLY_FRACTION = args.kelly
     STARTING_BANKROLL = args.bankroll
 
-    
     # Update selected cities if specified
     if args.cities:
-        selected_cities = args.cities
+        cities_to_analyze = [c.strip().lower() for c in args.cities.split(',')]
+        # Validate cities
+        cities_to_analyze = [c for c in cities_to_analyze if c in cities]
+        if cities_to_analyze:
+            selected_cities = cities_to_analyze
 
 
     # Training mode
