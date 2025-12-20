@@ -17,6 +17,7 @@ All v9 features maintained:
 
 import pandas as pd
 import numpy as np
+import pickle
 from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.metrics import mean_absolute_error
 import requests
