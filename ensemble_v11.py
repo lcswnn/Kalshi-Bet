@@ -15,16 +15,16 @@ All v9 features maintained:
 - Price filtering and edge requirements
 """
 
-import pandas as pd
-import numpy as np
+import pandas as pd # type: ignore
+import numpy as np # type: ignore
 import pickle
-from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor
-from sklearn.metrics import mean_absolute_error
-from sklearn.model_selection import cross_val_score
-import requests
+from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor # type: ignore
+from sklearn.metrics import mean_absolute_error # type: ignore
+from sklearn.model_selection import cross_val_score # type: ignore
+import requests # type: ignore
 from datetime import datetime, timedelta, timezone
 import re
-from scipy import stats
+from scipy import stats # type: ignore
 import glob
 import argparse
 try:
@@ -245,13 +245,13 @@ def print_header(target_date, is_today):
     print(f"Price Filter: {MIN_CONTRACT_PRICE*100:.0f}¢ - {MAX_CONTRACT_PRICE*100:.0f}¢")
     print(f"Sweet Spot: {SWEET_SPOT_LOW*100:.0f}¢ - {SWEET_SPOT_HIGH*100:.0f}¢")
     print(f"\n🎯 SMART BET SELECTION:")
-    print(f"   • Different cities: Bet freely (uncorrelated)")
+    print("   • Different cities: Bet freely (uncorrelated)")
     print(f"   • Same city: Only stack if edge ratio ≥ {SAME_CITY_MULTI_BET_THRESHOLD}x")
     print(f"   • Max {MAX_BETS_PER_CITY} bets/city, {MAX_TOTAL_BETS_PER_DAY} total/day")
     print(f"\n🤖 ML ENHANCEMENTS:")
-    print(f"   • Wind advection analysis (warm/cold air masses)")
-    print(f"   • 850mb temperature tracking (airmass changes)")
-    print(f"   • Dynamic forecast adjustment based on atmospheric signals")
+    print("   • Wind advection analysis (warm/cold air masses)")
+    print("   • 850mb temperature tracking (airmass changes)")
+    print("   • Dynamic forecast adjustment based on atmospheric signals")
     print(f"\n💰 BANKROLL: ${STARTING_BANKROLL:.2f} | {KELLY_FRACTION:.0%} Kelly")
     print("Data Sources: NOAA HRRR (3km) + Open-Meteo + NWS")
 
@@ -525,12 +525,12 @@ def analyze_wind_direction(wind_dir):
     """
     if wind_dir is None:
         return None
-    
+
     # Normalize to 0-360
     wind_dir = wind_dir % 360
-    
+
     # Determine cardinal direction
-    if 337.5 <= wind_dir or wind_dir < 22.5:
+    if wind_dir >= 337.5 or wind_dir < 22.5:
         cardinal = "N"
         advection_type = "cold"
     elif 22.5 <= wind_dir < 67.5:
@@ -551,13 +551,9 @@ def analyze_wind_direction(wind_dir):
     elif 247.5 <= wind_dir < 292.5:
         cardinal = "W"
         advection_type = "neutral"
-    elif 292.5 <= wind_dir < 337.5:
+    else:
         cardinal = "NW"
         advection_type = "cold"
-    else:
-        cardinal = "?"
-        advection_type = "unknown"
-    
     return {
         "degrees": wind_dir,
         "cardinal": cardinal,
@@ -577,75 +573,81 @@ def fetch_hrrr_850mb_temp(lat, lon, target_date, utc_offset):
     """
     if not HERBIE_AVAILABLE:
         return None
-    
+
     model_run_date, model_run_hour = get_most_recent_hrrr_run()
     if not model_run_date:
         return None
-    
+
     model_run_str = f"{model_run_date.strftime('%Y-%m-%d')} {model_run_hour:02d}:00"
     model_run_datetime = datetime.combine(model_run_date, datetime.min.time().replace(hour=model_run_hour))
-    
+
     # Calculate target time (local noon)
     target_12_local_utc = 12 - utc_offset
     target_noon = datetime.combine(target_date, datetime.min.time().replace(hour=target_12_local_utc % 24))
     if target_12_local_utc >= 24:
         target_noon += timedelta(days=1)
-    
+
     hours_to_noon = int((target_noon - model_run_datetime).total_seconds() / 3600)
-    
+
     # Skip if out of range
     if hours_to_noon < 1 or hours_to_noon > 47:
         return None
-    
+
     try:
-        # Fetch 850mb temp at target time
-        H_target = Herbie(
-            model_run_str,
-            model='hrrr',
-            product='prs',  # Pressure levels
-            fxx=hours_to_noon
+        return _extracted_from_fetch_hrrr_850mb_temp_35(
+            model_run_str, hours_to_noon, lon, lat
         )
-        
-        ds_850 = H_target.xarray("TMP:850 mb", remove_grib=True)
-        temp_850_data = ds_850['t']
-        lats = ds_850['latitude'].values
-        lons = ds_850['longitude'].values
-        
-        target_lon = lon if lon > 0 else lon + 360
-        dist = np.sqrt((lats - lat)**2 + (lons - target_lon)**2)
-        min_idx = np.unravel_index(np.argmin(dist), dist.shape)
-        
-        temp_850_k = float(temp_850_data.values[min_idx])
-        temp_850_f = (temp_850_k - 273.15) * 9/5 + 32
-        
-        # Try to get 24hr ago for comparison
-        hours_24hr_ago = hours_to_noon - 24
-        temp_850_24hr_f = None
-        
-        if hours_24hr_ago >= 1:
-            try:
-                H_24hr = Herbie(
-                    model_run_str,
-                    model='hrrr',
-                    product='prs',
-                    fxx=hours_24hr_ago
-                )
-                ds_850_24hr = H_24hr.xarray("TMP:850 mb", remove_grib=True)
-                temp_850_24hr_data = ds_850_24hr['t']
-                temp_850_24hr_k = float(temp_850_24hr_data.values[min_idx])
-                temp_850_24hr_f = (temp_850_24hr_k - 273.15) * 9/5 + 32
-            except:
-                pass
-        
-        return {
-            "temp_850mb_f": temp_850_f,
-            "temp_850mb_24hr_ago_f": temp_850_24hr_f,
-            "temp_850mb_change_24hr": temp_850_f - temp_850_24hr_f if temp_850_24hr_f else None
-        }
-        
     except Exception as e:
         print(f"     ⚠️ 850mb fetch error: {e}")
         return None
+
+
+# TODO Rename this here and in `fetch_hrrr_850mb_temp`
+def _extracted_from_fetch_hrrr_850mb_temp_35(model_run_str, hours_to_noon, lon, lat):
+    # Fetch 850mb temp at target time
+    H_target = Herbie(
+        model_run_str,
+        model='hrrr',
+        product='prs',  # Pressure levels
+        fxx=hours_to_noon
+    )
+
+    ds_850 = H_target.xarray("TMP:850 mb", remove_grib=True)
+    temp_850_data = ds_850['t']
+    lats = ds_850['latitude'].values
+    lons = ds_850['longitude'].values
+
+    target_lon = lon if lon > 0 else lon + 360
+    dist = np.sqrt((lats - lat)**2 + (lons - target_lon)**2)
+    min_idx = np.unravel_index(np.argmin(dist), dist.shape)
+
+    temp_850_k = float(temp_850_data.values[min_idx])
+    temp_850_f = (temp_850_k - 273.15) * 9/5 + 32
+
+    # Try to get 24hr ago for comparison
+    hours_24hr_ago = hours_to_noon - 24
+    temp_850_24hr_f = None
+
+    if hours_24hr_ago >= 1:
+        try:
+            H_24hr = Herbie(
+                model_run_str,
+                model='hrrr',
+                product='prs',
+                fxx=hours_24hr_ago
+            )
+            ds_850_24hr = H_24hr.xarray("TMP:850 mb", remove_grib=True)
+            temp_850_24hr_data = ds_850_24hr['t']
+            temp_850_24hr_k = float(temp_850_24hr_data.values[min_idx])
+            temp_850_24hr_f = (temp_850_24hr_k - 273.15) * 9/5 + 32
+        except:
+            pass
+
+    return {
+        "temp_850mb_f": temp_850_f,
+        "temp_850mb_24hr_ago_f": temp_850_24hr_f,
+        "temp_850mb_change_24hr": temp_850_f - temp_850_24hr_f if temp_850_24hr_f else None
+    }
 
 
 def extract_atmospheric_features(hrrr_data):
@@ -656,48 +658,51 @@ def extract_atmospheric_features(hrrr_data):
     """
     if not hrrr_data:
         return None
-    
-    features = {}
-    
+
     # Wind features
     wind_speed = hrrr_data.get('wind_speed')
     wind_dir = hrrr_data.get('wind_dir')
-    
+
+    features = {}
     if wind_speed is not None:
         features['wind_speed'] = wind_speed
-    
+
     if wind_dir is not None:
-        features['wind_dir'] = wind_dir
-        # Convert wind direction to cardinal components (helps ML)
-        wind_dir_rad = np.radians(wind_dir)
-        features['wind_north_component'] = np.cos(wind_dir_rad)  # -1 to 1
-        features['wind_east_component'] = np.sin(wind_dir_rad)   # -1 to 1
-        
-        # Wind advection type
-        wind_info = analyze_wind_direction(wind_dir)
-        if wind_info:
-            advection = wind_info["advection_type"]
-            features['wind_advection_warm'] = 1 if advection == "warm" else 0
-            features['wind_advection_cold'] = 1 if advection == "cold" else 0
-            features['wind_advection_neutral'] = 1 if advection == "neutral" else 0
-    
+        _extracted_from_extract_atmospheric_features_(wind_dir, features)
     # 850mb airmass features
     temps_850mb = hrrr_data.get('temps_850mb')
     if temps_850mb:
         temp_850 = temps_850mb.get("temp_850mb_f")
         temp_change = temps_850mb.get("temp_850mb_change_24hr")
-        
+
         if temp_850 is not None:
             features['temp_850mb'] = temp_850
-        
+
         if temp_change is not None:
             features['temp_850mb_change_24hr'] = temp_change
             # Categorize airmass change
             features['airmass_warming'] = 1 if temp_change > 5 else 0
             features['airmass_cooling'] = 1 if temp_change < -5 else 0
             features['airmass_stable'] = 1 if abs(temp_change) <= 5 else 0
-    
-    return features if features else None
+
+    return features or None
+
+
+# TODO Rename this here and in `extract_atmospheric_features`
+def _extracted_from_extract_atmospheric_features_(wind_dir, features):
+    features['wind_dir'] = wind_dir
+    # Convert wind direction to cardinal components (helps ML)
+    wind_dir_rad = np.radians(wind_dir)
+    features['wind_north_component'] = np.cos(wind_dir_rad)  # -1 to 1
+    features['wind_east_component'] = np.sin(wind_dir_rad)   # -1 to 1
+
+    # Wind advection type
+    wind_info = analyze_wind_direction(wind_dir)
+    if wind_info:
+        advection = wind_info["advection_type"]
+        features['wind_advection_warm'] = 1 if advection == "warm" else 0
+        features['wind_advection_cold'] = 1 if advection == "cold" else 0
+        features['wind_advection_neutral'] = 1 if advection == "neutral" else 0
 
 
 
@@ -710,54 +715,35 @@ def analyze_airmass_and_wind(hrrr_data, city_name):
     """
     if not hrrr_data:
         return None
-    
+
     wind_speed = hrrr_data.get('wind_speed')
     wind_dir = hrrr_data.get('wind_dir')
     temps_850mb = hrrr_data.get('temps_850mb')
-    
+
     analysis = {
         "wind_analysis": None,
         "airmass_analysis": None,
         "forecast_adjustment": None
     }
-    
+
     # Wind direction analysis
     if wind_dir is not None:
         wind_info = analyze_wind_direction(wind_dir)
         if wind_info:
-            advection = wind_info["advection_type"]
-            cardinal = wind_info["cardinal"]
-            
-            # Build wind analysis message
-            if advection == "warm":
-                wind_message = f"🌡️ {cardinal} winds ({wind_dir:.0f}°) - WARM ADVECTION"
-                wind_message += f"\n        Bringing warmer air from the south"
-                adjustment = "warmer"
-            elif advection == "cold":
-                wind_message = f"❄️ {cardinal} winds ({wind_dir:.0f}°) - COLD ADVECTION"
-                wind_message += f"\n        Bringing colder air from the north"
-                adjustment = "colder"
-            else:
-                wind_message = f"➡️ {cardinal} winds ({wind_dir:.0f}°) - neutral"
-                adjustment = None
-            
-            if wind_speed:
-                wind_message += f" at {wind_speed:.0f} mph"
-            
-            analysis["wind_analysis"] = wind_message
-            analysis["forecast_adjustment"] = adjustment
-    
+            _extracted_from_analyze_airmass_and_wind_25(
+                wind_info, wind_dir, wind_speed, analysis
+            )
     # 850mb airmass analysis
     if temps_850mb:
         temp_850 = temps_850mb.get("temp_850mb_f")
         temp_change = temps_850mb.get("temp_850mb_change_24hr")
-        
+
         if temp_850 is not None:
             airmass_message = f"850mb temp: {temp_850:.1f}°F"
-            
+
             if temp_change is not None:
                 airmass_message += f" (change: {temp_change:+.1f}°F/24hr)"
-                
+
                 if temp_change >= WARM_ADVECTION_THRESHOLD:
                     airmass_message += f"\n        🔥 SIGNIFICANT WARM AIRMASS MOVING IN"
                     analysis["forecast_adjustment"] = "warmer"
@@ -766,10 +752,35 @@ def analyze_airmass_and_wind(hrrr_data, city_name):
                     analysis["forecast_adjustment"] = "colder"
                 elif abs(temp_change) > 5:
                     airmass_message += f"\n        ⚠️ Notable airmass change detected"
-            
+
             analysis["airmass_analysis"] = airmass_message
-    
+
     return analysis
+
+
+# TODO Rename this here and in `analyze_airmass_and_wind`
+def _extracted_from_analyze_airmass_and_wind_25(wind_info, wind_dir, wind_speed, analysis):
+    advection = wind_info["advection_type"]
+    cardinal = wind_info["cardinal"]
+
+            # Build wind analysis message
+    if advection == "cold":
+        wind_message = f"❄️ {cardinal} winds ({wind_dir:.0f}°) - COLD ADVECTION"
+        wind_message += f"\n        Bringing colder air from the north"
+        adjustment = "colder"
+    elif advection == "warm":
+        wind_message = f"🌡️ {cardinal} winds ({wind_dir:.0f}°) - WARM ADVECTION"
+        wind_message += f"\n        Bringing warmer air from the south"
+        adjustment = "warmer"
+    else:
+        wind_message = f"➡️ {cardinal} winds ({wind_dir:.0f}°) - neutral"
+        adjustment = None
+
+    if wind_speed:
+        wind_message += f" at {wind_speed:.0f} mph"
+
+    analysis["wind_analysis"] = wind_message
+    analysis["forecast_adjustment"] = adjustment
 
 
 class AtmosphericAnalogModel:
@@ -1508,7 +1519,8 @@ def print_recommendations(selected_bets, all_bets, city_summaries, bankroll, tar
     cities_with_bets = set(b["city"] for b in selected_bets)
     num_cities = len(cities_with_bets)
     
-    super_confident_count = sum(1 for b in selected_bets if b.get("selection_reason") == "super_confident_stack")
+    super_confident_count = sum(bool(b.get("selection_reason") == "super_confident_stack")
+                            for b in selected_bets)
     
     # Print the recommendation header
     if num_cities > 1:
