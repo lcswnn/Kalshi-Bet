@@ -1,14 +1,14 @@
 {
   "total_trades": 13,
-  "completed_trades": 5,
-  "pending_trades": 8,
-  "wins": "1",
-  "losses": "4",
-  "win_rate": 20.0,
-  "total_profit": -230.00311639211247,
-  "total_wagered": 342.67917273014064,
-  "roi": -67.11908242326696,
-  "current_bankroll": 769.9968836078875,
+  "completed_trades": 10,
+  "pending_trades": 3,
+  "wins": "3",
+  "losses": "7",
+  "win_rate": 30.0,
+  "total_profit": -347.29888052829233,
+  "total_wagered": 613.1883602072586,
+  "roi": -56.6382050061917,
+  "current_bankroll": 698.2710708504391,
   "initial_bankroll": 1000.0,
-  "return_pct": -23.000311639211247
+  "return_pct": -30.172892914956094
 }

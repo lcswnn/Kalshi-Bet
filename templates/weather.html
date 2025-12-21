@@ -160,18 +160,20 @@
         // Parse bets
         if (currentSection === 'bets' && line.match(/BET #(\d+):/)) {
           if (currentBet) data.bets.push(currentBet);
-          const betMatch = line.match(/BET #(\d+):\s*(\w+)\s*-\s*(.+)/);
-          currentBet = {
-            number: betMatch[1],
-            city: betMatch[2],
-            confidence: betMatch[3],
-            contract: '',
-            side: '',
-            edge: {},
-            sizing: {},
-            forecast: '',
-            agreement: ''
-          };
+          const betMatch = line.match(/BET #(\d+):\s*(\w+(?:\s+\w+)*)\s*-\s*(.+)/);
+          if (betMatch) {
+            currentBet = {
+              number: betMatch[1],
+              city: betMatch[2],
+              confidence: betMatch[3],
+              contract: '',
+              side: '',
+              edge: {},
+              sizing: {},
+              forecast: '',
+              agreement: ''
+            };
+          }
         } else if (currentBet) {
           if (line.includes('Contract:')) {
             currentBet.contract = line.match(/Contract:\s*(.+)/)[1];
