@@ -343,39 +343,10 @@ def fetch_nws_forecast(lat, lon, target_date):
 
 
 def get_most_recent_hrrr_run():
-    """
-    Get the most recent available HRRR model run.
-    
-    HRRR runs every hour, but there's a lag before data is available.
-    This finds the most recent run we can actually access.
-    """
+    """Get the most recent available HRRR model run using v11's proven logic."""
     if not HERBIE_AVAILABLE:
         return None, None
     
-    now = datetime.now(timezone.utc)
-    
-    # HRRR data typically available 1-2 hours after run time
-    # Try the last 4 hours to be safe
-    for hours_ago in range(1, 5):
-        try_time = now - timedelta(hours=hours_ago)
-        model_run_date = try_time.date()
-        model_run_hour = try_time.hour
-        model_run_str = f"{model_run_date.strftime('%Y-%m-%d')} {model_run_hour:02d}:00"
-        
-        try:
-            # Test if this run is available
-            H = Herbie(
-                model_run_str,
-                model='hrrr',
-                product='sfc',
-                fxx=1
-            )
-            # If we get here, this run exists
-            return model_run_date, model_run_hour
-        except:
-            continue
-    
-    # Fallback to old logic if recent runs aren't available
     today = datetime.now().date()
     current_hour = datetime.now().hour
     
@@ -407,12 +378,43 @@ def fetch_hrrr_forecast_fixed(lat, lon, target_date, utc_offset):
     
     hours_to_start = int((target_start - model_run_datetime).total_seconds() / 3600)
     forecast_hours = list(range(max(1, hours_to_start), min(48, hours_to_start + 7)))
-    if not forecast_hours or hours_to_start > 18:
+    if not forecast_hours:
         print(f"     ⚠️ HRRR forecast not available yet (need F{hours_to_start}+)")
         return None, None
     
-    print(f"     HRRR Model run: {model_run_str} UTC (most recent)")
-    print(f"     Sampling hours: {forecast_hours} (local afternoon)")
+    # Calculate the actual time range being sampled
+    model_run_datetime = datetime.combine(model_run_date, datetime.min.time().replace(hour=model_run_hour))
+    first_sample_time = model_run_datetime + timedelta(hours=forecast_hours[0])
+    last_sample_time = model_run_datetime + timedelta(hours=forecast_hours[-1])
+    
+    # Convert to local time for display (utc_offset is hours behind UTC)
+    try:
+        from zoneinfo import ZoneInfo
+        # Determine timezone based on UTC offset
+        if utc_offset == -6:
+            local_tz = ZoneInfo("America/Chicago")
+            tz_name = "CT"
+        elif utc_offset == -5:
+            local_tz = ZoneInfo("America/New_York")
+            tz_name = "ET"
+        else:
+            # Default to UTC if unknown
+            local_tz = timezone.utc
+            tz_name = "UTC"
+        
+        first_local = first_sample_time.replace(tzinfo=timezone.utc).astimezone(local_tz)
+        last_local = last_sample_time.replace(tzinfo=timezone.utc).astimezone(local_tz)
+        
+        time_frame = f"{first_local.strftime('%I:%M %p')} - {last_local.strftime('%I:%M %p')} {tz_name}"
+        date_display = first_local.strftime('%b %d')
+        
+        print(f"     HRRR Model run: {model_run_str} UTC (most recent)")
+        print(f"     📅 HRRR Time Frame: {date_display}, {time_frame}")
+        print(f"     Sampling forecast hours: F{forecast_hours[0]}-F{forecast_hours[-1]}")
+    except:
+        # Fallback if timezone conversion fails
+        print(f"     HRRR Model run: {model_run_str} UTC (most recent)")
+        print(f"     Sampling hours: {forecast_hours} (local afternoon)")
     
     temperatures = []
     wind_speeds = []

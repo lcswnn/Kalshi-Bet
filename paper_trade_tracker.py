@@ -14,14 +14,6 @@ Usage:
     
     Run this once per day (ideally in the morning before games start)
     
-    python3 paper_trade_tracker.py --update PT001 --result won
-    python3 paper_trade_tracker.py --update PT001 --result lost
-    
-    To clean:
-    run 'rm paper_trades.csv'
-    run 'rm paper_trades_summary.json'
-    run 'python3 paper_trade_tracker.py' again
-    
 Output files:
     - paper_trades.csv: All recommended bets with outcomes
     - paper_trades_summary.json: Current performance stats
@@ -90,8 +82,8 @@ class PaperTradingTracker:
         # Load existing trades if file exists
         if Path(csv_path).exists():
             self.trades_df = pd.read_csv(csv_path)
-            self.trades_df['date'] = pd.to_datetime(self.trades_df['date'])
-            self.trades_df['game_date'] = pd.to_datetime(self.trades_df['game_date'])
+            self.trades_df['date'] = pd.to_datetime(self.trades_df['date'], format='mixed')
+            self.trades_df['game_date'] = pd.to_datetime(self.trades_df['game_date'], format='mixed')
             
             # Calculate current bankroll from completed trades
             completed = self.trades_df[self.trades_df['status'] == 'completed']
@@ -122,6 +114,19 @@ class PaperTradingTracker:
         Args:
             bet_info: Dictionary with bet details from analyze_betting_opportunity
         """
+        # Check if this trade already exists (same ticker and date)
+        ticker = bet_info.get('market_ticker', 'N/A')
+        today = datetime.now().date()
+        
+        existing = self.trades_df[
+            (self.trades_df['kalshi_ticker'] == ticker) &
+            (pd.to_datetime(self.trades_df['date']).dt.date == today)
+        ]
+        
+        if len(existing) > 0:
+            print(f"⚠️  Trade already logged today: {ticker}")
+            return existing.iloc[0]['trade_id']
+        
         trade_id = self.get_next_trade_id()
         
         # Parse game date/time from market info if available
