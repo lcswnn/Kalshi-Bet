@@ -44,18 +44,30 @@ def run_model():
     if city_filter and city_filter != "all":
         cmd.extend(["--cities", city_filter])
 
-    # Run the script and capture output, passing parameters as command-line args
-    result = subprocess.run(
-        cmd,
-        capture_output=True,
-        text=True
-    )
-
-    # Return the printed output (stdout)
-    return jsonify({
-        "output": result.stdout,
-        "error": result.stderr
-    })
+    # Run the script and capture output with extended timeout (120 seconds)
+    try:
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=120  # 2 minute timeout for HRRR data fetching
+        )
+        
+        # Return the printed output (stdout)
+        return jsonify({
+            "output": result.stdout,
+            "error": result.stderr
+        })
+    except subprocess.TimeoutExpired:
+        return jsonify({
+            "output": "",
+            "error": "Model execution timed out after 120 seconds. Try running with a single city filter or check if HRRR data is accessible."
+        })
+    except Exception as e:
+        return jsonify({
+            "output": "",
+            "error": f"Error running model: {str(e)}"
+        })
 
 @app.route("/run-sports-model", methods=["GET"])
 def run_sports_model():

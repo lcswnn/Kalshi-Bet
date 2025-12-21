@@ -92,22 +92,45 @@
       // Show loader
       document.getElementById("loader").style.display = "block";
 
-      // Clear output
-      document.getElementById("outputBox").value = "Running Ensemble V11...";
+      // Clear output with loading message
+      const cityName = cityFilter === "all" ? "all cities" : cityFilter;
+      document.getElementById("outputBox").value = `Running Ensemble V11 for ${cityName}...\n\nFetching HRRR data, Open-Meteo, and NWS forecasts...\n\nThis may take 30-60 seconds.`;
 
-      fetch(url)
+      // Increase fetch timeout to 2 minutes
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minute timeout
+
+      fetch(url, { signal: controller.signal })
         .then(response => response.json())
         .then(data => {
+          clearTimeout(timeoutId);
           // Hide loader
           document.getElementById("loader").style.display = "none";
 
           // Show output
-          document.getElementById("outputBox").value =
-            data.output || data.error || "No output received.";
+          if (data.error && data.error.trim() !== "") {
+            document.getElementById("outputBox").value = 
+              "ERROR:\n" + data.error + "\n\n" + (data.output || "");
+          } else {
+            document.getElementById("outputBox").value =
+              data.output || "No output received.";
+          }
         })
         .catch(err => {
+          clearTimeout(timeoutId);
           document.getElementById("loader").style.display = "none";
-          document.getElementById("outputBox").value = "Error: " + err;
+          if (err.name === 'AbortError') {
+            document.getElementById("outputBox").value = 
+              "Request timed out after 2 minutes.\n\n" +
+              "This usually means:\n" +
+              "• HRRR data is taking too long to fetch\n" +
+              "• Network issues accessing weather APIs\n\n" +
+              "Try:\n" +
+              "• Running with a single city filter\n" +
+              "• Refreshing and trying again";
+          } else {
+            document.getElementById("outputBox").value = "Error: " + err;
+          }
         });
     }
   </script>
