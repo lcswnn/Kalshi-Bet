@@ -1503,152 +1503,158 @@ def smart_select_bets(all_bets):
 
 
 def print_recommendations(selected_bets, all_bets, city_summaries, bankroll, target_date):
-    """Print the final betting recommendations in a clear format."""
+    """Print the final betting recommendations in a clear, user-friendly format."""
 
     target_date_str = target_date.strftime("%A, %B %d, %Y")
     
-    print(f"\n{'='*70}")
-    print("🎯 TODAY'S BETTING RECOMMENDATIONS")
-    print(f"📅 Target Date: {target_date_str}")
-    print(f"💰 Bankroll: ${bankroll:.2f}")
-    print(f"{'='*70}")
+    print(f"\n")
+    print("=" * 80)
+    print("📊 FORECAST ANALYSIS BY CITY")
+    print("=" * 80)
+    
+    # ============ CITY FORECASTS SECTION ============
+    for summary in city_summaries:
+        if summary:
+            print(f"\n🏙️  {summary['city'].upper()}")
+            print("-" * 80)
+            
+            # Forecast sources
+            print(f"   Model Forecasts:")
+            sources_info = []
+            if summary.get("hrrr_forecast"):
+                sources_info.append(f"HRRR: {summary['hrrr_forecast']:.1f}°F")
+            if summary.get("open_meteo_forecast"):
+                sources_info.append(f"Open-Meteo: {summary['open_meteo_forecast']:.1f}°F")
+            if summary.get("nws_forecast"):
+                sources_info.append(f"NWS: {summary['nws_forecast']:.1f}°F")
+            
+            for info in sources_info:
+                print(f"      • {info}")
+            
+            # Model agreement
+            agreement_emoji = "✅" if summary["agreement_level"] == "high" else "⚠️" if summary["agreement_level"] == "medium" else "❌"
+            if summary.get("model_spread") is not None and len(sources_info) > 1:
+                print(f"   Model Spread: {summary['model_spread']:.1f}°F ({summary['agreement_level'].upper()} agreement) {agreement_emoji}")
+            
+            # Atmospheric insights
+            airmass_info = summary.get("airmass_info")
+            if airmass_info:
+                if airmass_info.get("wind_analysis"):
+                    wind_line = airmass_info['wind_analysis'].split('\n')[0]
+                    print(f"   🌬️  {wind_line}")
+                if airmass_info.get("airmass_analysis"):
+                    airmass_line = airmass_info['airmass_analysis'].split('\n')[0]
+                    print(f"   🌡️  {airmass_line}")
+            
+            # ML adjustments made
+            if summary.get("adjustment_reasons"):
+                print(f"   🤖 ML Adjustments Applied:")
+                for reason in summary["adjustment_reasons"]:
+                    print(f"      • {reason}")
+            
+            # Final forecast
+            ml_adj_display = ""
+            if summary.get("ml_adjustment") and abs(summary["ml_adjustment"]) > 0.2:
+                ml_adj_display = f" (adjusted {summary['ml_adjustment']:+.1f}°F)"
+            
+            print(f"\n   ⭐ FINAL FORECAST: {summary['ensemble_forecast']:.1f}°F{ml_adj_display}")
+            print(f"   📍 Predicted Bin: {summary['forecast_bin'][0]}°-{summary['forecast_bin'][1]}°F")
+            
+            # Warning flags
+            if summary.get("major_disagreement", False):
+                print(f"   🚨 WARNING: Major model disagreement - frontal system possible")
+            
+            print()
+    
+    # ============ BETTING RECOMMENDATIONS SECTION ============
+    print("\n")
+    print("=" * 80)
+    print("💰 BETTING RECOMMENDATIONS")
+    print(f"📅 {target_date_str}")
+    print(f"💵 Bankroll: ${bankroll:.2f}")
+    print("=" * 80)
     
     if not selected_bets:
-        print("\n🛑 NO BETS RECOMMENDED TODAY")
-        print("\nThis could mean:")
-        print("  • No contracts with sufficient edge after filtering")
-        print("  • Models disagree significantly")
-        print("  • Market is efficiently priced")
-        print("\n💡 Sitting out is a valid strategy!")
+        print("\n   🛑 NO BETS RECOMMENDED TODAY")
+        print("\n   This could mean:")
+        print("      • No contracts with sufficient edge after filtering")
+        print("      • Models disagree significantly")
+        print("      • Market is efficiently priced")
+        print("\n   💡 Sitting out is a valid strategy!")
         return
     
     # Check for major disagreements
     has_major_disagreement = any(b.get("major_disagreement", False) for b in selected_bets)
     if has_major_disagreement:
-        print("\n⚠️  WARNING: MAJOR MODEL DISAGREEMENT DETECTED")
-        print("   Some forecasts differ by >5°F - possible frontal system")
-        print("   Proceed with caution or reduce bet sizes")
+        print("\n   ⚠️  WARNING: MAJOR MODEL DISAGREEMENT DETECTED")
+        print("      Some forecasts differ by >5°F - possible frontal system")
+        print("      Proceed with caution or reduce bet sizes")
         print()
     
-    # Analyze what we're recommending
-    cities_with_bets = set(b["city"] for b in selected_bets)
-    num_cities = len(cities_with_bets)
-    
-    super_confident_count = sum(bool(b.get("selection_reason") == "super_confident_stack")
-                            for b in selected_bets)
-    
-    # Print the recommendation header
-    if num_cities > 1:
-        print(f"\n✅ Found bets in {num_cities} DIFFERENT CITIES (uncorrelated):")
-        print("   → Safe to bet on all of these - different weather = independent outcomes!")
-    elif len(selected_bets) > 1:
-        city_name = list(cities_with_bets)[0]
-        print(f"\n🔥 Found {len(selected_bets)} bets in {city_name} - SUPER CONFIDENT:")
-        print(f"   → Stacking same-city bets because edge ratio ≥ {SAME_CITY_MULTI_BET_THRESHOLD}x!")
-    else:
-        city_name = list(cities_with_bets)[0]
-        print(f"\n⭐ Found 1 great bet in {city_name}:")
-        print("   → This is your best opportunity today.")
-    
+    print(f"\n   ✅ Found {len(selected_bets)} recommended bet(s)")
     print()
     
-    # Print each bet
     total_wager = 0
     total_potential = 0
     
     for i, bet in enumerate(selected_bets, 1):
-        # Confidence indicator
-        if bet["edge_ratio"] >= SUPER_CONFIDENT_EDGE_RATIO:
-            confidence = "🔥 SUPER CONFIDENT"
-        elif bet["edge_ratio"] >= SAME_CITY_MULTI_BET_THRESHOLD:
-            confidence = "✓ High confidence"
+        # Determine bet quality
+        edge_ratio = bet["edge_ratio"]
+        if edge_ratio >= SUPER_CONFIDENT_EDGE_RATIO:
+            confidence_level = "🔥 SUPER CONFIDENT"
+            confidence_note = "Very strong edge"
+        elif edge_ratio >= SAME_CITY_MULTI_BET_THRESHOLD:
+            confidence_level = "✅ HIGH CONFIDENCE"
+            confidence_note = "Good edge"
         else:
-            confidence = "⭐ Best opportunity"
+            confidence_level = "📊 STANDARD BET"
+            confidence_note = "Meets minimum edge"
         
-        # Add disagreement warning if applicable
-        if bet.get("major_disagreement", False):
-            confidence += " ⚠️ (major disagreement)"
-        
-        # Selection reason
-        if bet.get("selection_reason") == "super_confident_stack":
-            reason = "(stacked - high edge)"
-        else:
-            reason = "(best in city)"
-        
-        bucket_emoji = "🎯" if bet["price_bucket"] == "sweet_spot" else "📊"
-        forecast_marker = "📍" if bet.get("is_forecast_bin") else ""
+        bucket_emoji = "🎯" if bet["price_bucket"] == "sweet_spot" else "💎"
+        is_forecast_bin = " ⭐ MODEL'S PRIMARY BIN" if bet.get("is_forecast_bin") else ""
         
         odds = bet["kelly_info"].get("odds", 0)
         potential_profit = bet["bet_size"] * odds
+        roi_pct = (odds * 100) if odds > 0 else 0
         
-        print(f"   ┌─ BET #{i}: {bet['city']} {reason}")
-        print(f"   │  {confidence}")
-        print(f"   │  🌡️  Model predicts high: {bet['ensemble_forecast']:.1f}°F")
-        print(f"   │  Contract: {bet['subtitle']} {forecast_marker}")
-        print(f"   │  Side: {bet['side']} at {bet['bet_price']*100:.0f}¢ {bucket_emoji}")
-        print(f"   │  Your probability: {bet['our_prob_win']*100:.1f}%")
-        print(f"   │  Edge: {bet['edge']*100:+.1f}% ({bet['edge_ratio']:.1f}x minimum)")
-        print(f"   │  Kelly: {bet['kelly_info'].get('fractional_kelly_pct', 0):.1f}% of bankroll")
-        print(f"   │")
-        print(f"   │  💰 BET: ${bet['bet_size']:.2f}")
-        print(f"   │  📈 Potential profit: ${potential_profit:.2f}")
-        print(f"   └{'─'*50}")
+        print("   " + "─" * 74)
+        print(f"   BET #{i}: {bet['city'].upper()} - {confidence_level}")
+        print("   " + "─" * 74)
+        print(f"   📋 Contract: {bet['subtitle']}{is_forecast_bin}")
+        print(f"   💵 Side: {bet['side'].upper()} at {bet['bet_price']*100:.0f}¢ {bucket_emoji}")
+        print()
+        print(f"   📊 THE EDGE:")
+        print(f"      Your probability: {bet['our_prob_win']*100:.1f}%  |  Market: {bet['bet_price']*100:.1f}%")
+        print(f"      Edge: {bet['edge']*100:+.1f}%  ({edge_ratio:.1f}x required minimum)")
+        print(f"      {confidence_note}")
+        print()
+        print(f"   💰 POSITION SIZING:")
+        print(f"      Kelly %: {bet['kelly_info'].get('fractional_kelly_pct', 0):.1f}% of bankroll")
+        print(f"      ➜  BET: ${bet['bet_size']:.2f}")
+        print(f"      ➜  If you win: ${potential_profit:.2f} profit ({roi_pct:.0f}% ROI)")
+        print()
+        print(f"   🌡️  MODEL FORECAST: {bet['ensemble_forecast']:.1f}°F")
+        print(f"      Agreement level: {bet.get('agreement_level', 'N/A').upper()}")
         print()
         
         total_wager += bet["bet_size"]
         total_potential += potential_profit
     
     # Summary
-    print(f"   {'='*55}")
-    print(f"   TOTAL WAGER: ${total_wager:.2f} ({100*total_wager/bankroll:.1f}% of bankroll)")
-    print(f"   POTENTIAL PROFIT: ${total_potential:.2f}")
-    print(f"   {'='*55}")
-    
-    # City forecasts summary
-    print(f"\n📊 FORECAST SUMMARY:")
-    for summary in city_summaries:
-        if summary:
-            agreement_emoji = "✅" if summary["agreement_level"] == "high" else "⚠️" if summary["agreement_level"] == "medium" else "❌"
-            disagreement_flag = " 🚨 MAJOR DISAGREEMENT" if summary.get("major_disagreement", False) else ""
-            
-            # Show all three forecasts if available
-            sources_str = ""
-            if summary.get("hrrr_forecast"):
-                sources_str += f"HRRR:{summary['hrrr_forecast']:.1f}° "
-            if summary.get("open_meteo_forecast"):
-                sources_str += f"OM:{summary['open_meteo_forecast']:.1f}° "
-            if summary.get("nws_forecast"):
-                sources_str += f"NWS:{summary['nws_forecast']:.1f}° "
-            
-            ml_adj_display = ""
-            if summary.get("ml_adjustment") and summary["ml_adjustment"] != 0.0:
-                ml_adj_display = f" 🤖 ML+{summary['ml_adjustment']:+.1f}°F"
-            
-            print(f"   {summary['city']}: {summary['ensemble_forecast']:.1f}°F{ml_adj_display} → Bin {summary['forecast_bin'][0]}-{summary['forecast_bin'][1]}° {agreement_emoji} {summary['agreement_level'].upper()}{disagreement_flag}")
-            if sources_str:
-                print(f"      ({sources_str.strip()})")
-            
-            # Show ML adjustment reasons if available
-            if summary.get("adjustment_reasons"):
-                for reason in summary["adjustment_reasons"]:
-                    print(f"      🤖 ML: {reason}")
-            
-            # Show airmass/wind info if available
-            airmass_info = summary.get("airmass_info")
-            if airmass_info:
-                if airmass_info.get("wind_analysis"):
-                    wind_line = airmass_info['wind_analysis'].split('\n')[0]
-                    print(f"      Wind: {wind_line}")
-                if airmass_info.get("airmass_analysis"):
-                    # Show just the first line
-                    airmass_line = airmass_info['airmass_analysis'].split('\n')[0]
-                    print(f"      Airmass: {airmass_line}")
+    print("   " + "=" * 74)
+    print("   📊 PORTFOLIO SUMMARY")
+    print("   " + "=" * 74)
+    print(f"   Total bets: {len(selected_bets)}")
+    print(f"   Total wager: ${total_wager:.2f} ({100*total_wager/bankroll:.1f}% of bankroll)")
+    print(f"   Total potential profit: ${total_potential:.2f}")
+    print("   " + "=" * 74)
     
     # Show what we didn't bet on
     not_selected = [b for b in all_bets if b not in selected_bets]
     if not_selected:
-        print(f"\n📋 Also considered but not selected: {len(not_selected)} other opportunities")
-        print("   (Either same-city with edge ratio < 2.0x, or beyond daily limit)")
+        print(f"\n   💡 {len(not_selected)} other opportunity/opportunities found but not selected")
+        print(f"      (Reasons: same-city stacking limit, daily bet limit, or lower edge ratio)")
+
 
 
 # ============ MAIN ============
