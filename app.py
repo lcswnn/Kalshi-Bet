@@ -85,18 +85,33 @@ def run_sports_model():
     # Build command
     cmd = [sys.executable, script_path, "--kelly", kelly_fraction, "--bankroll", starting_bankroll]
 
-    # Run the script and capture output
-    result = subprocess.run(
-        cmd,
-        capture_output=True,
-        text=True
-    )
-
-    # Return the printed output (stdout)
-    return jsonify({
-        "output": result.stdout,
-        "error": result.stderr
-    })
+    # Run the script and capture output with timeout
+    try:
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=60  # 1 minute timeout
+        )
+        
+        # Return the printed output (stdout)
+        return jsonify({
+            "success": True,
+            "output": result.stdout,
+            "error": result.stderr
+        })
+    except subprocess.TimeoutExpired:
+        return jsonify({
+            "success": False,
+            "output": "",
+            "error": "Model execution timed out after 60 seconds."
+        })
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "output": "",
+            "error": f"Error running model: {str(e)}"
+        })
 
 @app.route('/about')
 def about():
