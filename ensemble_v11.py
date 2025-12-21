@@ -72,7 +72,7 @@ MAJOR_DISAGREEMENT_THRESHOLD = 5.0  # °F - flag as major disagreement (frontal 
 
 
 # ============ ATMOSPHERIC ANALOG MODEL CONFIGURATION ============
-ATMOSPHERIC_MODEL_WEIGHT = 0.25     # How much weight to give atmospheric analog prediction
+ATMOSPHERIC_MODEL_WEIGHT = 0.15     # How much weight to give atmospheric analog prediction (reduced from 0.25)
 MIN_TRAINING_SAMPLES = 30           # Minimum samples needed to train atmospheric model
 ATMOSPHERIC_MODEL_PATH = "atmospheric_models"  # Directory to save/load models
 
@@ -1095,14 +1095,14 @@ def analyze_city(city_key, bankroll, target_date):
         # Weight by reliability and disagreement detection
         if len(forecasts) == 3:
             # All three sources available - weighted average
-            # HRRR gets more weight if models agree, less if they disagree
+            # More balanced weighting - HRRR is good but not dominant
             if model_spread <= CONFIDENCE_BOOST_THRESHOLD:
-                # High agreement - trust HRRR most
-                weights = [0.5, 0.25, 0.25]  # HRRR, Open-Meteo, NWS
+                # High agreement - slight preference for HRRR
+                weights = [0.40, 0.30, 0.30]  # HRRR, Open-Meteo, NWS
                 agreement_level = 'high'
             elif model_spread <= ENSEMBLE_AGREEMENT_THRESHOLD:
-                # Medium agreement - balanced
-                weights = [0.4, 0.3, 0.3]
+                # Medium agreement - nearly equal
+                weights = [0.35, 0.325, 0.325]
                 agreement_level = 'medium'
             else:
                 # Disagreement - equal weight, let them average out
@@ -1133,26 +1133,26 @@ def analyze_city(city_key, bankroll, target_date):
             temp_850_change = hrrr_data['temps_850mb'].get('temp_850mb_change_24hr')
             
             if temp_850_change is not None:
-                # Strong airmass signal = adjust forecast
+                # Strong airmass signal = adjust forecast (but more conservatively)
                 if temp_850_change >= WARM_ADVECTION_THRESHOLD:
                     # Significant warming airmass
                     # If HRRR is lower than others, trust the warmer forecasts more
                     if hrrr_forecast and hrrr_forecast < ensemble_forecast:
-                        ml_adjustment = model_spread * 0.3  # Shift 30% toward warmer
+                        ml_adjustment = model_spread * 0.20  # Shift 20% toward warmer (reduced from 30%)
                         adjustment_reasons.append(f"Warm airmass (+{temp_850_change:.1f}°F/24hr)")
                 elif temp_850_change <= COLD_ADVECTION_THRESHOLD:
                     # Significant cooling airmass
                     # If HRRR is higher than others, trust the colder forecasts more
                     if hrrr_forecast and hrrr_forecast > ensemble_forecast:
-                        ml_adjustment = model_spread * -0.3  # Shift 30% toward colder
+                        ml_adjustment = model_spread * -0.20  # Shift 20% toward colder (reduced from 30%)
                         adjustment_reasons.append(f"Cold airmass ({temp_850_change:.1f}°F/24hr)")
                 elif abs(temp_850_change) > 8:
                     # Moderate airmass change
                     if forecast_adjustment == "warmer" and hrrr_forecast and hrrr_forecast < ensemble_forecast:
-                        ml_adjustment = model_spread * 0.2  # Shift 20% toward warmer
+                        ml_adjustment = model_spread * 0.10  # Shift 10% toward warmer (reduced from 20%)
                         adjustment_reasons.append(f"Moderate warming ({temp_850_change:+.1f}°F/24hr)")
                     elif forecast_adjustment == "colder" and hrrr_forecast and hrrr_forecast > ensemble_forecast:
-                        ml_adjustment = model_spread * -0.2  # Shift 20% toward colder
+                        ml_adjustment = model_spread * -0.10  # Shift 10% toward colder (reduced from 20%)
                         adjustment_reasons.append(f"Moderate cooling ({temp_850_change:.1f}°F/24hr)")
         
         # Wind-only signal (if no 850mb data)
@@ -1161,12 +1161,12 @@ def analyze_city(city_key, bankroll, target_date):
             if forecast_adjustment == "warmer":
                 # Warm advection detected
                 if hrrr_forecast and hrrr_forecast < ensemble_forecast:
-                    ml_adjustment = model_spread * 0.15  # Smaller adjustment (15%)
+                    ml_adjustment = model_spread * 0.08  # Smaller adjustment (8%, reduced from 15%)
                     adjustment_reasons.append("Warm wind advection")
             elif forecast_adjustment == "colder":
                 # Cold advection detected
                 if hrrr_forecast and hrrr_forecast > ensemble_forecast:
-                    ml_adjustment = model_spread * -0.15  # Smaller adjustment (15%)
+                    ml_adjustment = model_spread * -0.08  # Smaller adjustment (8%, reduced from 15%)
                     adjustment_reasons.append("Cold wind advection")
     
     # Apply the ML adjustment
