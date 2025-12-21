@@ -53,18 +53,22 @@ def run_model():
             timeout=120  # 2 minute timeout for HRRR data fetching
         )
         
-        # Return the printed output (stdout)
+        # Return both raw output and parsed data
         return jsonify({
+            "success": True,
             "output": result.stdout,
-            "error": result.stderr
+            "error": result.stderr,
+            "raw_output": result.stdout  # Keep raw output for fallback
         })
     except subprocess.TimeoutExpired:
         return jsonify({
+            "success": False,
             "output": "",
             "error": "Model execution timed out after 120 seconds. Try running with a single city filter or check if HRRR data is accessible."
         })
     except Exception as e:
         return jsonify({
+            "success": False,
             "output": "",
             "error": f"Error running model: {str(e)}"
         })

@@ -54,9 +54,19 @@
   </div>
   <div id="loader" class="loader" style="display: none;"></div>
 
-  <div class="output-container">
-    <h3 class="inter-medium">Output</h3>
-    <textarea id="outputBox"></textarea>
+  <!-- Results Display Area -->
+  <div id="resultsContainer" class="results-container" style="display: none;">
+    <!-- City Forecasts Section -->
+    <div id="forecastsSection" class="forecasts-section"></div>
+    
+    <!-- Betting Recommendations Section -->
+    <div id="betsSection" class="bets-section"></div>
+  </div>
+
+  <!-- Raw output toggle (for debugging) -->
+  <div class="raw-output-container" style="display: none;">
+    <button class="inter-medium toggle-raw-btn" onclick="toggleRawOutput()">Show Raw Output</button>
+    <textarea id="rawOutputBox" style="display: none;"></textarea>
   </div>
 
 
@@ -75,6 +85,343 @@
       }
     });
 
+    function toggleRawOutput() {
+      const rawBox = document.getElementById("rawOutputBox");
+      const btn = document.querySelector(".toggle-raw-btn");
+      if (rawBox.style.display === "none") {
+        rawBox.style.display = "block";
+        btn.textContent = "Hide Raw Output";
+      } else {
+        rawBox.style.display = "none";
+        btn.textContent = "Show Raw Output";
+      }
+    }
+
+    function parseModelOutput(text) {
+      const lines = text.split('\n');
+      const data = {
+        forecasts: [],
+        bets: [],
+        summary: {},
+        warnings: []
+      };
+
+      let currentSection = null;
+      let currentCity = null;
+      let currentBet = null;
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+
+        // Detect sections
+        if (line.includes('FORECAST ANALYSIS BY CITY')) {
+          currentSection = 'forecasts';
+        } else if (line.includes('BETTING RECOMMENDATIONS')) {
+          currentSection = 'bets';
+        } else if (line.includes('PORTFOLIO SUMMARY')) {
+          currentSection = 'summary';
+        }
+
+        // Parse city forecasts
+        if (currentSection === 'forecasts' && line.match(/🏙️\s+(\w+)/)) {
+          if (currentCity) data.forecasts.push(currentCity);
+          currentCity = {
+            name: line.match(/🏙️\s+(\w+)/)[1],
+            models: [],
+            spread: '',
+            wind: '',
+            airmass: '',
+            mlAdjustments: [],
+            finalForecast: '',
+            predictedBin: '',
+            warnings: []
+          };
+        } else if (currentCity) {
+          if (line.includes('HRRR:') || line.includes('Open-Meteo:') || line.includes('NWS:')) {
+            const match = line.match(/(HRRR|Open-Meteo|NWS):\s*([\d.]+)°F/);
+            if (match) currentCity.models.push({ name: match[1], temp: match[2] });
+          } else if (line.includes('Model Spread:')) {
+            currentCity.spread = line.match(/Model Spread:\s*(.+)/)[1];
+          } else if (line.includes('🌬️')) {
+            currentCity.wind = line.replace(/\s*🌬️\s*/, '').trim();
+          } else if (line.includes('🌡️')) {
+            currentCity.airmass = line.replace(/\s*🌡️\s*/, '').trim();
+          } else if (line.includes('• ') && line.includes('ML')) {
+            currentCity.mlAdjustments.push(line.replace(/.*•\s*/, '').trim());
+          } else if (line.includes('FINAL FORECAST:')) {
+            currentCity.finalForecast = line.match(/FINAL FORECAST:\s*(.+)/)[1];
+          } else if (line.includes('Predicted Bin:')) {
+            currentCity.predictedBin = line.match(/Predicted Bin:\s*(.+)/)[1];
+          } else if (line.includes('WARNING:')) {
+            currentCity.warnings.push(line.replace(/.*WARNING:\s*/, '').trim());
+          }
+        }
+
+        // Parse bets
+        if (currentSection === 'bets' && line.match(/BET #(\d+):/)) {
+          if (currentBet) data.bets.push(currentBet);
+          const betMatch = line.match(/BET #(\d+):\s*(\w+)\s*-\s*(.+)/);
+          currentBet = {
+            number: betMatch[1],
+            city: betMatch[2],
+            confidence: betMatch[3],
+            contract: '',
+            side: '',
+            edge: {},
+            sizing: {},
+            forecast: '',
+            agreement: ''
+          };
+        } else if (currentBet) {
+          if (line.includes('Contract:')) {
+            currentBet.contract = line.match(/Contract:\s*(.+)/)[1];
+          } else if (line.includes('Side:')) {
+            currentBet.side = line.match(/Side:\s*(.+)/)[1];
+          } else if (line.includes('Your probability:')) {
+            const match = line.match(/Your probability:\s*([\d.]+)%\s*\|\s*Market:\s*([\d.]+)%/);
+            if (match) {
+              currentBet.edge.yourProb = match[1];
+              currentBet.edge.marketProb = match[2];
+            }
+          } else if (line.includes('Edge:')) {
+            const match = line.match(/Edge:\s*([+-]?[\d.]+)%\s*\((.+)\)/);
+            if (match) {
+              currentBet.edge.percentage = match[1];
+              currentBet.edge.ratio = match[2];
+            }
+          } else if (line.includes('Kelly %:')) {
+            currentBet.sizing.kelly = line.match(/Kelly %:\s*([\d.]+)%/)[1];
+          } else if (line.includes('BET:')) {
+            currentBet.sizing.amount = line.match(/BET:\s*\$?([\d.]+)/)[1];
+          } else if (line.includes('If you win:')) {
+            const match = line.match(/If you win:\s*\$?([\d.]+)\s*profit\s*\(([\d.]+)% ROI\)/);
+            if (match) {
+              currentBet.sizing.profit = match[1];
+              currentBet.sizing.roi = match[2];
+            }
+          } else if (line.includes('MODEL FORECAST:')) {
+            currentBet.forecast = line.match(/MODEL FORECAST:\s*(.+)/)[1];
+          } else if (line.includes('Agreement level:')) {
+            currentBet.agreement = line.match(/Agreement level:\s*(.+)/)[1];
+          }
+        }
+
+        // Parse summary
+        if (currentSection === 'summary') {
+          if (line.includes('Total bets:')) {
+            data.summary.totalBets = line.match(/Total bets:\s*(\d+)/)[1];
+          } else if (line.includes('Total wager:')) {
+            const match = line.match(/Total wager:\s*\$?([\d.]+)\s*\(([\d.]+)%/);
+            if (match) {
+              data.summary.totalWager = match[1];
+              data.summary.wagerPercent = match[2];
+            }
+          } else if (line.includes('Total potential profit:')) {
+            data.summary.totalProfit = line.match(/Total potential profit:\s*\$?([\d.]+)/)[1];
+          } else if (line.includes('Portfolio ROI')) {
+            data.summary.portfolioROI = line.match(/Portfolio ROI.*:\s*([\d.]+)%/)[1];
+          }
+        }
+
+        // Capture warnings
+        if (line.includes('⚠️') || line.includes('WARNING') || line.includes('🚨')) {
+          data.warnings.push(line.trim());
+        }
+      }
+
+      // Push last items
+      if (currentCity) data.forecasts.push(currentCity);
+      if (currentBet) data.bets.push(currentBet);
+
+      return data;
+    }
+
+    function displayResults(data) {
+      const forecastsSection = document.getElementById('forecastsSection');
+      const betsSection = document.getElementById('betsSection');
+      
+      // Clear previous results
+      forecastsSection.innerHTML = '';
+      betsSection.innerHTML = '';
+
+      // Show warnings if any
+      if (data.warnings.length > 0) {
+        const warningsHtml = `
+          <div class="warning-banner inter-medium">
+            ${data.warnings.map(w => `<p>${w}</p>`).join('')}
+          </div>
+        `;
+        forecastsSection.innerHTML += warningsHtml;
+      }
+
+      // Display forecasts
+      if (data.forecasts.length > 0) {
+        forecastsSection.innerHTML += '<h2 class="inter-semibold section-title">📊 Forecast Analysis</h2>';
+        data.forecasts.forEach(city => {
+          const cityHtml = `
+            <div class="forecast-card">
+              <h3 class="inter-semibold city-name">${city.name}</h3>
+              
+              ${city.models.length > 0 ? `
+                <div class="models-section">
+                  <p class="inter-medium subsection-label">Model Forecasts</p>
+                  ${city.models.map(m => `
+                    <div class="model-item inter-medium">
+                      <span class="model-name">${m.name}</span>
+                      <span class="model-temp">${m.temp}°F</span>
+                    </div>
+                  `).join('')}
+                </div>
+              ` : ''}
+
+              ${city.spread ? `<p class="inter-medium spread-info">${city.spread}</p>` : ''}
+              ${city.wind ? `<p class="inter-medium atmospheric-info">🌬️ ${city.wind}</p>` : ''}
+              ${city.airmass ? `<p class="inter-medium atmospheric-info">🌡️ ${city.airmass}</p>` : ''}
+              
+              ${city.mlAdjustments.length > 0 ? `
+                <div class="ml-adjustments">
+                  <p class="inter-medium subsection-label">🤖 ML Adjustments</p>
+                  ${city.mlAdjustments.map(adj => `<p class="inter-medium adjustment-item">• ${adj}</p>`).join('')}
+                </div>
+              ` : ''}
+
+              <div class="final-forecast">
+                <p class="inter-semibold forecast-value">⭐ ${city.finalForecast}</p>
+                ${city.predictedBin ? `<p class="inter-medium bin-value">📍 ${city.predictedBin}</p>` : ''}
+              </div>
+
+              ${city.warnings.length > 0 ? `
+                <div class="city-warnings">
+                  ${city.warnings.map(w => `<p class="inter-medium">🚨 ${w}</p>`).join('')}
+                </div>
+              ` : ''}
+            </div>
+          `;
+          forecastsSection.innerHTML += cityHtml;
+        });
+      }
+
+      // Display bets
+      if (data.bets.length > 0) {
+        betsSection.innerHTML += '<h2 class="inter-semibold section-title">💰 Recommended Bets</h2>';
+        
+        data.bets.forEach(bet => {
+          const betHtml = `
+            <div class="bet-card">
+              <div class="bet-header">
+                <span class="inter-semibold bet-number">BET #${bet.number}</span>
+                <span class="inter-medium bet-city">${bet.city}</span>
+                <span class="inter-medium confidence-badge">${bet.confidence}</span>
+              </div>
+
+              <div class="bet-details">
+                <div class="detail-row">
+                  <span class="inter-medium label">Contract:</span>
+                  <span class="inter-medium value">${bet.contract}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="inter-medium label">Side:</span>
+                  <span class="inter-medium value">${bet.side}</span>
+                </div>
+              </div>
+
+              ${bet.edge.yourProb ? `
+                <div class="edge-section">
+                  <p class="inter-semibold subsection-title">📊 The Edge</p>
+                  <div class="edge-stats">
+                    <div class="stat-item">
+                      <span class="inter-medium stat-label">Your Probability</span>
+                      <span class="inter-semibold stat-value">${bet.edge.yourProb}%</span>
+                    </div>
+                    <div class="stat-item">
+                      <span class="inter-medium stat-label">Market Price</span>
+                      <span class="inter-semibold stat-value">${bet.edge.marketProb}%</span>
+                    </div>
+                    <div class="stat-item highlight">
+                      <span class="inter-medium stat-label">Edge</span>
+                      <span class="inter-semibold stat-value">${bet.edge.percentage}%</span>
+                    </div>
+                  </div>
+                  ${bet.edge.ratio ? `<p class="inter-medium edge-ratio">${bet.edge.ratio}</p>` : ''}
+                </div>
+              ` : ''}
+
+              ${bet.sizing.amount ? `
+                <div class="sizing-section">
+                  <p class="inter-semibold subsection-title">💵 Position Sizing</p>
+                  <div class="sizing-stats">
+                    <div class="stat-item">
+                      <span class="inter-medium stat-label">Kelly %</span>
+                      <span class="inter-semibold stat-value">${bet.sizing.kelly}%</span>
+                    </div>
+                    <div class="stat-item highlight">
+                      <span class="inter-medium stat-label">Bet Amount</span>
+                      <span class="inter-semibold stat-value">$${bet.sizing.amount}</span>
+                    </div>
+                    ${bet.sizing.profit ? `
+                      <div class="stat-item success">
+                        <span class="inter-medium stat-label">Potential Profit</span>
+                        <span class="inter-semibold stat-value">$${bet.sizing.profit} (${bet.sizing.roi}% ROI)</span>
+                      </div>
+                    ` : ''}
+                  </div>
+                </div>
+              ` : ''}
+
+              <div class="model-info">
+                ${bet.forecast ? `<p class="inter-medium">🌡️ ${bet.forecast}</p>` : ''}
+                ${bet.agreement ? `<p class="inter-medium">Agreement: ${bet.agreement}</p>` : ''}
+              </div>
+            </div>
+          `;
+          betsSection.innerHTML += betHtml;
+        });
+
+        // Add summary
+        if (data.summary.totalBets) {
+          const summaryHtml = `
+            <div class="portfolio-summary">
+              <h3 class="inter-semibold">📊 Portfolio Summary</h3>
+              <div class="summary-grid">
+                <div class="summary-item">
+                  <span class="inter-medium">Total Bets</span>
+                  <span class="inter-semibold">${data.summary.totalBets}</span>
+                </div>
+                <div class="summary-item">
+                  <span class="inter-medium">Total Wager</span>
+                  <span class="inter-semibold">$${data.summary.totalWager} (${data.summary.wagerPercent}%)</span>
+                </div>
+                <div class="summary-item">
+                  <span class="inter-medium">Potential Profit</span>
+                  <span class="inter-semibold success">$${data.summary.totalProfit}</span>
+                </div>
+                ${data.summary.portfolioROI ? `
+                  <div class="summary-item">
+                    <span class="inter-medium">Portfolio ROI</span>
+                    <span class="inter-semibold success">${data.summary.portfolioROI}%</span>
+                  </div>
+                ` : ''}
+              </div>
+            </div>
+          `;
+          betsSection.innerHTML += summaryHtml;
+        }
+      } else {
+        betsSection.innerHTML += `
+          <div class="no-bets-message">
+            <h3 class="inter-semibold">🛑 No Bets Recommended Today</h3>
+            <p class="inter-medium">No qualifying opportunities found. This could mean:</p>
+            <ul class="inter-medium">
+              <li>Models disagree significantly</li>
+              <li>No contracts with sufficient edge</li>
+              <li>Market is efficiently priced</li>
+            </ul>
+            <p class="inter-medium">💡 Sitting out is a valid strategy!</p>
+          </div>
+        `;
+      }
+    }
+
     function runModel() {
       // Get settings values
       const kellyFraction = document.getElementById("kellyFraction").value;
@@ -89,12 +436,9 @@
         url += `&customDate=${customDate}`;
       }
 
-      // Show loader
+      // Show loader, hide results
       document.getElementById("loader").style.display = "block";
-
-      // Clear output with loading message
-      const cityName = cityFilter === "all" ? "all cities" : cityFilter;
-      document.getElementById("outputBox").value = `Running Ensemble V11 for ${cityName}...\n\nFetching HRRR data, Open-Meteo, and NWS forecasts...\n\nThis may take 30-60 seconds.`;
+      document.getElementById("resultsContainer").style.display = "none";
 
       // Increase fetch timeout to 2 minutes
       const controller = new AbortController();
@@ -104,33 +448,53 @@
         .then(response => response.json())
         .then(data => {
           clearTimeout(timeoutId);
-          // Hide loader
           document.getElementById("loader").style.display = "none";
 
-          // Show output
-          if (data.error && data.error.trim() !== "") {
-            document.getElementById("outputBox").value = 
-              "ERROR:\n" + data.error + "\n\n" + (data.output || "");
+          // Store raw output
+          document.getElementById("rawOutputBox").value = data.output || data.error || "";
+
+          if (data.success !== false && data.output) {
+            // Parse and display results
+            const parsedData = parseModelOutput(data.output);
+            displayResults(parsedData);
+            document.getElementById("resultsContainer").style.display = "block";
           } else {
-            document.getElementById("outputBox").value =
-              data.output || "No output received.";
+            // Show error
+            document.getElementById("resultsContainer").innerHTML = `
+              <div class="error-message">
+                <h3 class="inter-semibold">❌ Error</h3>
+                <p class="inter-medium">${data.error || "Unknown error occurred"}</p>
+              </div>
+            `;
+            document.getElementById("resultsContainer").style.display = "block";
           }
         })
         .catch(err => {
           clearTimeout(timeoutId);
           document.getElementById("loader").style.display = "none";
+          
+          let errorMsg = "Unknown error occurred";
           if (err.name === 'AbortError') {
-            document.getElementById("outputBox").value = 
-              "Request timed out after 2 minutes.\n\n" +
-              "This usually means:\n" +
-              "• HRRR data is taking too long to fetch\n" +
-              "• Network issues accessing weather APIs\n\n" +
-              "Try:\n" +
-              "• Running with a single city filter\n" +
-              "• Refreshing and trying again";
+            errorMsg = `Request timed out after 2 minutes.
+
+This usually means:
+• HRRR data is taking too long to fetch
+• Network issues accessing weather APIs
+
+Try:
+• Running with a single city filter
+• Refreshing and trying again`;
           } else {
-            document.getElementById("outputBox").value = "Error: " + err;
+            errorMsg = err.toString();
           }
+
+          document.getElementById("resultsContainer").innerHTML = `
+            <div class="error-message">
+              <h3 class="inter-semibold">❌ Error</h3>
+              <pre class="inter-medium">${errorMsg}</pre>
+            </div>
+          `;
+          document.getElementById("resultsContainer").style.display = "block";
         });
     }
   </script>
