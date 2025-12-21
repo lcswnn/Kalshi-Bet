@@ -372,12 +372,18 @@ def fetch_hrrr_forecast_fixed(lat, lon, target_date, utc_offset):
     model_run_datetime = datetime.combine(model_run_date, datetime.min.time().replace(hour=model_run_hour))
     
     target_12_local_utc = 12 - utc_offset
-    target_start = datetime.combine(target_date, datetime.min.time().replace(hour=target_12_local_utc % 24))
-    if target_12_local_utc >= 24:
+    # Expand window: start at 6 AM local, sample through 8 PM local (14 hours)
+    target_start_hour = 6  # 6 AM local
+    target_start_utc = (target_start_hour - utc_offset) % 24
+    target_start = datetime.combine(target_date, datetime.min.time().replace(hour=target_start_utc))
+    if (target_start_hour - utc_offset) >= 24:
         target_start += timedelta(days=1)
+    elif (target_start_hour - utc_offset) < 0:
+        target_start -= timedelta(days=1)
     
     hours_to_start = int((target_start - model_run_datetime).total_seconds() / 3600)
-    forecast_hours = list(range(max(1, hours_to_start), min(48, hours_to_start + 7)))
+    # Sample 14 hours (6 AM to 8 PM local) instead of 7 hours
+    forecast_hours = list(range(max(1, hours_to_start), min(48, hours_to_start + 14)))
     if not forecast_hours:
         print(f"     ⚠️ HRRR forecast not available yet (need F{hours_to_start}+)")
         return None, None
@@ -409,7 +415,7 @@ def fetch_hrrr_forecast_fixed(lat, lon, target_date, utc_offset):
         date_display = first_local.strftime('%b %d')
         
         print(f"     HRRR Model run: {model_run_str} UTC (most recent)")
-        print(f"     📅 HRRR Time Frame: {date_display}, {time_frame}")
+        print(f"     📅 HRRR Time Frame: {date_display}, {time_frame} (expanded window)")
         print(f"     Sampling forecast hours: F{forecast_hours[0]}-F{forecast_hours[-1]}")
     except:
         # Fallback if timezone conversion fails
@@ -1169,8 +1175,11 @@ def analyze_city(city_key, bankroll, target_date):
                     ml_adjustment = model_spread * -0.08  # Smaller adjustment (8%, reduced from 15%)
                     adjustment_reasons.append("Cold wind advection")
     
-    # Apply the ML adjustment
-    if ml_adjustment != 0.0:
+    # Apply the ML adjustment (only if meaningful)
+    # Cap at ±1.5°F to prevent extreme adjustments
+    ml_adjustment = max(-1.5, min(1.5, ml_adjustment))
+    
+    if abs(ml_adjustment) > 0.2:  # Ignore tiny adjustments
         original_ensemble = ensemble_forecast
         ensemble_forecast += ml_adjustment
         print(f"\n  🤖 ML ADJUSTMENT: {original_ensemble:.1f}°F → {ensemble_forecast:.1f}°F ({ml_adjustment:+.1f}°F)")
@@ -1198,7 +1207,11 @@ def analyze_city(city_key, bankroll, target_date):
                 # Get prediction from atmospheric model
                 atmospheric_adjustment, atmospheric_confidence = atmospheric_model.predict_adjustment(atmos_features)
                 
-                if abs(atmospheric_adjustment) > 0.1:  # Only display if meaningful
+                # Cap atmospheric predictions at ±1.0°F to prevent extreme adjustments
+                atmospheric_adjustment = max(-1.0, min(1.0, atmospheric_adjustment))
+                
+                # Only apply if adjustment is meaningful (>0.3°F) to avoid noise
+                if abs(atmospheric_adjustment) > 0.3:
                     print(f"\n  🌐 ATMOSPHERIC ANALOG PREDICTION:")
                     print(f"     Based on {atmospheric_model.training_samples} historical patterns")
                     print(f"     Predicted adjustment: {atmospheric_adjustment:+.1f}°F (confidence: {atmospheric_confidence:.0%})")
@@ -1256,7 +1269,7 @@ def analyze_city(city_key, bankroll, target_date):
         "major_disagreement": major_disagreement,
         "airmass_info": airmass_info if hrrr_forecast else None,
         "ml_adjustment": ml_adjustment,
-        "adjustment_reasons": adjustment_reasons if ml_adjustment != 0.0 else None,
+        "adjustment_reasons": adjustment_reasons if abs(ml_adjustment) > 0.2 else None,
         "atmospheric_adjustment": atmospheric_adjustment,
         "atmospheric_confidence": atmospheric_confidence,
     }
