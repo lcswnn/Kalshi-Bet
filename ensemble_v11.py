@@ -1,7 +1,15 @@
 """
-KALSHI WEATHER BETTING MODEL v11
-================================
+KALSHI WEATHER BETTING MODEL v11 (FIXED)
+=========================================
 ENHANCED FORECAST VERSION with NWS Integration & Disagreement Detection.
+
+Key improvements in FIXED version:
+1. NWS ROUNDING: Properly applies NOAA/NWS rounding rules (round up at 0.5+)
+   - Matches how Kalshi resolves markets using NWS data
+   - Handles negative temperatures correctly (-2.5 → -3, -2.4 → -2)
+2. VALID BINS ONLY: Only predicts into bins that actually exist on Kalshi for that day
+   - Extracts valid bins from market data before analysis
+   - Prevents predictions into non-existent bins
 
 Key improvements over v9:
 1. NWS FORECAST: Added National Weather Service as third forecast source
@@ -225,8 +233,8 @@ def get_target_date(force_today=False):
 # ============ HEADER ============
 def print_header(target_date, is_today):
     print("=" * 70)
-    print("KALSHI WEATHER BETTING MODEL v11")
-    print("(Atmospheric Analog-Enhanced Forecasts)")
+    print("KALSHI WEATHER BETTING MODEL v11 (FIXED)")
+    print("(NWS Rounding + Valid Bins + Atmospheric Analog-Enhanced)")
     print("=" * 70)
 
     eastern_now = get_eastern_now()
@@ -491,30 +499,70 @@ def fetch_hrrr_forecast_fixed(lat, lon, target_date, utc_offset):
     return forecast_high, weather_data
 
 
-def get_bin_for_temp(temp):
+def nws_round(temp):
+    """
+    Apply NWS/NOAA rounding rules used by Kalshi for market resolution.
+    
+    NWS rounds UP when temperature is at 0.5 or higher:
+    - Positive: 38.5 → 39, 38.4 → 38
+    - Negative: -2.5 → -3, -2.4 → -2
+    
+    This follows standard mathematical rounding (round half up).
+    
+    Args:
+        temp: Raw temperature in Fahrenheit
+    
+    Returns:
+        Rounded integer temperature as NWS would report it
+    """
+    # Standard rounding: round half up
+    # For positive numbers: 38.5 rounds to 39
+    # For negative numbers: -2.5 rounds to -3 (away from zero)
+    if temp >= 0:
+        return int(np.floor(temp + 0.5))
+    else:
+        # For negative numbers, we need to round "away from zero"
+        # -2.5 should become -3, not -2
+        return int(np.ceil(temp - 0.5))
+
+
+def get_bin_for_temp(temp, valid_bins=None):
     """
     Get the Kalshi bin that contains this temperature.
     
-    Kalshi uses 2-degree bins with ODD lower bounds:
-    ..., 27-28, 29-30, 31-32, 33-34, ...
+    IMPORTANT: This applies NWS rounding first, since Kalshi uses NWS-rounded
+    temperatures for market resolution.
+    
+    Args:
+        temp: Raw temperature forecast
+        valid_bins: Optional set of valid (low, high) tuples from Kalshi markets.
+                   If provided, will find which actual bin contains the temp.
+    
+    Returns:
+        (lower, upper) tuple for the bin
     
     Examples:
-        27.5°F → bin (27, 28)
-        29.0°F → bin (29, 30)
-        29.9°F → bin (29, 30)
-        30.0°F → bin (29, 30)  # 30 is the upper bound of 29-30
-        30.1°F → bin (31, 32)  # Just above 30 goes to next bin
+        27.5°F → NWS rounds to 28 → finds bin containing 28
+        79.4°F → NWS rounds to 79 → bin (78, 79) if that's what exists on Kalshi
     """
-    # Floor to get the integer part
-    temp_floor = int(np.floor(temp))
+    # First apply NWS rounding
+    rounded_temp = nws_round(temp)
     
-    # Find the odd number that starts the bin containing this temp
-    # If temp_floor is odd, that's our lower bound
-    # If temp_floor is even, the bin started at temp_floor - 1
-    if temp_floor % 2 == 1:  # odd
-        lower = temp_floor
+    # If valid bins provided, find which one contains this temperature
+    if valid_bins:
+        for low, high in sorted(valid_bins):
+            if low <= rounded_temp <= high:
+                return (low, high)
+        # If no valid bin contains it, fall through to theoretical calculation
+        print(f"     ⚠️ Warning: NWS-rounded temp {rounded_temp}°F not in any Kalshi bin")
+    
+    # Calculate theoretical bin (2-degree bins with odd lower bounds)
+    # If rounded_temp is odd, that's our lower bound
+    # If rounded_temp is even, the bin started at rounded_temp - 1
+    if rounded_temp % 2 == 1:  # odd
+        lower = rounded_temp
     else:  # even
-        lower = temp_floor - 1
+        lower = rounded_temp - 1
     
     return (lower, lower + 1)
 
@@ -1252,15 +1300,18 @@ def analyze_city(city_key, bankroll, target_date):
                 agreement_level = 'low'
 
     print(f"\n  🎯 ENSEMBLE FORECAST: {ensemble_forecast:.1f}°F")
+    
+    # Show NWS-rounded value (what Kalshi actually uses)
+    rounded_forecast = nws_round(ensemble_forecast)
+    print(f"     NWS-rounded (for Kalshi resolution): {rounded_forecast}°F")
+    
+    # NOTE: forecast_bin will be calculated after we fetch Kalshi data and know valid bins
 
-    forecast_bin = get_bin_for_temp(ensemble_forecast)
-    print(f"     Primary bin: {forecast_bin[0]}°-{forecast_bin[1]}°F")
-
-    # Store city summary
+    # Store city summary (forecast_bin will be updated later)
     city_summary = {
         "city": city["name"],
         "ensemble_forecast": ensemble_forecast,
-        "forecast_bin": forecast_bin,
+        "forecast_bin": None,  # Will be set after Kalshi data fetch
         "agreement_level": agreement_level,
         "hrrr_forecast": hrrr_forecast,
         "open_meteo_forecast": open_meteo_forecast,
@@ -1323,6 +1374,28 @@ def analyze_city(city_key, bankroll, target_date):
     print(f"  CONTRACT ANALYSIS (Filtered: {MIN_CONTRACT_PRICE*100:.0f}¢-{MAX_CONTRACT_PRICE*100:.0f}¢)")
     print(f"  {'='*60}")
 
+    # Extract all valid bins from Kalshi markets for this date
+    # This ensures we only predict into bins that actually exist
+    valid_bins = set()
+    for market in markets:
+        subtitle = market.get("subtitle", "")
+        numbers = re.findall(r'-?\d+', subtitle)
+        
+        if "to" in subtitle and len(numbers) >= 2:
+            low = int(numbers[0])
+            high = int(numbers[1])
+            valid_bins.add((low, high))
+    
+    print(f"     Found {len(valid_bins)} valid temperature bins for {target_str}")
+    print(f"     Valid bins: {sorted(valid_bins)[:10]}{'...' if len(valid_bins) > 10 else ''}")
+    
+    # NOW calculate the forecast bin using actual Kalshi bins
+    forecast_bin = get_bin_for_temp(ensemble_forecast, valid_bins)
+    print(f"     📍 Predicted Bin (from Kalshi markets): {forecast_bin[0]}°-{forecast_bin[1]}°F")
+    
+    # Update the city_summary with the correct forecast bin
+    city_summary["forecast_bin"] = forecast_bin
+
     skipped_cheap = 0
     skipped_expensive = 0
 
@@ -1356,24 +1429,36 @@ def analyze_city(city_key, bankroll, target_date):
         if "to" in subtitle and len(numbers) >= 2:
             low = int(numbers[0])
             high = int(numbers[1])
+            
+            # Verify this is a valid bin (should always be true, but extra safety)
+            if (low, high) not in valid_bins:
+                continue
+            
             model_prob = calibrated_probability(low, high, ensemble_forecast, 
                                                 CALIBRATED_FORECAST_STD, agreement_level)
-            # Check if our forecast actually falls IN this contract's bin
-            is_forecast_bin = (low <= ensemble_forecast <= high)
+            
+            # Check if our NWS-rounded forecast falls IN this contract's bin
+            # This is critical because Kalshi uses NWS-rounded temperatures for resolution
+            rounded_forecast = nws_round(ensemble_forecast)
+            is_forecast_bin = (low <= rounded_forecast <= high)
             contract_type = "range"
 
         elif "or below" in subtitle and len(numbers) >= 1:
             threshold = int(numbers[0])
             model_prob = calibrated_below_probability(threshold, ensemble_forecast,
                                                        CALIBRATED_FORECAST_STD, agreement_level)
-            is_forecast_bin = ensemble_forecast <= threshold
+            # Use NWS-rounded forecast for comparison
+            rounded_forecast = nws_round(ensemble_forecast)
+            is_forecast_bin = rounded_forecast <= threshold
             contract_type = "below"
 
         elif "or above" in subtitle and len(numbers) >= 1:
             threshold = int(numbers[0])
             model_prob = calibrated_above_probability(threshold, ensemble_forecast,
                                                        CALIBRATED_FORECAST_STD, agreement_level)
-            is_forecast_bin = ensemble_forecast >= threshold
+            # Use NWS-rounded forecast for comparison
+            rounded_forecast = nws_round(ensemble_forecast)
+            is_forecast_bin = rounded_forecast >= threshold
             contract_type = "above"
         else:
             continue
@@ -1780,7 +1865,7 @@ def main():
     print_recommendations(selected_bets, all_bets, city_summaries, bankroll, target_date)
 
     print(f"\n{'='*70}")
-    print("ANALYSIS COMPLETE (v11 - Atmospheric Analog Enhanced)")
+    print("ANALYSIS COMPLETE (v11 FIXED - NWS Rounding + Valid Bins)")
     print(f"{'='*70}")
 
 
