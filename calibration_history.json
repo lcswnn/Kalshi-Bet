@@ -748,8 +748,9 @@
         "threshold": null,
         "side": "NO"
       },
-      "outcome": null,
-      "recorded_at": "2025-12-22T18:46:45.414269"
+      "outcome": "loss",
+      "recorded_at": "2025-12-22T18:46:45.414269",
+      "actual_temp": 53.0
     },
     {
       "date": "2025-12-23",
@@ -763,8 +764,9 @@
         "threshold": null,
         "side": "YES"
       },
-      "outcome": null,
-      "recorded_at": "2025-12-22T18:46:45.415805"
+      "outcome": "loss",
+      "recorded_at": "2025-12-22T18:46:45.415805",
+      "actual_temp": 81.0
     },
     {
       "date": "2025-12-23",
@@ -778,8 +780,9 @@
         "threshold": null,
         "side": "NO"
       },
-      "outcome": null,
-      "recorded_at": "2025-12-22T18:46:45.417593"
+      "outcome": "win",
+      "recorded_at": "2025-12-22T18:46:45.417593",
+      "actual_temp": 40.0
     },
     {
       "date": "2025-12-23",
@@ -793,8 +796,9 @@
         "threshold": null,
         "side": "NO"
       },
-      "outcome": null,
-      "recorded_at": "2025-12-22T18:46:45.418717"
+      "outcome": "loss",
+      "recorded_at": "2025-12-22T18:46:45.418717",
+      "actual_temp": 53.0
     },
     {
       "date": "2025-12-23",
@@ -808,8 +812,9 @@
         "threshold": null,
         "side": "YES"
       },
-      "outcome": null,
-      "recorded_at": "2025-12-22T18:48:31.392215"
+      "outcome": "loss",
+      "recorded_at": "2025-12-22T18:48:31.392215",
+      "actual_temp": 81.0
     },
     {
       "date": "2025-12-23",
@@ -823,8 +828,9 @@
         "threshold": null,
         "side": "NO"
       },
-      "outcome": null,
-      "recorded_at": "2025-12-22T18:48:31.395858"
+      "outcome": "loss",
+      "recorded_at": "2025-12-22T18:48:31.395858",
+      "actual_temp": 53.0
     },
     {
       "date": "2025-12-23",
@@ -838,8 +844,9 @@
         "threshold": null,
         "side": "NO"
       },
-      "outcome": null,
-      "recorded_at": "2025-12-22T18:48:31.397176"
+      "outcome": "win",
+      "recorded_at": "2025-12-22T18:48:31.397176",
+      "actual_temp": 40.0
     },
     {
       "date": "2025-12-23",
@@ -853,8 +860,9 @@
         "threshold": null,
         "side": "NO"
       },
-      "outcome": null,
-      "recorded_at": "2025-12-22T18:48:31.398441"
+      "outcome": "loss",
+      "recorded_at": "2025-12-22T18:48:31.398441",
+      "actual_temp": 53.0
     },
     {
       "date": "2025-12-23",
@@ -868,8 +876,9 @@
         "threshold": 37,
         "side": "YES"
       },
-      "outcome": null,
-      "recorded_at": "2025-12-22T19:03:47.928076"
+      "outcome": "loss",
+      "recorded_at": "2025-12-22T19:03:47.928076",
+      "actual_temp": 40.0
     },
     {
       "date": "2025-12-23",
@@ -883,8 +892,9 @@
         "threshold": null,
         "side": "YES"
       },
-      "outcome": null,
-      "recorded_at": "2025-12-22T19:03:47.930408"
+      "outcome": "loss",
+      "recorded_at": "2025-12-22T19:03:47.930408",
+      "actual_temp": 81.0
     },
     {
       "date": "2025-12-23",
@@ -898,8 +908,9 @@
         "threshold": null,
         "side": "NO"
       },
-      "outcome": null,
-      "recorded_at": "2025-12-22T19:03:47.931837"
+      "outcome": "loss",
+      "recorded_at": "2025-12-22T19:03:47.931837",
+      "actual_temp": 53.0
     },
     {
       "date": "2025-12-23",
@@ -913,8 +924,9 @@
         "threshold": null,
         "side": "NO"
       },
-      "outcome": null,
-      "recorded_at": "2025-12-22T19:03:47.933216"
+      "outcome": "loss",
+      "recorded_at": "2025-12-22T19:03:47.933216",
+      "actual_temp": 53.0
     },
     {
       "date": "2025-12-23",
@@ -928,8 +940,9 @@
         "threshold": null,
         "side": "NO"
       },
-      "outcome": null,
-      "recorded_at": "2025-12-22T19:03:47.934573"
+      "outcome": "win",
+      "recorded_at": "2025-12-22T19:03:47.934573",
+      "actual_temp": 81.0
     },
     {
       "date": "2025-12-23",
@@ -943,8 +956,9 @@
         "threshold": null,
         "side": "NO"
       },
-      "outcome": null,
-      "recorded_at": "2025-12-22T19:03:47.935969"
+      "outcome": "win",
+      "recorded_at": "2025-12-22T19:03:47.935969",
+      "actual_temp": 40.0
     },
     {
       "date": "2025-12-23",
@@ -958,8 +972,9 @@
         "threshold": 37,
         "side": "YES"
       },
-      "outcome": null,
-      "recorded_at": "2025-12-22T19:09:37.212603"
+      "outcome": "loss",
+      "recorded_at": "2025-12-22T19:09:37.212603",
+      "actual_temp": 40.0
     },
     {
       "date": "2025-12-23",
@@ -973,8 +988,9 @@
         "threshold": null,
         "side": "NO"
       },
-      "outcome": null,
-      "recorded_at": "2025-12-22T19:09:37.216317"
+      "outcome": "win",
+      "recorded_at": "2025-12-22T19:09:37.216317",
+      "actual_temp": 81.0
     },
     {
       "date": "2025-12-23",
@@ -988,8 +1004,9 @@
         "threshold": null,
         "side": "NO"
       },
-      "outcome": null,
-      "recorded_at": "2025-12-22T19:09:37.217760"
+      "outcome": "win",
+      "recorded_at": "2025-12-22T19:09:37.217760",
+      "actual_temp": 40.0
     },
     {
       "date": "2025-12-23",
@@ -1003,8 +1020,9 @@
         "threshold": null,
         "side": "NO"
       },
-      "outcome": null,
-      "recorded_at": "2025-12-22T19:09:37.219107"
+      "outcome": "loss",
+      "recorded_at": "2025-12-22T19:09:37.219107",
+      "actual_temp": 53.0
     },
     {
       "date": "2025-12-23",
@@ -1018,8 +1036,9 @@
         "threshold": null,
         "side": "NO"
       },
-      "outcome": null,
-      "recorded_at": "2025-12-22T19:09:37.220335"
+      "outcome": "loss",
+      "recorded_at": "2025-12-22T19:09:37.220335",
+      "actual_temp": 53.0
     },
     {
       "date": "2025-12-23",
@@ -1033,8 +1052,9 @@
         "threshold": null,
         "side": "YES"
       },
-      "outcome": null,
-      "recorded_at": "2025-12-22T19:09:37.221582"
+      "outcome": "loss",
+      "recorded_at": "2025-12-22T19:09:37.221582",
+      "actual_temp": 81.0
     },
     {
       "date": "2025-12-23",
@@ -1048,8 +1068,9 @@
         "threshold": null,
         "side": "NO"
       },
-      "outcome": null,
-      "recorded_at": "2025-12-22T19:15:53.562497"
+      "outcome": "win",
+      "recorded_at": "2025-12-22T19:15:53.562497",
+      "actual_temp": 81.0
     },
     {
       "date": "2025-12-23",
@@ -1063,8 +1084,9 @@
         "threshold": 37,
         "side": "YES"
       },
-      "outcome": null,
-      "recorded_at": "2025-12-22T19:15:53.565719"
+      "outcome": "loss",
+      "recorded_at": "2025-12-22T19:15:53.565719",
+      "actual_temp": 40.0
     },
     {
       "date": "2025-12-23",
@@ -1078,8 +1100,9 @@
         "threshold": null,
         "side": "NO"
       },
-      "outcome": null,
-      "recorded_at": "2025-12-22T19:15:53.568201"
+      "outcome": "win",
+      "recorded_at": "2025-12-22T19:15:53.568201",
+      "actual_temp": 40.0
     },
     {
       "date": "2025-12-23",
@@ -1093,8 +1116,9 @@
         "threshold": null,
         "side": "YES"
       },
-      "outcome": null,
-      "recorded_at": "2025-12-22T19:15:53.570150"
+      "outcome": "loss",
+      "recorded_at": "2025-12-22T19:15:53.570150",
+      "actual_temp": 81.0
     },
     {
       "date": "2025-12-23",
@@ -1108,8 +1132,9 @@
         "threshold": null,
         "side": "NO"
       },
-      "outcome": null,
-      "recorded_at": "2025-12-22T19:15:53.571903"
+      "outcome": "loss",
+      "recorded_at": "2025-12-22T19:15:53.571903",
+      "actual_temp": 53.0
     },
     {
       "date": "2025-12-23",
@@ -1123,8 +1148,9 @@
         "threshold": null,
         "side": "NO"
       },
-      "outcome": null,
-      "recorded_at": "2025-12-22T19:15:53.573306"
+      "outcome": "loss",
+      "recorded_at": "2025-12-22T19:15:53.573306",
+      "actual_temp": 53.0
     },
     {
       "date": "2025-12-23",
@@ -1138,8 +1164,9 @@
         "threshold": null,
         "side": "NO"
       },
-      "outcome": null,
-      "recorded_at": "2025-12-22T19:26:23.963021"
+      "outcome": "win",
+      "recorded_at": "2025-12-22T19:26:23.963021",
+      "actual_temp": 81.0
     },
     {
       "date": "2025-12-23",
@@ -1153,8 +1180,9 @@
         "threshold": 37,
         "side": "YES"
       },
-      "outcome": null,
-      "recorded_at": "2025-12-22T19:26:23.966421"
+      "outcome": "loss",
+      "recorded_at": "2025-12-22T19:26:23.966421",
+      "actual_temp": 40.0
     },
     {
       "date": "2025-12-23",
@@ -1168,8 +1196,9 @@
         "threshold": null,
         "side": "NO"
       },
-      "outcome": null,
-      "recorded_at": "2025-12-22T19:26:23.968178"
+      "outcome": "win",
+      "recorded_at": "2025-12-22T19:26:23.968178",
+      "actual_temp": 40.0
     },
     {
       "date": "2025-12-23",
@@ -1183,8 +1212,9 @@
         "threshold": null,
         "side": "YES"
       },
-      "outcome": null,
-      "recorded_at": "2025-12-22T19:26:23.969815"
+      "outcome": "loss",
+      "recorded_at": "2025-12-22T19:26:23.969815",
+      "actual_temp": 81.0
     },
     {
       "date": "2025-12-23",
@@ -1198,8 +1228,9 @@
         "threshold": null,
         "side": "NO"
       },
-      "outcome": null,
-      "recorded_at": "2025-12-22T19:26:23.971429"
+      "outcome": "loss",
+      "recorded_at": "2025-12-22T19:26:23.971429",
+      "actual_temp": 53.0
     },
     {
       "date": "2025-12-23",
@@ -1213,8 +1244,9 @@
         "threshold": null,
         "side": "NO"
       },
-      "outcome": null,
-      "recorded_at": "2025-12-22T19:26:23.973227"
+      "outcome": "loss",
+      "recorded_at": "2025-12-22T19:26:23.973227",
+      "actual_temp": 53.0
     },
     {
       "date": "2025-12-23",
@@ -1228,8 +1260,9 @@
         "threshold": 37,
         "side": "YES"
       },
-      "outcome": null,
-      "recorded_at": "2025-12-22T21:13:43.415619"
+      "outcome": "loss",
+      "recorded_at": "2025-12-22T21:13:43.415619",
+      "actual_temp": 40.0
     },
     {
       "date": "2025-12-23",
@@ -1243,8 +1276,9 @@
         "threshold": null,
         "side": "NO"
       },
-      "outcome": null,
-      "recorded_at": "2025-12-22T21:13:43.418220"
+      "outcome": "win",
+      "recorded_at": "2025-12-22T21:13:43.418220",
+      "actual_temp": 81.0
     },
     {
       "date": "2025-12-23",
@@ -1258,8 +1292,9 @@
         "threshold": null,
         "side": "NO"
       },
-      "outcome": null,
-      "recorded_at": "2025-12-22T21:13:43.419920"
+      "outcome": "loss",
+      "recorded_at": "2025-12-22T21:13:43.419920",
+      "actual_temp": 40.0
     },
     {
       "date": "2025-12-23",
@@ -1273,8 +1308,9 @@
         "threshold": null,
         "side": "NO"
       },
-      "outcome": null,
-      "recorded_at": "2025-12-22T21:13:43.421470"
+      "outcome": "loss",
+      "recorded_at": "2025-12-22T21:13:43.421470",
+      "actual_temp": 81.0
     },
     {
       "date": "2025-12-23",
@@ -1288,8 +1324,9 @@
         "threshold": null,
         "side": "NO"
       },
-      "outcome": null,
-      "recorded_at": "2025-12-22T21:13:43.422987"
+      "outcome": "loss",
+      "recorded_at": "2025-12-22T21:13:43.422987",
+      "actual_temp": 53.0
     },
     {
       "date": "2025-12-23",
@@ -1303,8 +1340,9 @@
         "threshold": null,
         "side": "NO"
       },
-      "outcome": null,
-      "recorded_at": "2025-12-22T21:13:43.424555"
+      "outcome": "loss",
+      "recorded_at": "2025-12-22T21:13:43.424555",
+      "actual_temp": 53.0
     },
     {
       "date": "2025-12-23",
@@ -1318,8 +1356,9 @@
         "threshold": null,
         "side": "NO"
       },
-      "outcome": null,
-      "recorded_at": "2025-12-22T21:20:19.831790"
+      "outcome": "win",
+      "recorded_at": "2025-12-22T21:20:19.831790",
+      "actual_temp": 81.0
     },
     {
       "date": "2025-12-23",
@@ -1333,8 +1372,9 @@
         "threshold": null,
         "side": "NO"
       },
-      "outcome": null,
-      "recorded_at": "2025-12-22T21:20:19.835413"
+      "outcome": "loss",
+      "recorded_at": "2025-12-22T21:20:19.835413",
+      "actual_temp": 40.0
     },
     {
       "date": "2025-12-23",
@@ -1348,8 +1388,9 @@
         "threshold": null,
         "side": "NO"
       },
-      "outcome": null,
-      "recorded_at": "2025-12-22T21:20:19.837541"
+      "outcome": "win",
+      "recorded_at": "2025-12-22T21:20:19.837541",
+      "actual_temp": 40.0
     },
     {
       "date": "2025-12-23",
@@ -1363,8 +1404,9 @@
         "threshold": null,
         "side": "NO"
       },
-      "outcome": null,
-      "recorded_at": "2025-12-22T21:20:19.839517"
+      "outcome": "loss",
+      "recorded_at": "2025-12-22T21:20:19.839517",
+      "actual_temp": 81.0
     },
     {
       "date": "2025-12-23",
@@ -1378,8 +1420,9 @@
         "threshold": null,
         "side": "NO"
       },
-      "outcome": null,
-      "recorded_at": "2025-12-22T21:20:19.841222"
+      "outcome": "loss",
+      "recorded_at": "2025-12-22T21:20:19.841222",
+      "actual_temp": 53.0
     },
     {
       "date": "2025-12-23",
@@ -1393,8 +1436,9 @@
         "threshold": null,
         "side": "NO"
       },
-      "outcome": null,
-      "recorded_at": "2025-12-22T21:20:19.843335"
+      "outcome": "loss",
+      "recorded_at": "2025-12-22T21:20:19.843335",
+      "actual_temp": 53.0
     },
     {
       "date": "2025-12-23",
@@ -1408,8 +1452,9 @@
         "threshold": null,
         "side": "NO"
       },
-      "outcome": null,
-      "recorded_at": "2025-12-22T21:23:52.149677"
+      "outcome": "win",
+      "recorded_at": "2025-12-22T21:23:52.149677",
+      "actual_temp": 81.0
     },
     {
       "date": "2025-12-23",
@@ -1423,8 +1468,9 @@
         "threshold": null,
         "side": "NO"
       },
-      "outcome": null,
-      "recorded_at": "2025-12-22T21:23:52.153197"
+      "outcome": "loss",
+      "recorded_at": "2025-12-22T21:23:52.153197",
+      "actual_temp": 40.0
     },
     {
       "date": "2025-12-23",
@@ -1438,8 +1484,9 @@
         "threshold": null,
         "side": "NO"
       },
-      "outcome": null,
-      "recorded_at": "2025-12-22T21:23:52.154764"
+      "outcome": "win",
+      "recorded_at": "2025-12-22T21:23:52.154764",
+      "actual_temp": 40.0
     },
     {
       "date": "2025-12-23",
@@ -1453,8 +1500,9 @@
         "threshold": null,
         "side": "YES"
       },
-      "outcome": null,
-      "recorded_at": "2025-12-22T21:23:52.156321"
+      "outcome": "loss",
+      "recorded_at": "2025-12-22T21:23:52.156321",
+      "actual_temp": 81.0
     },
     {
       "date": "2025-12-23",
@@ -1468,8 +1516,9 @@
         "threshold": null,
         "side": "NO"
       },
-      "outcome": null,
-      "recorded_at": "2025-12-22T21:23:52.157646"
+      "outcome": "loss",
+      "recorded_at": "2025-12-22T21:23:52.157646",
+      "actual_temp": 53.0
     },
     {
       "date": "2025-12-23",
@@ -1483,8 +1532,9 @@
         "threshold": null,
         "side": "NO"
       },
-      "outcome": null,
-      "recorded_at": "2025-12-22T21:23:52.158772"
+      "outcome": "loss",
+      "recorded_at": "2025-12-22T21:23:52.158772",
+      "actual_temp": 53.0
     },
     {
       "date": "2025-12-23",
@@ -1498,8 +1548,9 @@
         "threshold": null,
         "side": "NO"
       },
-      "outcome": null,
-      "recorded_at": "2025-12-22T22:03:29.632078"
+      "outcome": "win",
+      "recorded_at": "2025-12-22T22:03:29.632078",
+      "actual_temp": 81.0
     },
     {
       "date": "2025-12-23",
@@ -1513,8 +1564,9 @@
         "threshold": null,
         "side": "NO"
       },
-      "outcome": null,
-      "recorded_at": "2025-12-22T22:03:29.636038"
+      "outcome": "win",
+      "recorded_at": "2025-12-22T22:03:29.636038",
+      "actual_temp": 40.0
     },
     {
       "date": "2025-12-23",
@@ -1528,8 +1580,9 @@
         "threshold": null,
         "side": "NO"
       },
-      "outcome": null,
-      "recorded_at": "2025-12-22T22:03:29.638254"
+      "outcome": "loss",
+      "recorded_at": "2025-12-22T22:03:29.638254",
+      "actual_temp": 40.0
     },
     {
       "date": "2025-12-23",
@@ -1543,8 +1596,9 @@
         "threshold": null,
         "side": "YES"
       },
-      "outcome": null,
-      "recorded_at": "2025-12-22T22:03:29.639940"
+      "outcome": "loss",
+      "recorded_at": "2025-12-22T22:03:29.639940",
+      "actual_temp": 81.0
     },
     {
       "date": "2025-12-23",
@@ -1558,8 +1612,9 @@
         "threshold": null,
         "side": "NO"
       },
-      "outcome": null,
-      "recorded_at": "2025-12-22T22:03:29.641567"
+      "outcome": "loss",
+      "recorded_at": "2025-12-22T22:03:29.641567",
+      "actual_temp": 53.0
     },
     {
       "date": "2025-12-23",
@@ -1573,8 +1628,579 @@
         "threshold": null,
         "side": "NO"
       },
+      "outcome": "loss",
+      "recorded_at": "2025-12-22T22:03:29.643500",
+      "actual_temp": 53.0
+    },
+    {
+      "date": "2025-12-24",
+      "city": "Chicago",
+      "our_prob": 0.5100981083571593,
+      "market_price": 0.105,
+      "contract": {
+        "subtitle": "42\u00b0 to 43\u00b0",
+        "low": 42,
+        "high": 43,
+        "threshold": null,
+        "side": "YES"
+      },
       "outcome": null,
-      "recorded_at": "2025-12-22T22:03:29.643500"
+      "recorded_at": "2025-12-23T16:02:50.942953"
+    },
+    {
+      "date": "2025-12-24",
+      "city": "New York City",
+      "our_prob": 0.9714870620270222,
+      "market_price": 0.5549999999999999,
+      "contract": {
+        "subtitle": "44\u00b0 to 45\u00b0",
+        "low": 44,
+        "high": 45,
+        "threshold": null,
+        "side": "NO"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-23T16:02:50.946708"
+    },
+    {
+      "date": "2025-12-24",
+      "city": "Chicago",
+      "our_prob": 0.9927470464294678,
+      "market_price": 0.62,
+      "contract": {
+        "subtitle": "46\u00b0 to 47\u00b0",
+        "low": 46,
+        "high": 47,
+        "threshold": null,
+        "side": "NO"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-23T16:02:50.948941"
+    },
+    {
+      "date": "2025-12-24",
+      "city": "Miami",
+      "our_prob": 0.516077685375554,
+      "market_price": 0.265,
+      "contract": {
+        "subtitle": "78\u00b0 to 79\u00b0",
+        "low": 78,
+        "high": 79,
+        "threshold": null,
+        "side": "YES"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-23T16:02:50.951571"
+    },
+    {
+      "date": "2025-12-24",
+      "city": "Miami",
+      "our_prob": 0.9801808252171372,
+      "market_price": 0.8049999999999999,
+      "contract": {
+        "subtitle": "82\u00b0 to 83\u00b0",
+        "low": 82,
+        "high": 83,
+        "threshold": null,
+        "side": "NO"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-23T16:02:50.954584"
+    },
+    {
+      "date": "2025-12-24",
+      "city": "Chicago",
+      "our_prob": 0.5100981083571593,
+      "market_price": 0.1,
+      "contract": {
+        "subtitle": "42\u00b0 to 43\u00b0",
+        "low": 42,
+        "high": 43,
+        "threshold": null,
+        "side": "YES"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-23T16:03:14.751728"
+    },
+    {
+      "date": "2025-12-24",
+      "city": "New York City",
+      "our_prob": 0.9714870620270222,
+      "market_price": 0.5549999999999999,
+      "contract": {
+        "subtitle": "44\u00b0 to 45\u00b0",
+        "low": 44,
+        "high": 45,
+        "threshold": null,
+        "side": "NO"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-23T16:03:14.754713"
+    },
+    {
+      "date": "2025-12-24",
+      "city": "Chicago",
+      "our_prob": 0.9927470464294678,
+      "market_price": 0.62,
+      "contract": {
+        "subtitle": "46\u00b0 to 47\u00b0",
+        "low": 46,
+        "high": 47,
+        "threshold": null,
+        "side": "NO"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-23T16:03:14.757630"
+    },
+    {
+      "date": "2025-12-24",
+      "city": "Miami",
+      "our_prob": 0.516077685375554,
+      "market_price": 0.265,
+      "contract": {
+        "subtitle": "78\u00b0 to 79\u00b0",
+        "low": 78,
+        "high": 79,
+        "threshold": null,
+        "side": "YES"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-23T16:03:14.760212"
+    },
+    {
+      "date": "2025-12-24",
+      "city": "Chicago",
+      "our_prob": 0.5100981083571593,
+      "market_price": 0.1,
+      "contract": {
+        "subtitle": "42\u00b0 to 43\u00b0",
+        "low": 42,
+        "high": 43,
+        "threshold": null,
+        "side": "YES"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-23T16:03:39.994586"
+    },
+    {
+      "date": "2025-12-24",
+      "city": "New York City",
+      "our_prob": 0.9714870620270222,
+      "market_price": 0.5549999999999999,
+      "contract": {
+        "subtitle": "44\u00b0 to 45\u00b0",
+        "low": 44,
+        "high": 45,
+        "threshold": null,
+        "side": "NO"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-23T16:03:39.997267"
+    },
+    {
+      "date": "2025-12-24",
+      "city": "Chicago",
+      "our_prob": 0.9927470464294678,
+      "market_price": 0.615,
+      "contract": {
+        "subtitle": "46\u00b0 to 47\u00b0",
+        "low": 46,
+        "high": 47,
+        "threshold": null,
+        "side": "NO"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-23T16:03:39.999709"
+    },
+    {
+      "date": "2025-12-24",
+      "city": "Miami",
+      "our_prob": 0.516077685375554,
+      "market_price": 0.265,
+      "contract": {
+        "subtitle": "78\u00b0 to 79\u00b0",
+        "low": 78,
+        "high": 79,
+        "threshold": null,
+        "side": "YES"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-23T16:03:40.001830"
+    },
+    {
+      "date": "2025-12-24",
+      "city": "Miami",
+      "our_prob": 0.9801808252171372,
+      "market_price": 0.8049999999999999,
+      "contract": {
+        "subtitle": "82\u00b0 to 83\u00b0",
+        "low": 82,
+        "high": 83,
+        "threshold": null,
+        "side": "NO"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-23T16:03:40.003458"
+    },
+    {
+      "date": "2025-12-24",
+      "city": "New York City",
+      "our_prob": 0.9758030111667675,
+      "market_price": 0.5549999999999999,
+      "contract": {
+        "subtitle": "44\u00b0 to 45\u00b0",
+        "low": 44,
+        "high": 45,
+        "threshold": null,
+        "side": "NO"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-23T16:06:03.177444"
+    },
+    {
+      "date": "2025-12-24",
+      "city": "Chicago",
+      "our_prob": 0.9905085041209145,
+      "market_price": 0.62,
+      "contract": {
+        "subtitle": "46\u00b0 to 47\u00b0",
+        "low": 46,
+        "high": 47,
+        "threshold": null,
+        "side": "NO"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-23T16:06:03.182756"
+    },
+    {
+      "date": "2025-12-24",
+      "city": "New York City",
+      "our_prob": 0.9723387677013482,
+      "market_price": 0.605,
+      "contract": {
+        "subtitle": "42\u00b0 to 43\u00b0",
+        "low": 42,
+        "high": 43,
+        "threshold": null,
+        "side": "NO"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-23T16:06:03.185628"
+    },
+    {
+      "date": "2025-12-24",
+      "city": "Miami",
+      "our_prob": 0.45017598869419606,
+      "market_price": 0.265,
+      "contract": {
+        "subtitle": "78\u00b0 to 79\u00b0",
+        "low": 78,
+        "high": 79,
+        "threshold": null,
+        "side": "YES"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-23T16:06:03.188451"
+    },
+    {
+      "date": "2025-12-24",
+      "city": "Chicago",
+      "our_prob": 0.9878384323013087,
+      "market_price": 0.6950000000000001,
+      "contract": {
+        "subtitle": "44\u00b0 to 45\u00b0",
+        "low": 44,
+        "high": 45,
+        "threshold": null,
+        "side": "NO"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-23T16:06:03.191884"
+    },
+    {
+      "date": "2025-12-24",
+      "city": "Miami",
+      "our_prob": 0.9903645046830611,
+      "market_price": 0.8049999999999999,
+      "contract": {
+        "subtitle": "82\u00b0 to 83\u00b0",
+        "low": 82,
+        "high": 83,
+        "threshold": null,
+        "side": "NO"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-23T16:06:03.194935"
+    },
+    {
+      "date": "2025-12-24",
+      "city": "New York City",
+      "our_prob": 0.9758030111667675,
+      "market_price": 0.55,
+      "contract": {
+        "subtitle": "44\u00b0 to 45\u00b0",
+        "low": 44,
+        "high": 45,
+        "threshold": null,
+        "side": "NO"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-23T16:13:54.284474"
+    },
+    {
+      "date": "2025-12-24",
+      "city": "New York City",
+      "our_prob": 0.9723387677013482,
+      "market_price": 0.605,
+      "contract": {
+        "subtitle": "42\u00b0 to 43\u00b0",
+        "low": 42,
+        "high": 43,
+        "threshold": null,
+        "side": "NO"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-23T16:13:54.288863"
+    },
+    {
+      "date": "2025-12-24",
+      "city": "Chicago",
+      "our_prob": 0.9905085041209145,
+      "market_price": 0.625,
+      "contract": {
+        "subtitle": "46\u00b0 to 47\u00b0",
+        "low": 46,
+        "high": 47,
+        "threshold": null,
+        "side": "NO"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-23T16:13:54.291784"
+    },
+    {
+      "date": "2025-12-24",
+      "city": "Miami",
+      "our_prob": 0.45017598869419606,
+      "market_price": 0.265,
+      "contract": {
+        "subtitle": "78\u00b0 to 79\u00b0",
+        "low": 78,
+        "high": 79,
+        "threshold": null,
+        "side": "YES"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-23T16:13:54.294173"
+    },
+    {
+      "date": "2025-12-24",
+      "city": "Chicago",
+      "our_prob": 0.9878384323013087,
+      "market_price": 0.725,
+      "contract": {
+        "subtitle": "44\u00b0 to 45\u00b0",
+        "low": 44,
+        "high": 45,
+        "threshold": null,
+        "side": "NO"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-23T16:13:54.296273"
+    },
+    {
+      "date": "2025-12-24",
+      "city": "Miami",
+      "our_prob": 0.9903645046830611,
+      "market_price": 0.8049999999999999,
+      "contract": {
+        "subtitle": "82\u00b0 to 83\u00b0",
+        "low": 82,
+        "high": 83,
+        "threshold": null,
+        "side": "NO"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-23T16:13:54.298753"
+    },
+    {
+      "date": "2025-12-24",
+      "city": "New York City",
+      "our_prob": 0.9758030111667675,
+      "market_price": 0.5449999999999999,
+      "contract": {
+        "subtitle": "44\u00b0 to 45\u00b0",
+        "low": 44,
+        "high": 45,
+        "threshold": null,
+        "side": "NO"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-23T16:19:32.365309"
+    },
+    {
+      "date": "2025-12-24",
+      "city": "New York City",
+      "our_prob": 0.9723387677013482,
+      "market_price": 0.605,
+      "contract": {
+        "subtitle": "42\u00b0 to 43\u00b0",
+        "low": 42,
+        "high": 43,
+        "threshold": null,
+        "side": "NO"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-23T16:19:32.369226"
+    },
+    {
+      "date": "2025-12-24",
+      "city": "Chicago",
+      "our_prob": 0.9905085041209145,
+      "market_price": 0.63,
+      "contract": {
+        "subtitle": "46\u00b0 to 47\u00b0",
+        "low": 46,
+        "high": 47,
+        "threshold": null,
+        "side": "NO"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-23T16:19:32.372268"
+    },
+    {
+      "date": "2025-12-24",
+      "city": "Miami",
+      "our_prob": 0.45017598869419606,
+      "market_price": 0.265,
+      "contract": {
+        "subtitle": "78\u00b0 to 79\u00b0",
+        "low": 78,
+        "high": 79,
+        "threshold": null,
+        "side": "YES"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-23T16:19:32.374292"
+    },
+    {
+      "date": "2025-12-24",
+      "city": "Chicago",
+      "our_prob": 0.9878384323013087,
+      "market_price": 0.725,
+      "contract": {
+        "subtitle": "44\u00b0 to 45\u00b0",
+        "low": 44,
+        "high": 45,
+        "threshold": null,
+        "side": "NO"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-23T16:19:32.376155"
+    },
+    {
+      "date": "2025-12-24",
+      "city": "Miami",
+      "our_prob": 0.9903645046830611,
+      "market_price": 0.8049999999999999,
+      "contract": {
+        "subtitle": "82\u00b0 to 83\u00b0",
+        "low": 82,
+        "high": 83,
+        "threshold": null,
+        "side": "NO"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-23T16:19:32.378581"
+    },
+    {
+      "date": "2025-12-24",
+      "city": "New York City",
+      "our_prob": 0.9758030111667675,
+      "market_price": 0.53,
+      "contract": {
+        "subtitle": "44\u00b0 to 45\u00b0",
+        "low": 44,
+        "high": 45,
+        "threshold": null,
+        "side": "NO"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-23T16:25:22.246562"
+    },
+    {
+      "date": "2025-12-24",
+      "city": "Chicago",
+      "our_prob": 0.9905085041209145,
+      "market_price": 0.625,
+      "contract": {
+        "subtitle": "46\u00b0 to 47\u00b0",
+        "low": 46,
+        "high": 47,
+        "threshold": null,
+        "side": "NO"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-23T16:25:22.251354"
+    },
+    {
+      "date": "2025-12-24",
+      "city": "New York City",
+      "our_prob": 0.9723387677013482,
+      "market_price": 0.63,
+      "contract": {
+        "subtitle": "42\u00b0 to 43\u00b0",
+        "low": 42,
+        "high": 43,
+        "threshold": null,
+        "side": "NO"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-23T16:25:22.254163"
+    },
+    {
+      "date": "2025-12-24",
+      "city": "Chicago",
+      "our_prob": 0.9878384323013087,
+      "market_price": 0.73,
+      "contract": {
+        "subtitle": "44\u00b0 to 45\u00b0",
+        "low": 44,
+        "high": 45,
+        "threshold": null,
+        "side": "NO"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-23T16:25:22.256724"
+    },
+    {
+      "date": "2025-12-24",
+      "city": "Miami",
+      "our_prob": 0.9903645046830611,
+      "market_price": 0.8049999999999999,
+      "contract": {
+        "subtitle": "82\u00b0 to 83\u00b0",
+        "low": 82,
+        "high": 83,
+        "threshold": null,
+        "side": "NO"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-23T16:25:22.259400"
+    },
+    {
+      "date": "2025-12-24",
+      "city": "Miami",
+      "our_prob": 0.38033471885292625,
+      "market_price": 0.265,
+      "contract": {
+        "subtitle": "78\u00b0 to 79\u00b0",
+        "low": 78,
+        "high": 79,
+        "threshold": null,
+        "side": "YES"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-23T16:25:22.262659"
     }
   ],
   "bins": {
@@ -1583,8 +2209,8 @@
       "count": 6
     },
     "0.5": {
-      "wins": 4,
-      "count": 9
+      "wins": 5,
+      "count": 15
     },
     "0.3": {
       "wins": 7,
@@ -1600,7 +2226,19 @@
     },
     "0.4": {
       "wins": 10,
-      "count": 14
+      "count": 15
+    },
+    "1.0": {
+      "wins": 13,
+      "count": 41
+    },
+    "0.6": {
+      "wins": 0,
+      "count": 3
+    },
+    "0.7": {
+      "wins": 3,
+      "count": 5
     }
   }
 }

@@ -1,6 +1,6 @@
 """
-KALSHI WEATHER BETTING MODEL v12.5 (OPTIMIZED + ENHANCED)
-==========================================================
+KALSHI WEATHER BETTING MODEL v12.5 (OPTIMIZED + ENHANCED) - CALIBRATION BOOST REMOVED
+=====================================================================================
 CALIBRATED based on your 46 historical bets showing:
 - 30% estimates → 70% actual wins (you're too conservative!)
 - 40% estimates → 71% actual wins (systematic underestimation)
@@ -9,7 +9,7 @@ CALIBRATED based on your 46 historical bets showing:
 
 OPTIMIZATIONS APPLIED (v12):
 1. ✅ LOWER EDGE REQUIREMENTS: 8% sweet spot, 7% mid-range (was 12%)
-2. ✅ CALIBRATION BOOST: Auto-adjusts probabilities +15% in 25-50% range
+2. ❌ CALIBRATION BOOST REMOVED: No longer auto-adjusts probabilities (was +15%)
 3. ✅ AGGRESSIVE KELLY: 0.80 fraction, 20% max (was 0.75, 15%)
 4. ✅ MID-RANGE FOCUS: 40-60¢ contracts prioritized (your strength)
 5. ✅ RELAXED THRESHOLDS: Lower barriers for multi-betting same city
@@ -99,7 +99,7 @@ EVENING_CUTOFF_HOUR = 18  # 6 PM Eastern
 # ============ KELLY CRITERION CONFIGURATION ============
 # CALIBRATED based on historical betting patterns
 STARTING_BANKROLL = 100        # Your bankroll
-KELLY_FRACTION = 0.80          # Increased from 0.75 - your picks are better than you think!
+KELLY_FRACTION = 0.40          # Increased from 0.75 - your picks are better than you think!
 MIN_BET_SIZE = 0.50            # Don't bet less than 50¢
 MAX_BET_FRACTION = 0.20        # Increased from 0.15 - bet more on calibrated opportunities
 
@@ -247,11 +247,7 @@ class CalibrationTracker:
         bin_key = f"{prob_bin:.1f}"
         
         if bin_key not in self.history["bins"]:
-            # No calibration data - apply conservative boost based on historical pattern
-            # Your history shows you're ~15-20% too conservative on average
-            if 0.25 <= raw_probability <= 0.50:
-                # This is where you're most underconfident
-                return min(0.99, raw_probability * 1.15)  # Boost by 15%
+            # No calibration data - return raw probability without adjustment
             return raw_probability
         
         bin_data = self.history["bins"][bin_key]
@@ -259,9 +255,7 @@ class CalibrationTracker:
         # Use calibration data even with fewer samples (was 10, now 3)
         # Your systematic bias is clear enough to trust smaller samples
         if bin_data.get("count", 0) < 3:
-            # Apply general boost for small sample bins
-            if 0.25 <= raw_probability <= 0.50:
-                return min(0.99, raw_probability * 1.12)
+            # Not enough data - return raw probability
             return raw_probability
         
         # Calculate empirical accuracy
@@ -287,20 +281,49 @@ class CalibrationTracker:
         Call this after you know the actual temperature.
         """
         updated = 0
+        
+        # Normalize city name for flexible matching
+        city_lower = city.lower().strip()
+        city_map = {
+            "chicago": ["chicago", "chi"],
+            "new york": ["new york", "new york city", "nyc"],
+            "miami": ["miami", "mia"]
+        }
+        
+        # Find which city group this belongs to
+        matching_variants = None
+        for key, variants in city_map.items():
+            if city_lower in variants or any(v in city_lower for v in variants):
+                matching_variants = variants
+                break
+        
         for pred in self.history["predictions"]:
-            if pred["date"] == str(date) and pred["city"] == city and pred["outcome"] is None:
+            pred_city_lower = pred["city"].lower().strip()
+            
+            # Check if cities match (case-insensitive, with variants)
+            cities_match = False
+            if matching_variants:
+                cities_match = pred_city_lower in matching_variants or any(v in pred_city_lower for v in matching_variants)
+            else:
+                cities_match = (pred_city_lower == city_lower)
+            
+            if pred["date"] == str(date) and cities_match and pred["outcome"] is None:
                 # Determine if prediction was correct
                 contract = pred["contract"]
-                if "low" in contract and "high" in contract:
+                
+                # Validate contract data before using it
+                if "low" in contract and "high" in contract and contract["low"] is not None and contract["high"] is not None:
                     # Range contract
                     won = contract["low"] <= actual_temp <= contract["high"]
-                elif "threshold" in contract and "side" in contract:
+                elif "threshold" in contract and "side" in contract and contract["threshold"] is not None:
                     # Above/below contract
                     if contract["side"] == "above":
                         won = actual_temp >= contract["threshold"]
                     else:  # below
                         won = actual_temp <= contract["threshold"]
                 else:
+                    # Malformed contract data - skip this prediction
+                    print(f"   ⚠️  Skipping malformed contract: {contract.get('subtitle', 'Unknown')}")
                     continue
                 
                 pred["outcome"] = "win" if won else "loss"
@@ -323,6 +346,9 @@ class CalibrationTracker:
         if updated > 0:
             self.save_history()
             print(f"✅ Updated {updated} prediction(s) with actual temp {actual_temp}°F")
+        else:
+            print(f"⚠️  No matching predictions found for {city} on {date}")
+            print(f"   (Searched for city variants of '{city}')")
     
     def get_calibration_report(self):
         """Generate a calibration report showing accuracy by probability bin."""
@@ -784,7 +810,7 @@ def print_header(target_date, is_today):
     print("   • 40-60¢ contracts: Your sweet spot (71% win rate)")
     print("   • Edge requirements lowered: 7-10% (was 12%)")
     print("   • Kelly increased to 0.80 (was 0.75)")
-    print("   • Calibration auto-boosts probabilities in 25-50% range")
+    print("   • Calibration boost REMOVED (was causing overconfidence)")
     
     print("\n🌤️  V12.5 ENHANCEMENTS (BUILT-IN):")
     print("   ✅ Cloud timing analysis (morning/peak heating clouds)")
@@ -2452,12 +2478,13 @@ def smart_select_bets(all_bets, bankroll=STARTING_BANKROLL):
     selected_bets = selected_bets[:MAX_TOTAL_BETS_PER_DAY]
     
     # CRITICAL: Ensure total wager doesn't exceed bankroll
-    # Scale down bet sizes proportionally if needed
+    # Target 95% of bankroll to leave buffer for rounding
+    max_wager = bankroll * 0.95
     total_wager = sum(bet["bet_size"] for bet in selected_bets)
     
-    if total_wager > bankroll:
-        # Calculate scaling factor
-        scale_factor = bankroll / total_wager
+    if total_wager > max_wager:
+        # Calculate scaling factor to hit 95% of bankroll
+        scale_factor = max_wager / total_wager
         
         # Scale down all bet sizes proportionally
         for bet in selected_bets:
@@ -2635,11 +2662,12 @@ def print_recommendations(selected_bets, all_bets, city_summaries, bankroll, tar
     print(f"   Total wager: ${total_wager:.2f} ({100*total_wager/bankroll:.1f}% of bankroll)")
     print(f"   Total potential profit: ${total_potential:.2f}")
     
-    # Sanity check - this should never trigger now, but good to have
-    if total_wager > bankroll:
+    # Sanity check with small epsilon for floating point precision
+    epsilon = 0.01  # 1 cent tolerance
+    if total_wager > bankroll + epsilon:
         print(f"   ⚠️  WARNING: Total wager exceeds bankroll by ${total_wager - bankroll:.2f}!")
         print(f"   ⚠️  This should not happen - please report this bug")
-    elif total_wager > bankroll * 0.95:
+    elif total_wager > bankroll * 0.90:
         print(f"   ℹ️  Note: Using {100*total_wager/bankroll:.1f}% of available bankroll")
     
     print("   " + "=" * 74)
