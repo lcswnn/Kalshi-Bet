@@ -1215,6 +1215,276 @@
       },
       "outcome": null,
       "recorded_at": "2025-12-22T19:26:23.973227"
+    },
+    {
+      "date": "2025-12-23",
+      "city": "New York City",
+      "our_prob": 0.99,
+      "market_price": 0.1,
+      "contract": {
+        "subtitle": "37\u00b0 or below",
+        "low": null,
+        "high": null,
+        "threshold": 37,
+        "side": "YES"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-22T21:13:43.415619"
+    },
+    {
+      "date": "2025-12-23",
+      "city": "Miami",
+      "our_prob": 0.998,
+      "market_price": 0.42500000000000004,
+      "contract": {
+        "subtitle": "80\u00b0 to 81\u00b0",
+        "low": 80,
+        "high": 81,
+        "threshold": null,
+        "side": "NO"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-22T21:13:43.418220"
+    },
+    {
+      "date": "2025-12-23",
+      "city": "New York City",
+      "our_prob": 0.998,
+      "market_price": 0.5700000000000001,
+      "contract": {
+        "subtitle": "38\u00b0 to 39\u00b0",
+        "low": 38,
+        "high": 39,
+        "threshold": null,
+        "side": "NO"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-22T21:13:43.419920"
+    },
+    {
+      "date": "2025-12-23",
+      "city": "Miami",
+      "our_prob": 0.998,
+      "market_price": 0.7050000000000001,
+      "contract": {
+        "subtitle": "78\u00b0 to 79\u00b0",
+        "low": 78,
+        "high": 79,
+        "threshold": null,
+        "side": "NO"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-22T21:13:43.421470"
+    },
+    {
+      "date": "2025-12-23",
+      "city": "Chicago",
+      "our_prob": 0.9928145649771374,
+      "market_price": 0.6699999999999999,
+      "contract": {
+        "subtitle": "49\u00b0 to 50\u00b0",
+        "low": 49,
+        "high": 50,
+        "threshold": null,
+        "side": "NO"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-22T21:13:43.422987"
+    },
+    {
+      "date": "2025-12-23",
+      "city": "Chicago",
+      "our_prob": 0.9917628833931819,
+      "market_price": 0.7150000000000001,
+      "contract": {
+        "subtitle": "47\u00b0 to 48\u00b0",
+        "low": 47,
+        "high": 48,
+        "threshold": null,
+        "side": "NO"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-22T21:13:43.424555"
+    },
+    {
+      "date": "2025-12-23",
+      "city": "Miami",
+      "our_prob": 0.998,
+      "market_price": 0.42500000000000004,
+      "contract": {
+        "subtitle": "80\u00b0 to 81\u00b0",
+        "low": 80,
+        "high": 81,
+        "threshold": null,
+        "side": "NO"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-22T21:20:19.831790"
+    },
+    {
+      "date": "2025-12-23",
+      "city": "New York City",
+      "our_prob": 0.998,
+      "market_price": 0.5700000000000001,
+      "contract": {
+        "subtitle": "38\u00b0 to 39\u00b0",
+        "low": 38,
+        "high": 39,
+        "threshold": null,
+        "side": "NO"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-22T21:20:19.835413"
+    },
+    {
+      "date": "2025-12-23",
+      "city": "New York City",
+      "our_prob": 0.998,
+      "market_price": 0.61,
+      "contract": {
+        "subtitle": "40\u00b0 to 41\u00b0",
+        "low": 40,
+        "high": 41,
+        "threshold": null,
+        "side": "NO"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-22T21:20:19.837541"
+    },
+    {
+      "date": "2025-12-23",
+      "city": "Miami",
+      "our_prob": 0.998,
+      "market_price": 0.71,
+      "contract": {
+        "subtitle": "78\u00b0 to 79\u00b0",
+        "low": 78,
+        "high": 79,
+        "threshold": null,
+        "side": "NO"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-22T21:20:19.839517"
+    },
+    {
+      "date": "2025-12-23",
+      "city": "Chicago",
+      "our_prob": 0.9928145649771374,
+      "market_price": 0.655,
+      "contract": {
+        "subtitle": "49\u00b0 to 50\u00b0",
+        "low": 49,
+        "high": 50,
+        "threshold": null,
+        "side": "NO"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-22T21:20:19.841222"
+    },
+    {
+      "date": "2025-12-23",
+      "city": "Chicago",
+      "our_prob": 0.9917628833931819,
+      "market_price": 0.735,
+      "contract": {
+        "subtitle": "47\u00b0 to 48\u00b0",
+        "low": 47,
+        "high": 48,
+        "threshold": null,
+        "side": "NO"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-22T21:20:19.843335"
+    },
+    {
+      "date": "2025-12-23",
+      "city": "Miami",
+      "our_prob": 0.9865131921191401,
+      "market_price": 0.42500000000000004,
+      "contract": {
+        "subtitle": "80\u00b0 to 81\u00b0",
+        "low": 80,
+        "high": 81,
+        "threshold": null,
+        "side": "NO"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-22T21:23:52.149677"
+    },
+    {
+      "date": "2025-12-23",
+      "city": "New York City",
+      "our_prob": 0.9732452414458685,
+      "market_price": 0.5700000000000001,
+      "contract": {
+        "subtitle": "38\u00b0 to 39\u00b0",
+        "low": 38,
+        "high": 39,
+        "threshold": null,
+        "side": "NO"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-22T21:23:52.153197"
+    },
+    {
+      "date": "2025-12-23",
+      "city": "New York City",
+      "our_prob": 0.9806673803200328,
+      "market_price": 0.6,
+      "contract": {
+        "subtitle": "40\u00b0 to 41\u00b0",
+        "low": 40,
+        "high": 41,
+        "threshold": null,
+        "side": "NO"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-22T21:23:52.154764"
+    },
+    {
+      "date": "2025-12-23",
+      "city": "Miami",
+      "our_prob": 0.5596662096620982,
+      "market_price": 0.29,
+      "contract": {
+        "subtitle": "78\u00b0 to 79\u00b0",
+        "low": 78,
+        "high": 79,
+        "threshold": null,
+        "side": "YES"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-22T21:23:52.156321"
+    },
+    {
+      "date": "2025-12-23",
+      "city": "Chicago",
+      "our_prob": 0.9852784641640939,
+      "market_price": 0.645,
+      "contract": {
+        "subtitle": "49\u00b0 to 50\u00b0",
+        "low": 49,
+        "high": 50,
+        "threshold": null,
+        "side": "NO"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-22T21:23:52.157646"
+    },
+    {
+      "date": "2025-12-23",
+      "city": "Chicago",
+      "our_prob": 0.9835680609073507,
+      "market_price": 0.755,
+      "contract": {
+        "subtitle": "47\u00b0 to 48\u00b0",
+        "low": 47,
+        "high": 48,
+        "threshold": null,
+        "side": "NO"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-22T21:23:52.158772"
     }
   ],
   "bins": {

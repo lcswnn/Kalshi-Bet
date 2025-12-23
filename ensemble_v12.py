@@ -122,7 +122,7 @@ WIND_SHIFT_THRESHOLD = 90.0         # degrees - significant wind direction chang
 # ============ CLOUD COVER & PRECIPITATION TIMING CONFIGURATION ============
 MORNING_CLOUD_THRESHOLD = 60        # % - significant morning cloud cover (before 10 AM)
 AFTERNOON_CLOUD_THRESHOLD = 70      # % - significant afternoon cloud cover
-MORNING_CLOUD_IMPACT = -3.0         # °F - typical max temp suppression from morning clouds
+MORNING_CLOUD_IMPACT = -2.0         # °F - typical max temp suppression from morning clouds
 HEAVY_PRECIP_THRESHOLD = 0.1        # inches/hour - heavy rain rate
 PEAK_HEATING_START = 11             # Hour (local) - start of peak heating period
 PEAK_HEATING_END = 15               # Hour (local) - end of peak heating period
@@ -786,14 +786,12 @@ def print_header(target_date, is_today):
     print("   • Kelly increased to 0.80 (was 0.75)")
     print("   • Calibration auto-boosts probabilities in 25-50% range")
     
-    print("\n🌤️  NEW IN V12.5 - MEDIUM PRIORITY ENHANCEMENTS:")
-    if ENHANCEMENTS_AVAILABLE:
-        print("   ✅ Cloud timing analysis (midday clouds = -5 to -10°F)")
-        print("   ✅ Precipitation timing (rain during peak heating = -8 to -15°F)")
-        print("   ✅ Weather regime detection (adjusts uncertainty 0.75x to 1.5x)")
-    else:
-        print("   ⚠️  Enhancement module not found - using base v12 features")
-        print("   💡 Add medium_priority_enhancements.py for full v12.5")
+    print("\n🌤️  V12.5 ENHANCEMENTS (BUILT-IN):")
+    print("   ✅ Cloud timing analysis (morning/peak heating clouds)")
+    print("   ✅ Precipitation timing analysis (rain during peak heating)")
+    print("   ✅ Weather regime detection (pressure-based uncertainty)")
+    print("   ✅ Smart model weighting (reduces GFS correlation)")
+    print("   ✅ Dynamic uncertainty (scales with conditions)")
     
     print("\n✨ V12 CORE ENHANCEMENTS:")
     print("   • Dynamic forecast uncertainty (scales with model spread)")
@@ -1965,6 +1963,8 @@ def analyze_city(city_key, bankroll, target_date, calibration_tracker=None):
     
     # Calculate weighted ensemble
     ensemble_forecast = sum(f * w for f, w in zip(forecasts, weights))
+    # SAVE ORIGINAL for display purposes before adjustments
+    original_weighted_ensemble = ensemble_forecast
     
     # ============ DYNAMIC UNCERTAINTY CALCULATION (V12 NEW!) ============
     uncertainty_std, uncertainty_factors = calculate_dynamic_uncertainty(
@@ -2098,11 +2098,12 @@ def analyze_city(city_key, bankroll, target_date, calibration_tracker=None):
                     print(f"     Ensemble: {original_ensemble:.1f}°F → {ensemble_forecast:.1f}°F")
     
     # ============ MEDIUM PRIORITY ENHANCEMENTS (V12.5 NEW!) ============
+    # DISABLED: This was double-counting cloud/precip adjustments already applied above
     enhancement_adjustments = []
     enhancement_explanations = []
     regime_uncertainty_mult = 1.0
     
-    if ENHANCEMENTS_AVAILABLE:
+    if False and ENHANCEMENTS_AVAILABLE:  # DISABLED to prevent double-counting
         print(f"\n  🌤️  ENHANCED ANALYSIS (V12.5 - Cloud/Precip/Regime):")
         
         try:
@@ -2145,7 +2146,7 @@ def analyze_city(city_key, bankroll, target_date, calibration_tracker=None):
     print(f"\n  📊 Model Comparison:")
     for source, forecast in zip(forecast_sources, forecasts):
         print(f"     {source}: {forecast:.1f}°F")
-    print(f"     Weighted Ensemble: {ensemble_forecast:.1f}°F")
+    print(f"     Weighted Ensemble: {original_weighted_ensemble:.1f}°F")
     
     if len(forecasts) > 1:
         print(f"     Spread: {model_spread:.1f}°F → Agreement: {agreement_level.upper()}")
@@ -2158,6 +2159,14 @@ def analyze_city(city_key, bankroll, target_date, calibration_tracker=None):
             elif agreement_level == 'medium':
                 agreement_level = 'low'
 
+    # Show adjustment summary if the final forecast differs significantly from weighted ensemble
+    total_adjustment = ensemble_forecast - original_weighted_ensemble
+    if abs(total_adjustment) > 0.5:
+        print(f"\n  📐 ADJUSTMENT SUMMARY:")
+        print(f"     Weighted Ensemble: {original_weighted_ensemble:.1f}°F")
+        print(f"     Total Adjustments: {total_adjustment:+.1f}°F")
+        print(f"     Final Ensemble: {ensemble_forecast:.1f}°F")
+    
     print(f"\n  🎯 ENSEMBLE FORECAST: {ensemble_forecast:.1f}°F")
     rounded_forecast = nws_round(ensemble_forecast)
     print(f"     NWS-rounded (for Kalshi resolution): {rounded_forecast}°F")

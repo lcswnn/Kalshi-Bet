@@ -262,13 +262,25 @@
         forecastsSection.innerHTML += warningsHtml;
       }
 
+      // Helper to format city names
+      function formatCityName(name) {
+        const cityMap = {
+          'NYC': 'New York',
+          'NEW YORK CITY': 'New York',
+          'CHICAGO': 'Chicago',
+          'MIAMI': 'Miami'
+        };
+        return cityMap[name.toUpperCase()] || name;
+      }
+
       // Display forecasts
       if (data.forecasts.length > 0) {
         forecastsSection.innerHTML += '<h2 class="inter-semibold section-title">📊 Forecast Analysis</h2>';
         data.forecasts.forEach(city => {
+          const displayName = formatCityName(city.name);
           const cityHtml = `
             <div class="forecast-card">
-              <h3 class="inter-semibold city-name">${city.name}</h3>
+              <h3 class="inter-semibold city-name">${displayName}</h3>
               
               ${city.models.length > 0 ? `
                 <div class="models-section">
@@ -295,7 +307,6 @@
 
               <div class="final-forecast">
                 <p class="inter-semibold forecast-value">⭐ Ensemble Forecast: ${city.finalForecast}</p>
-                ${city.uncertainty ? `<p class="inter-medium uncertainty-value">Uncertainty: ${city.uncertainty}</p>` : ''}
                 ${city.predictedBin ? `<p class="inter-medium bin-value">📍 ${city.predictedBin}</p>` : ''}
               </div>
 
@@ -378,7 +389,6 @@
               ` : ''}
 
               <div class="model-info">
-                ${bet.forecast ? `<p class="inter-medium">🌡️ ${bet.forecast}</p>` : ''}
                 ${bet.agreement ? `<p class="inter-medium">Agreement: ${bet.agreement}</p>` : ''}
               </div>
             </div>
