@@ -56,9 +56,14 @@
 
   <!-- Results Display Area -->
   <div id="resultsContainer" class="results-container" style="display: none;">
+    <!-- Prediction Date Header -->
+    <div id="predictionDateHeader" class="prediction-date-header">
+      <h2 class="inter-semibold" id="predictionDateText"></h2>
+    </div>
+
     <!-- City Forecasts Section -->
     <div id="forecastsSection" class="forecasts-section"></div>
-    
+
     <!-- Betting Recommendations Section -->
     <div id="betsSection" class="bets-section"></div>
   </div>
@@ -473,6 +478,12 @@
           document.getElementById("rawOutputBox").value = data.output || data.error || "";
 
           if (data.success !== false && data.output) {
+            // Display prediction date
+            if (data.prediction_date) {
+              document.getElementById("predictionDateText").textContent =
+                "Predictions for " + data.prediction_date;
+            }
+
             // Parse and display results
             const parsedData = parseModelOutput(data.output);
             displayResults(parsedData);

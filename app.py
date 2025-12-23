@@ -2,8 +2,40 @@ from flask import Flask, jsonify, render_template, request
 import subprocess
 import sys
 import os
+from datetime import datetime, timedelta
+
+try:
+    from zoneinfo import ZoneInfo
+except ImportError:
+    from backports.zoneinfo import ZoneInfo  # type: ignore
 
 app = Flask(__name__)
+
+KALSHI_TIMEZONE = ZoneInfo("America/New_York")
+EVENING_CUTOFF_HOUR = 18  # 6 PM Eastern
+
+
+def get_prediction_date(date_option, custom_date=None):
+    """
+    Calculate the prediction date based on the date option.
+    Returns a formatted date string.
+    """
+    eastern_now = datetime.now(KALSHI_TIMEZONE)
+
+    if date_option == "today":
+        target_date = eastern_now.date()
+    elif date_option == "tomorrow":
+        target_date = (eastern_now + timedelta(days=1)).date()
+    elif date_option == "custom" and custom_date:
+        target_date = datetime.strptime(custom_date, "%Y-%m-%d").date()
+    else:  # auto
+        hour = eastern_now.hour
+        if hour < EVENING_CUTOFF_HOUR:
+            target_date = eastern_now.date()
+        else:
+            target_date = (eastern_now + timedelta(days=1)).date()
+
+    return target_date.strftime("%A, %B %d, %Y")
 
 @app.route('/')
 def home():
@@ -44,6 +76,9 @@ def run_model():
     if city_filter and city_filter != "all":
         cmd.extend(["--cities", city_filter])
 
+    # Calculate the prediction date to return in the response
+    prediction_date = get_prediction_date(date_option, custom_date)
+
     # Run the script and capture output with extended timeout (120 seconds)
     try:
         result = subprocess.run(
@@ -52,13 +87,14 @@ def run_model():
             text=True,
             timeout=120  # 2 minute timeout for HRRR data fetching
         )
-        
+
         # Return both raw output and parsed data
         return jsonify({
             "success": True,
             "output": result.stdout,
             "error": result.stderr,
-            "raw_output": result.stdout  # Keep raw output for fallback
+            "raw_output": result.stdout,  # Keep raw output for fallback
+            "prediction_date": prediction_date
         })
     except subprocess.TimeoutExpired:
         return jsonify({
