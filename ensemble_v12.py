@@ -122,7 +122,7 @@ WIND_SHIFT_THRESHOLD = 90.0         # degrees - significant wind direction chang
 # ============ CLOUD COVER & PRECIPITATION TIMING CONFIGURATION ============
 MORNING_CLOUD_THRESHOLD = 60        # % - significant morning cloud cover (before 10 AM)
 AFTERNOON_CLOUD_THRESHOLD = 70      # % - significant afternoon cloud cover
-MORNING_CLOUD_IMPACT = -2.0         # °F - typical max temp suppression from morning clouds
+MORNING_CLOUD_IMPACT = -3.0         # °F - typical max temp suppression from morning clouds
 HEAVY_PRECIP_THRESHOLD = 0.1        # inches/hour - heavy rain rate
 PEAK_HEATING_START = 11             # Hour (local) - start of peak heating period
 PEAK_HEATING_END = 15               # Hour (local) - end of peak heating period
