@@ -2109,7 +2109,7 @@ def analyze_city(city_key, bankroll, target_date, calibration_tracker=None):
             # Apply all medium-priority enhancements
             adjusted_forecast, adjusted_uncertainty, enhancement_report = enhanced_forecast_adjustment(
                 city["lat"], city["lon"], target_date,
-                ensemble_forecast, uncertainty_std, model_spread
+                ensemble_forecast, uncertainty_std
             )
             
             # Show what was found
