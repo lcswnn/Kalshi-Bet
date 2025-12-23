@@ -58,8 +58,11 @@ import argparse
 from pathlib import Path
 
 # Import medium-priority enhancements (v12.5)
-# Medium priority enhancements are now built-in to v12.5!
-ENHANCEMENTS_AVAILABLE = True
+try:
+    from medium_priority_enhancements import apply_medium_priority_enhancements as enhanced_forecast_adjustment
+    ENHANCEMENTS_AVAILABLE = True
+except ImportError:
+    ENHANCEMENTS_AVAILABLE = False
 
 try:
     from zoneinfo import ZoneInfo
