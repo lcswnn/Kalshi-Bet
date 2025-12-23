@@ -204,8 +204,12 @@
             }
           } else if (line.includes('Kelly %:')) {
             currentBet.sizing.kelly = line.match(/Kelly %:\s*([\d.]+)%/)[1];
-          } else if (line.includes('BET:')) {
-            currentBet.sizing.amount = line.match(/BET:\s*\$?([\d.]+)/)[1];
+          } else if (line.includes('BET') && line.match(/\$[\d.]+/)) {
+            // Match "BET: $X" or "➜  BET: $X" or "➜  BET (scaled...): $X"
+            const match = line.match(/\$([\d.]+)/);
+            if (match && !currentBet.sizing.amount) {
+              currentBet.sizing.amount = match[1];
+            }
           } else if (line.includes('If you win:')) {
             const match = line.match(/If you win:\s*\$?([\d.]+)\s*profit\s*\(([\d.]+)% ROI\)/);
             if (match) {
