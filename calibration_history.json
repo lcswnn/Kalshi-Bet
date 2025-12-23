@@ -1,0 +1,886 @@
+{
+  "predictions": [
+    {
+      "date": "2025-12-03",
+      "city": "chi",
+      "our_prob": 0.1721,
+      "market_price": 0.1721,
+      "contract": {
+        "subtitle": "30 or below",
+        "threshold": 30,
+        "side": "below",
+        "type": "threshold"
+      },
+      "outcome": "win",
+      "actual_temp": 30,
+      "recorded_at": "2025-12-23T00:27:39.018909",
+      "imported": true
+    },
+    {
+      "date": "2025-12-03",
+      "city": "chi",
+      "our_prob": 0.4918,
+      "market_price": 0.4918,
+      "contract": {
+        "subtitle": "31 to 32",
+        "low": 31,
+        "high": 32,
+        "type": "range"
+      },
+      "outcome": "win",
+      "actual_temp": 30,
+      "recorded_at": "2025-12-23T00:27:39.019027",
+      "imported": true
+    },
+    {
+      "date": "2025-12-03",
+      "city": "chi",
+      "our_prob": 0.2786,
+      "market_price": 0.2786,
+      "contract": {
+        "subtitle": "33 to 34",
+        "low": 33,
+        "high": 34,
+        "type": "range"
+      },
+      "outcome": "win",
+      "actual_temp": 30,
+      "recorded_at": "2025-12-23T00:27:39.019107",
+      "imported": true
+    },
+    {
+      "date": "2025-12-04",
+      "city": "chi",
+      "our_prob": 0.0431,
+      "market_price": 0.0431,
+      "contract": {
+        "subtitle": "15 or below",
+        "threshold": 15,
+        "side": "below",
+        "type": "threshold"
+      },
+      "outcome": "loss",
+      "actual_temp": 22.5,
+      "recorded_at": "2025-12-23T00:27:39.019176",
+      "imported": true
+    },
+    {
+      "date": "2025-12-04",
+      "city": "chi",
+      "our_prob": 0.4678,
+      "market_price": 0.4678,
+      "contract": {
+        "subtitle": "18 to 19",
+        "low": 18,
+        "high": 19,
+        "type": "range"
+      },
+      "outcome": "loss",
+      "actual_temp": 22.5,
+      "recorded_at": "2025-12-23T00:27:39.019279",
+      "imported": true
+    },
+    {
+      "date": "2025-12-04",
+      "city": "nyc",
+      "our_prob": 0.1597,
+      "market_price": 0.1597,
+      "contract": {
+        "subtitle": "37 to 38",
+        "low": 37,
+        "high": 38,
+        "type": "range"
+      },
+      "outcome": "loss",
+      "actual_temp": 41.5,
+      "recorded_at": "2025-12-23T00:27:39.019372",
+      "imported": true
+    },
+    {
+      "date": "2025-12-04",
+      "city": "mia",
+      "our_prob": 0.1804,
+      "market_price": 0.1804,
+      "contract": {
+        "subtitle": "80 to 81",
+        "low": 80,
+        "high": 81,
+        "type": "range"
+      },
+      "outcome": "loss",
+      "actual_temp": 82.5,
+      "recorded_at": "2025-12-23T00:27:39.019448",
+      "imported": true
+    },
+    {
+      "date": "2025-12-05",
+      "city": "nyc",
+      "our_prob": 0.0571,
+      "market_price": 0.0571,
+      "contract": {
+        "subtitle": "29 or below",
+        "threshold": 29,
+        "side": "below",
+        "type": "threshold"
+      },
+      "outcome": "loss",
+      "actual_temp": 32.5,
+      "recorded_at": "2025-12-23T00:27:39.019513",
+      "imported": true
+    },
+    {
+      "date": "2025-12-05",
+      "city": "mia",
+      "our_prob": 0.0323,
+      "market_price": 0.0323,
+      "contract": {
+        "subtitle": "79 to 80",
+        "low": 79,
+        "high": 80,
+        "type": "range"
+      },
+      "outcome": "loss",
+      "actual_temp": 83.5,
+      "recorded_at": "2025-12-23T00:27:39.019573",
+      "imported": true
+    },
+    {
+      "date": "2025-12-05",
+      "city": "mia",
+      "our_prob": 0.1433,
+      "market_price": 0.1433,
+      "contract": {
+        "subtitle": "81 to 82",
+        "low": 81,
+        "high": 82,
+        "type": "range"
+      },
+      "outcome": "loss",
+      "actual_temp": 83.5,
+      "recorded_at": "2025-12-23T00:27:39.019641",
+      "imported": true
+    },
+    {
+      "date": "2025-12-05",
+      "city": "mia",
+      "our_prob": 0.38270000000000004,
+      "market_price": 0.38270000000000004,
+      "contract": {
+        "subtitle": "85 to 86",
+        "low": 85,
+        "high": 86,
+        "type": "range"
+      },
+      "outcome": "win",
+      "actual_temp": 83.5,
+      "recorded_at": "2025-12-23T00:27:39.019696",
+      "imported": true
+    },
+    {
+      "date": "2025-12-05",
+      "city": "nyc",
+      "our_prob": 0.1986,
+      "market_price": 0.1986,
+      "contract": {
+        "subtitle": "30 to 31",
+        "low": 30,
+        "high": 31,
+        "type": "range"
+      },
+      "outcome": "loss",
+      "actual_temp": 32.5,
+      "recorded_at": "2025-12-23T00:27:39.019752",
+      "imported": true
+    },
+    {
+      "date": "2025-12-05",
+      "city": "chi",
+      "our_prob": 0.1277,
+      "market_price": 0.1277,
+      "contract": {
+        "subtitle": "26 to 27",
+        "low": 26,
+        "high": 27,
+        "type": "range"
+      },
+      "outcome": "loss",
+      "actual_temp": 28.5,
+      "recorded_at": "2025-12-23T00:27:39.019809",
+      "imported": true
+    },
+    {
+      "date": "2025-12-06",
+      "city": "chi",
+      "our_prob": 0.41200000000000003,
+      "market_price": 0.41200000000000003,
+      "contract": {
+        "subtitle": "30 to 31",
+        "low": 30,
+        "high": 31,
+        "type": "range"
+      },
+      "outcome": "win",
+      "actual_temp": 32.5,
+      "recorded_at": "2025-12-23T00:27:39.019864",
+      "imported": true
+    },
+    {
+      "date": "2025-12-06",
+      "city": "nyc",
+      "our_prob": 0.4618,
+      "market_price": 0.4618,
+      "contract": {
+        "subtitle": "41 to 42 ",
+        "low": 41,
+        "high": 42,
+        "type": "range"
+      },
+      "outcome": "loss",
+      "actual_temp": 41.5,
+      "recorded_at": "2025-12-23T00:27:39.019918",
+      "imported": true
+    },
+    {
+      "date": "2025-12-06",
+      "city": "mia",
+      "our_prob": 0.255,
+      "market_price": 0.255,
+      "contract": {
+        "subtitle": "86 to 87",
+        "low": 86,
+        "high": 87,
+        "type": "range"
+      },
+      "outcome": "win",
+      "actual_temp": 84.5,
+      "recorded_at": "2025-12-23T00:27:39.019971",
+      "imported": true
+    },
+    {
+      "date": "2025-12-07",
+      "city": "mia",
+      "our_prob": 0.3533,
+      "market_price": 0.3533,
+      "contract": {
+        "subtitle": "86 to 87",
+        "low": 86,
+        "high": 87,
+        "type": "range"
+      },
+      "outcome": "win",
+      "actual_temp": 84.5,
+      "recorded_at": "2025-12-23T00:27:39.020032",
+      "imported": true
+    },
+    {
+      "date": "2025-12-07",
+      "city": "chi",
+      "our_prob": 0.0137,
+      "market_price": 0.0137,
+      "contract": {
+        "subtitle": "31 to 32",
+        "low": 31,
+        "high": 32,
+        "type": "range"
+      },
+      "outcome": "loss",
+      "actual_temp": 33.5,
+      "recorded_at": "2025-12-23T00:27:39.020088",
+      "imported": true
+    },
+    {
+      "date": "2025-12-08",
+      "city": "mia",
+      "our_prob": 0.39490000000000003,
+      "market_price": 0.39490000000000003,
+      "contract": {
+        "subtitle": "85 to 86",
+        "low": 85,
+        "high": 86,
+        "type": "range"
+      },
+      "outcome": "win",
+      "actual_temp": 87.5,
+      "recorded_at": "2025-12-23T00:27:39.020141",
+      "imported": true
+    },
+    {
+      "date": "2025-12-08",
+      "city": "nyc",
+      "our_prob": 0.285,
+      "market_price": 0.285,
+      "contract": {
+        "subtitle": "37 to 38",
+        "low": 37,
+        "high": 38,
+        "type": "range"
+      },
+      "outcome": "loss",
+      "actual_temp": 37.5,
+      "recorded_at": "2025-12-23T00:27:39.020196",
+      "imported": true
+    },
+    {
+      "date": "2025-12-09",
+      "city": "mia",
+      "our_prob": 0.3926,
+      "market_price": 0.3926,
+      "contract": {
+        "subtitle": "76 to 77",
+        "low": 76,
+        "high": 77,
+        "type": "range"
+      },
+      "outcome": "win",
+      "actual_temp": 74.5,
+      "recorded_at": "2025-12-23T00:27:39.020274",
+      "imported": true
+    },
+    {
+      "date": "2025-12-09",
+      "city": "chi",
+      "our_prob": 0.0642,
+      "market_price": 0.0642,
+      "contract": {
+        "subtitle": "35 to 36",
+        "low": 35,
+        "high": 36,
+        "type": "range"
+      },
+      "outcome": "loss",
+      "actual_temp": 37.5,
+      "recorded_at": "2025-12-23T00:27:39.020337",
+      "imported": true
+    },
+    {
+      "date": "2025-12-09",
+      "city": "chi",
+      "our_prob": 0.3433,
+      "market_price": 0.3433,
+      "contract": {
+        "subtitle": "39 to 40",
+        "low": 39,
+        "high": 40,
+        "type": "range"
+      },
+      "outcome": "win",
+      "actual_temp": 37.5,
+      "recorded_at": "2025-12-23T00:27:39.020393",
+      "imported": true
+    },
+    {
+      "date": "2025-12-09",
+      "city": "nyc",
+      "our_prob": 0.32880000000000004,
+      "market_price": 0.32880000000000004,
+      "contract": {
+        "subtitle": "36 to 37",
+        "low": 36,
+        "high": 37,
+        "type": "range"
+      },
+      "outcome": "win",
+      "actual_temp": 34.5,
+      "recorded_at": "2025-12-23T00:27:39.020469",
+      "imported": true
+    },
+    {
+      "date": "2025-12-10",
+      "city": "nyc",
+      "our_prob": 0.4125,
+      "market_price": 0.4125,
+      "contract": {
+        "subtitle": "44 to 45",
+        "low": 44,
+        "high": 45,
+        "type": "range"
+      },
+      "outcome": "win",
+      "actual_temp": 46.5,
+      "recorded_at": "2025-12-23T00:27:39.020528",
+      "imported": true
+    },
+    {
+      "date": "2025-12-10",
+      "city": "mia",
+      "our_prob": 0.3832,
+      "market_price": 0.3832,
+      "contract": {
+        "subtitle": "82 to 83",
+        "low": 82,
+        "high": 83,
+        "type": "range"
+      },
+      "outcome": "loss",
+      "actual_temp": 82.5,
+      "recorded_at": "2025-12-23T00:27:39.020595",
+      "imported": true
+    },
+    {
+      "date": "2025-12-13",
+      "city": "nyc",
+      "our_prob": 0.4048,
+      "market_price": 0.4048,
+      "contract": {
+        "subtitle": "40 to 41",
+        "low": 40,
+        "high": 41,
+        "type": "range"
+      },
+      "outcome": "loss",
+      "actual_temp": 40.5,
+      "recorded_at": "2025-12-23T00:27:39.020650",
+      "imported": true
+    },
+    {
+      "date": "2025-12-14",
+      "city": "mia",
+      "our_prob": 0.41479999999999995,
+      "market_price": 0.41479999999999995,
+      "contract": {
+        "subtitle": "81 to 82",
+        "low": 81,
+        "high": 82,
+        "type": "range"
+      },
+      "outcome": "loss",
+      "actual_temp": 81.5,
+      "recorded_at": "2025-12-23T00:27:39.020714",
+      "imported": true
+    },
+    {
+      "date": "2025-12-15",
+      "city": "mia",
+      "our_prob": 0.4025,
+      "market_price": 0.4025,
+      "contract": {
+        "subtitle": "75 to 76",
+        "low": 75,
+        "high": 76,
+        "type": "range"
+      },
+      "outcome": "win",
+      "actual_temp": 73.5,
+      "recorded_at": "2025-12-23T00:27:39.020775",
+      "imported": true
+    },
+    {
+      "date": "2025-12-15",
+      "city": "nyc",
+      "our_prob": 0.275,
+      "market_price": 0.275,
+      "contract": {
+        "subtitle": "30 to 31",
+        "low": 30,
+        "high": 31,
+        "type": "range"
+      },
+      "outcome": "win",
+      "actual_temp": 28.5,
+      "recorded_at": "2025-12-23T00:27:39.020829",
+      "imported": true
+    },
+    {
+      "date": "2025-12-16",
+      "city": "nyc",
+      "our_prob": 0.3926,
+      "market_price": 0.3926,
+      "contract": {
+        "subtitle": "32 to 33",
+        "low": 32,
+        "high": 33,
+        "type": "range"
+      },
+      "outcome": "loss",
+      "actual_temp": 32.5,
+      "recorded_at": "2025-12-23T00:27:39.020883",
+      "imported": true
+    },
+    {
+      "date": "2025-12-16",
+      "city": "chi",
+      "our_prob": 0.32409999999999994,
+      "market_price": 0.32409999999999994,
+      "contract": {
+        "subtitle": "37 to 38",
+        "low": 37,
+        "high": 38,
+        "type": "range"
+      },
+      "outcome": "win",
+      "actual_temp": 39.5,
+      "recorded_at": "2025-12-23T00:27:39.020935",
+      "imported": true
+    },
+    {
+      "date": "2025-12-16",
+      "city": "mia",
+      "our_prob": 0.3747,
+      "market_price": 0.3747,
+      "contract": {
+        "subtitle": "74 to 75",
+        "low": 74,
+        "high": 75,
+        "type": "range"
+      },
+      "outcome": "win",
+      "actual_temp": 76.5,
+      "recorded_at": "2025-12-23T00:27:39.020989",
+      "imported": true
+    },
+    {
+      "date": "2025-12-17",
+      "city": "chi",
+      "our_prob": 0.3533,
+      "market_price": 0.3533,
+      "contract": {
+        "subtitle": "40 to 41",
+        "low": 40,
+        "high": 41,
+        "type": "range"
+      },
+      "outcome": "win",
+      "actual_temp": 42,
+      "recorded_at": "2025-12-23T00:27:39.021051",
+      "imported": true
+    },
+    {
+      "date": "2025-12-17",
+      "city": "nyc",
+      "our_prob": 0.18,
+      "market_price": 0.18,
+      "contract": {
+        "subtitle": "42 or below",
+        "threshold": 42,
+        "side": "below",
+        "type": "threshold"
+      },
+      "outcome": "win",
+      "actual_temp": 47.5,
+      "recorded_at": "2025-12-23T00:27:39.021105",
+      "imported": true
+    },
+    {
+      "date": "2025-12-18",
+      "city": "nyc",
+      "our_prob": 0.253,
+      "market_price": 0.253,
+      "contract": {
+        "subtitle": "49 or below",
+        "threshold": 49,
+        "side": "below",
+        "type": "threshold"
+      },
+      "outcome": "loss",
+      "actual_temp": 50.5,
+      "recorded_at": "2025-12-23T00:27:39.021158",
+      "imported": true
+    },
+    {
+      "date": "2025-12-18",
+      "city": "nyc",
+      "our_prob": 0.49770000000000003,
+      "market_price": 0.49770000000000003,
+      "contract": {
+        "subtitle": "50 to 51",
+        "low": 50,
+        "high": 51,
+        "type": "range"
+      },
+      "outcome": "win",
+      "actual_temp": 50.5,
+      "recorded_at": "2025-12-23T00:27:39.021232",
+      "imported": true
+    },
+    {
+      "date": "2025-12-19",
+      "city": "chi",
+      "our_prob": 0.5005,
+      "market_price": 0.5005,
+      "contract": {
+        "subtitle": "23 or below",
+        "threshold": 23,
+        "side": "below",
+        "type": "threshold"
+      },
+      "outcome": "loss",
+      "actual_temp": 24.5,
+      "recorded_at": "2025-12-23T00:27:39.021292",
+      "imported": true
+    },
+    {
+      "date": "2025-12-19",
+      "city": "mia",
+      "our_prob": 0.4522,
+      "market_price": 0.4522,
+      "contract": {
+        "subtitle": "87 to 88",
+        "low": 87,
+        "high": 88,
+        "type": "range"
+      },
+      "outcome": "win",
+      "actual_temp": 85.5,
+      "recorded_at": "2025-12-23T00:27:39.021347",
+      "imported": true
+    },
+    {
+      "date": "2025-12-19",
+      "city": "nyc",
+      "our_prob": 0.4524,
+      "market_price": 0.4524,
+      "contract": {
+        "subtitle": "58 to 59",
+        "low": 58,
+        "high": 59,
+        "type": "range"
+      },
+      "outcome": "loss",
+      "actual_temp": 58.5,
+      "recorded_at": "2025-12-23T00:27:39.021401",
+      "imported": true
+    },
+    {
+      "date": "2025-12-20",
+      "city": "mia",
+      "our_prob": 0.4225,
+      "market_price": 0.4225,
+      "contract": {
+        "subtitle": "82 to 83",
+        "low": 82,
+        "high": 83,
+        "type": "range"
+      },
+      "outcome": "win",
+      "actual_temp": 84.5,
+      "recorded_at": "2025-12-23T00:27:39.021454",
+      "imported": true
+    },
+    {
+      "date": "2025-12-21",
+      "city": "mia",
+      "our_prob": 0.30469999999999997,
+      "market_price": 0.30469999999999997,
+      "contract": {
+        "subtitle": "84 to 85",
+        "low": 84,
+        "high": 85,
+        "type": "range"
+      },
+      "outcome": "win",
+      "actual_temp": 82.5,
+      "recorded_at": "2025-12-23T00:27:39.021522",
+      "imported": true
+    },
+    {
+      "date": "2025-12-21",
+      "city": "chi",
+      "our_prob": 0.2427,
+      "market_price": 0.2427,
+      "contract": {
+        "subtitle": "33 to 34",
+        "low": 33,
+        "high": 34,
+        "type": "range"
+      },
+      "outcome": "loss",
+      "actual_temp": 33.5,
+      "recorded_at": "2025-12-23T00:27:39.021586",
+      "imported": true
+    },
+    {
+      "date": "2025-12-21",
+      "city": "nyc",
+      "our_prob": 0.4524,
+      "market_price": 0.4524,
+      "contract": {
+        "subtitle": "44 to 45",
+        "low": 44,
+        "high": 45,
+        "type": "range"
+      },
+      "outcome": "win",
+      "actual_temp": 46.5,
+      "recorded_at": "2025-12-23T00:27:39.021640",
+      "imported": true
+    },
+    {
+      "date": "2025-12-22",
+      "city": "chi",
+      "our_prob": 0.33390000000000003,
+      "market_price": 0.33390000000000003,
+      "contract": {
+        "subtitle": "44 to 45",
+        "low": 44,
+        "high": 45,
+        "type": "range"
+      },
+      "outcome": "loss",
+      "actual_temp": 44.5,
+      "recorded_at": "2025-12-23T00:27:39.021691",
+      "imported": true
+    },
+    {
+      "date": "2025-12-22",
+      "city": "nyc",
+      "our_prob": 0.4622,
+      "market_price": 0.4622,
+      "contract": {
+        "subtitle": "38 to 39",
+        "low": 38,
+        "high": 39,
+        "type": "range"
+      },
+      "outcome": "loss",
+      "actual_temp": 38.5,
+      "recorded_at": "2025-12-23T00:27:39.021743",
+      "imported": true
+    },
+    {
+      "date": "2025-12-23",
+      "city": "Chicago",
+      "our_prob": 0.9760851146173971,
+      "market_price": 0.645,
+      "contract": {
+        "subtitle": "49\u00b0 to 50\u00b0",
+        "low": 49,
+        "high": 50,
+        "threshold": null,
+        "side": "NO"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-22T18:46:45.414269"
+    },
+    {
+      "date": "2025-12-23",
+      "city": "Miami",
+      "our_prob": 0.5126232649706082,
+      "market_price": 0.325,
+      "contract": {
+        "subtitle": "78\u00b0 to 79\u00b0",
+        "low": 78,
+        "high": 79,
+        "threshold": null,
+        "side": "YES"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-22T18:46:45.415805"
+    },
+    {
+      "date": "2025-12-23",
+      "city": "New York City",
+      "our_prob": 0.6902480399424549,
+      "market_price": 0.5449999999999999,
+      "contract": {
+        "subtitle": "40\u00b0 to 41\u00b0",
+        "low": 40,
+        "high": 41,
+        "threshold": null,
+        "side": "NO"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-22T18:46:45.417593"
+    },
+    {
+      "date": "2025-12-23",
+      "city": "Chicago",
+      "our_prob": 0.981340609624185,
+      "market_price": 0.735,
+      "contract": {
+        "subtitle": "51\u00b0 to 52\u00b0",
+        "low": 51,
+        "high": 52,
+        "threshold": null,
+        "side": "NO"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-22T18:46:45.418717"
+    },
+    {
+      "date": "2025-12-23",
+      "city": "Miami",
+      "our_prob": 0.5126232649706082,
+      "market_price": 0.31,
+      "contract": {
+        "subtitle": "78\u00b0 to 79\u00b0",
+        "low": 78,
+        "high": 79,
+        "threshold": null,
+        "side": "YES"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-22T18:48:31.392215"
+    },
+    {
+      "date": "2025-12-23",
+      "city": "Chicago",
+      "our_prob": 0.9760851146173971,
+      "market_price": 0.645,
+      "contract": {
+        "subtitle": "49\u00b0 to 50\u00b0",
+        "low": 49,
+        "high": 50,
+        "threshold": null,
+        "side": "NO"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-22T18:48:31.395858"
+    },
+    {
+      "date": "2025-12-23",
+      "city": "New York City",
+      "our_prob": 0.6902480399424549,
+      "market_price": 0.5449999999999999,
+      "contract": {
+        "subtitle": "40\u00b0 to 41\u00b0",
+        "low": 40,
+        "high": 41,
+        "threshold": null,
+        "side": "NO"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-22T18:48:31.397176"
+    },
+    {
+      "date": "2025-12-23",
+      "city": "Chicago",
+      "our_prob": 0.981340609624185,
+      "market_price": 0.74,
+      "contract": {
+        "subtitle": "51\u00b0 to 52\u00b0",
+        "low": 51,
+        "high": 52,
+        "threshold": null,
+        "side": "NO"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-22T18:48:31.398441"
+    }
+  ],
+  "bins": {
+    "0.2": {
+      "wins": 2,
+      "count": 6
+    },
+    "0.5": {
+      "wins": 4,
+      "count": 9
+    },
+    "0.3": {
+      "wins": 7,
+      "count": 10
+    },
+    "0.0": {
+      "wins": 0,
+      "count": 3
+    },
+    "0.1": {
+      "wins": 0,
+      "count": 4
+    },
+    "0.4": {
+      "wins": 10,
+      "count": 14
+    }
+  }
+}
