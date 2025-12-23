@@ -252,20 +252,10 @@
     function displayResults(data) {
       const forecastsSection = document.getElementById('forecastsSection');
       const betsSection = document.getElementById('betsSection');
-      
+
       // Clear previous results
       forecastsSection.innerHTML = '';
       betsSection.innerHTML = '';
-
-      // Show warnings if any
-      if (data.warnings.length > 0) {
-        const warningsHtml = `
-          <div class="warning-banner inter-medium">
-            ${data.warnings.map(w => `<p>${w}</p>`).join('')}
-          </div>
-        `;
-        forecastsSection.innerHTML += warningsHtml;
-      }
 
       // Helper to format city names
       function formatCityName(name) {
