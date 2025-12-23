@@ -359,7 +359,7 @@ def create_visualizations(results_df, city_name, output_dir='.'):
     ax1.plot(results_df['date'], results_df['ensemble_v10'], 
              'g--', linewidth=1.5, label='Ensemble v10', alpha=0.6)
     ax1.plot(results_df['date'], results_df['ensemble_v11'], 
-             'r--', linewidth=1.5, label='Ensemble v11', alpha=0.6)
+             'r--', linewidth=1.5, label='Ensemble v12', alpha=0.6)
     
     ax1.set_ylabel('Temperature (°F)', fontsize=12)
     ax1.set_title(f'{city_name}: Forecast vs Actual Temperature', fontsize=14, fontweight='bold')

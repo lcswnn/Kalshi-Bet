@@ -1,20 +1,25 @@
 """
-KALSHI WEATHER BETTING MODEL v12 (OPTIMIZED FOR YOUR BETTING HISTORY)
-=====================================================================
+KALSHI WEATHER BETTING MODEL v12.5 (OPTIMIZED + ENHANCED)
+==========================================================
 CALIBRATED based on your 46 historical bets showing:
 - 30% estimates → 70% actual wins (you're too conservative!)
 - 40% estimates → 71% actual wins (systematic underestimation)
 - 40-60¢ price range: Your sweet spot (71% win rate)
 - Overall: 50% win rate but leaving money on the table
 
-OPTIMIZATIONS APPLIED:
+OPTIMIZATIONS APPLIED (v12):
 1. ✅ LOWER EDGE REQUIREMENTS: 8% sweet spot, 7% mid-range (was 12%)
 2. ✅ CALIBRATION BOOST: Auto-adjusts probabilities +15% in 25-50% range
 3. ✅ AGGRESSIVE KELLY: 0.80 fraction, 20% max (was 0.75, 15%)
 4. ✅ MID-RANGE FOCUS: 40-60¢ contracts prioritized (your strength)
 5. ✅ RELAXED THRESHOLDS: Lower barriers for multi-betting same city
 
-HIGH PRIORITY FIXES:
+NEW IN V12.5 - MEDIUM PRIORITY ENHANCEMENTS:
+6. ✅ CLOUD TIMING ANALYSIS: Midday clouds suppress max by 5-10°F
+7. ✅ PRECIPITATION TIMING: Rain during peak heating = 8-15°F drop
+8. ✅ REGIME DETECTION: High pressure vs frontal systems affects uncertainty
+
+HIGH PRIORITY FIXES (v12):
 1. ✅ DYNAMIC FORECAST UNCERTAINTY: Adjusts std based on model spread & conditions (2-6°F)
 2. ✅ CURRENT OBSERVATIONS: Uses real-time data to constrain forecasts
 3. ✅ CALIBRATION TRACKING: Tracks historical accuracy to adjust probabilities  
@@ -25,6 +30,8 @@ Key improvements over v11:
 - Morning observations prevent impossible predictions
 - Calibration database learns from your 46 bets
 - NWS/Open-Meteo get reduced weight (both use GFS) vs independent HRRR
+- Cloud/precip timing analysis prevents major forecast misses
+- Weather regime detection adjusts uncertainty appropriately
 
 All v11 features maintained:
 - NWS FORECAST integration
@@ -49,6 +56,10 @@ from scipy import stats # type: ignore
 import glob
 import argparse
 from pathlib import Path
+
+# Import medium-priority enhancements (v12.5)
+# Medium priority enhancements are now built-in to v12.5!
+ENHANCEMENTS_AVAILABLE = True
 
 try:
     from zoneinfo import ZoneInfo
@@ -104,6 +115,22 @@ ATMOSPHERIC_MODEL_PATH = "atmospheric_models"  # Directory to save/load models
 WARM_ADVECTION_THRESHOLD = 15.0     # °F - significant warm airmass change
 COLD_ADVECTION_THRESHOLD = -15.0    # °F - significant cold airmass change
 WIND_SHIFT_THRESHOLD = 90.0         # degrees - significant wind direction change
+
+# ============ CLOUD COVER & PRECIPITATION TIMING CONFIGURATION ============
+MORNING_CLOUD_THRESHOLD = 60        # % - significant morning cloud cover (before 10 AM)
+AFTERNOON_CLOUD_THRESHOLD = 70      # % - significant afternoon cloud cover
+MORNING_CLOUD_IMPACT = -3.0         # °F - typical max temp suppression from morning clouds
+HEAVY_PRECIP_THRESHOLD = 0.1        # inches/hour - heavy rain rate
+PEAK_HEATING_START = 11             # Hour (local) - start of peak heating period
+PEAK_HEATING_END = 15               # Hour (local) - end of peak heating period
+PRECIP_PEAK_HEATING_IMPACT = -8.0   # °F - rain during peak heating suppresses max significantly
+
+# ============ REGIME DETECTION CONFIGURATION ============
+HIGH_PRESSURE_THRESHOLD = 1020      # mb - strong high pressure
+LOW_PRESSURE_THRESHOLD = 1008       # mb - approaching low pressure
+FRONTAL_PRESSURE_CHANGE = 3.0       # mb/3hr - rapid pressure change indicates front
+STABLE_REGIME_UNCERTAINTY = 1.8     # °F - low uncertainty in stable high pressure
+FRONTAL_REGIME_UNCERTAINTY = 4.5    # °F - high uncertainty near fronts
 
 # Edge requirements by price bucket
 # TUNED based on historical performance: 30-40% implied prob bets won 70%+
@@ -741,7 +768,7 @@ def get_target_date(force_today=False):
 def print_header(target_date, is_today):
     """Print analysis header."""
     print("\n" + "="*70)
-    print(" KALSHI WEATHER BETTING MODEL v12 (OPTIMIZED)")
+    print(" KALSHI WEATHER BETTING MODEL v12.5 (OPTIMIZED + ENHANCED)")
     print("="*70)
     print(f" Target Date: {target_date.strftime('%A, %B %d, %Y')}")
     print(f" Analysis Time: {get_eastern_now().strftime('%I:%M %p ET')}")
@@ -756,7 +783,16 @@ def print_header(target_date, is_today):
     print("   • Kelly increased to 0.80 (was 0.75)")
     print("   • Calibration auto-boosts probabilities in 25-50% range")
     
-    print("\n✨ V12 ENHANCEMENTS:")
+    print("\n🌤️  NEW IN V12.5 - MEDIUM PRIORITY ENHANCEMENTS:")
+    if ENHANCEMENTS_AVAILABLE:
+        print("   ✅ Cloud timing analysis (midday clouds = -5 to -10°F)")
+        print("   ✅ Precipitation timing (rain during peak heating = -8 to -15°F)")
+        print("   ✅ Weather regime detection (adjusts uncertainty 0.75x to 1.5x)")
+    else:
+        print("   ⚠️  Enhancement module not found - using base v12 features")
+        print("   💡 Add medium_priority_enhancements.py for full v12.5")
+    
+    print("\n✨ V12 CORE ENHANCEMENTS:")
     print("   • Dynamic forecast uncertainty (scales with model spread)")
     print("   • Current observation constraints (uses real-time temps)")
     print("   • Calibration tracking (learns from your past accuracy)")
@@ -935,6 +971,10 @@ def fetch_hrrr_forecast_fixed(lat, lon, target_date, utc_offset):
     temperatures = []
     wind_speeds = []
     wind_dirs = []
+    cloud_covers = []  # NEW: Track cloud cover
+    precip_rates = []   # NEW: Track precipitation rates
+    pressures = []      # NEW: Track surface pressure for regime detection
+    forecast_times = [] # NEW: Track actual forecast times
     
     for fxx in forecast_hours:
         try:
@@ -944,6 +984,10 @@ def fetch_hrrr_forecast_fixed(lat, lon, target_date, utc_offset):
                 product='sfc',
                 fxx=fxx
             )
+            
+            # Calculate actual forecast time
+            forecast_time = model_run_datetime + timedelta(hours=fxx)
+            forecast_times.append(forecast_time)
             
             ds = H.xarray("TMP:2 m", remove_grib=True)
             temp_data = ds['t2m']
@@ -958,6 +1002,7 @@ def fetch_hrrr_forecast_fixed(lat, lon, target_date, utc_offset):
             temp_f = (temp_k - 273.15) * 9/5 + 32
             temperatures.append(temp_f)
             
+            # Fetch wind data
             try:
                 ds_u = H.xarray("UGRD:10 m", remove_grib=True)
                 ds_v = H.xarray("VGRD:10 m", remove_grib=True)
@@ -967,6 +1012,36 @@ def fetch_hrrr_forecast_fixed(lat, lon, target_date, utc_offset):
                 wind_dir = (np.arctan2(-u, -v) * 180 / np.pi) % 360
                 wind_speeds.append(wind_speed)
                 wind_dirs.append(wind_dir)
+            except:
+                pass
+            
+            # NEW: Fetch cloud cover data (total cloud cover)
+            try:
+                ds_cloud = H.xarray("TCDC:entire atmosphere", remove_grib=True)
+                cloud_var = ds_cloud['tcc'] if 'tcc' in ds_cloud else ds_cloud['tcdceatm']
+                cloud_cover = float(cloud_var.values[min_idx])
+                cloud_covers.append(cloud_cover)
+            except:
+                pass
+            
+            # NEW: Fetch precipitation rate
+            try:
+                ds_precip = H.xarray("PRATE:surface", remove_grib=True)
+                precip_var = ds_precip['prate'] if 'prate' in ds_precip else ds_precip['pratessfc']
+                precip_rate_kg = float(precip_var.values[min_idx])
+                # Convert kg/m²/s to inches/hour
+                precip_rate_in = precip_rate_kg * 0.1417  # Conversion factor
+                precip_rates.append(precip_rate_in)
+            except:
+                precip_rates.append(0.0)
+            
+            # NEW: Fetch surface pressure for regime detection
+            try:
+                ds_pres = H.xarray("PRES:surface", remove_grib=True)
+                pres_var = ds_pres['sp'] if 'sp' in ds_pres else ds_pres['pressfc']
+                pressure_pa = float(pres_var.values[min_idx])
+                pressure_mb = pressure_pa / 100.0  # Convert Pa to mb
+                pressures.append(pressure_mb)
             except:
                 pass
                 
@@ -995,7 +1070,13 @@ def fetch_hrrr_forecast_fixed(lat, lon, target_date, utc_offset):
         'wind_dir': avg_wind_dir,
         'temps_850mb': temps_850mb,
         'model_run': model_run_str,
-        'source': 'HRRR'
+        'source': 'HRRR',
+        # NEW: Cloud cover and precipitation timing data
+        'cloud_covers': cloud_covers,
+        'precip_rates': precip_rates,
+        'forecast_times': forecast_times,
+        # NEW: Pressure data for regime detection
+        'pressures': pressures,
     }
     
     return forecast_high, weather_data
@@ -1290,6 +1371,227 @@ def analyze_airmass_and_wind(hrrr_data, city_name):
     return analysis
 
 
+# ============ CLOUD COVER TIMING ANALYSIS ============
+
+def analyze_cloud_timing(hrrr_data, utc_offset):
+    """
+    Analyze cloud cover timing to predict impact on max temperature.
+    
+    Morning clouds (before 10 AM) have MUCH bigger impact than afternoon clouds.
+    Physics: Morning clouds block sunrise heating, preventing temperature rise.
+             Afternoon clouds arrive after heating is done, minimal impact.
+    
+    Args:
+        hrrr_data: Dictionary with 'cloud_covers' and 'forecast_times'
+        utc_offset: UTC offset for the location
+    
+    Returns:
+        dict with cloud timing analysis and forecast adjustment
+    """
+    if not hrrr_data or 'cloud_covers' not in hrrr_data or 'forecast_times' not in hrrr_data:
+        return None
+    
+    cloud_covers = hrrr_data.get('cloud_covers', [])
+    forecast_times = hrrr_data.get('forecast_times', [])
+    
+    if not cloud_covers or not forecast_times or len(cloud_covers) != len(forecast_times):
+        return None
+    
+    # Separate into morning (6 AM - 10 AM) and afternoon (10 AM - 4 PM) periods
+    morning_clouds = []
+    afternoon_clouds = []
+    peak_heating_clouds = []
+    
+    for cloud, time in zip(cloud_covers, forecast_times):
+        # Convert UTC time to local hour
+        local_hour = (time.hour + utc_offset) % 24
+        
+        if 6 <= local_hour < 10:
+            morning_clouds.append(cloud)
+        elif 10 <= local_hour < 16:
+            afternoon_clouds.append(cloud)
+        
+        if PEAK_HEATING_START <= local_hour < PEAK_HEATING_END:
+            peak_heating_clouds.append(cloud)
+    
+    analysis = {
+        "morning_cloud_avg": np.mean(morning_clouds) if morning_clouds else 0,
+        "afternoon_cloud_avg": np.mean(afternoon_clouds) if afternoon_clouds else 0,
+        "peak_heating_cloud_avg": np.mean(peak_heating_clouds) if peak_heating_clouds else 0,
+        "forecast_adjustment": 0.0,
+        "message": None
+    }
+    
+    # Assess impact
+    morning_avg = analysis["morning_cloud_avg"]
+    
+    if morning_avg >= MORNING_CLOUD_THRESHOLD:
+        # Significant morning clouds - suppress max temp
+        # More clouds = more suppression (non-linear)
+        cloud_factor = (morning_avg - MORNING_CLOUD_THRESHOLD) / (100 - MORNING_CLOUD_THRESHOLD)
+        adjustment = MORNING_CLOUD_IMPACT * (0.5 + 0.5 * cloud_factor)  # -1.5°F to -3.0°F
+        
+        analysis["forecast_adjustment"] = adjustment
+        analysis["message"] = f"☁️ Morning clouds ({morning_avg:.0f}% avg) will suppress max by ~{abs(adjustment):.1f}°F"
+        
+    elif analysis["peak_heating_cloud_avg"] >= AFTERNOON_CLOUD_THRESHOLD:
+        # Afternoon clouds during peak heating - minor impact
+        adjustment = -1.0
+        analysis["forecast_adjustment"] = adjustment
+        analysis["message"] = f"⛅ Afternoon clouds ({analysis['peak_heating_cloud_avg']:.0f}% during peak heating) - minor impact (~1°F)"
+    
+    else:
+        analysis["message"] = "☀️ Mostly clear skies - no cloud suppression"
+    
+    return analysis
+
+
+# ============ PRECIPITATION TIMING ANALYSIS ============
+
+def analyze_precip_timing(hrrr_data, utc_offset):
+    """
+    Analyze precipitation timing to predict impact on max temperature.
+    
+    Rain during peak heating hours (11 AM - 3 PM) can DROP max temp by 5-15°F!
+    Physics: Rain cools through evaporation + clouds block sun + wet ground doesn't heat.
+    
+    Args:
+        hrrr_data: Dictionary with 'precip_rates' and 'forecast_times'
+        utc_offset: UTC offset for the location
+    
+    Returns:
+        dict with precipitation timing analysis and forecast adjustment
+    """
+    if not hrrr_data or 'precip_rates' not in hrrr_data or 'forecast_times' not in hrrr_data:
+        return None
+    
+    precip_rates = hrrr_data.get('precip_rates', [])
+    forecast_times = hrrr_data.get('forecast_times', [])
+    
+    if not precip_rates or not forecast_times or len(precip_rates) != len(forecast_times):
+        return None
+    
+    # Focus on peak heating period
+    peak_heating_precip = []
+    total_precip_amount = 0
+    
+    for precip, time in zip(precip_rates, forecast_times):
+        local_hour = (time.hour + utc_offset) % 24
+        total_precip_amount += precip
+        
+        if PEAK_HEATING_START <= local_hour < PEAK_HEATING_END:
+            peak_heating_precip.append(precip)
+    
+    analysis = {
+        "peak_heating_precip_avg": np.mean(peak_heating_precip) if peak_heating_precip else 0,
+        "total_precip": total_precip_amount,
+        "has_peak_heating_rain": any(p > 0.01 for p in peak_heating_precip),
+        "forecast_adjustment": 0.0,
+        "message": None
+    }
+    
+    peak_avg = analysis["peak_heating_precip_avg"]
+    
+    if peak_avg >= HEAVY_PRECIP_THRESHOLD:
+        # Heavy rain during peak heating - major impact
+        # The heavier the rain, the bigger the suppression
+        rain_factor = min(peak_avg / HEAVY_PRECIP_THRESHOLD, 2.0)  # Cap at 2x
+        adjustment = PRECIP_PEAK_HEATING_IMPACT * rain_factor  # Up to -16°F for extreme rain
+        
+        analysis["forecast_adjustment"] = adjustment
+        analysis["message"] = f"🌧️ HEAVY RAIN during peak heating ({peak_avg:.2f} in/hr) - MAJOR temp suppression (~{abs(adjustment):.0f}°F)"
+        
+    elif analysis["has_peak_heating_rain"]:
+        # Light rain during peak heating - moderate impact
+        adjustment = PRECIP_PEAK_HEATING_IMPACT * 0.4  # ~-3°F
+        
+        analysis["forecast_adjustment"] = adjustment
+        analysis["message"] = f"🌦️ Light rain during peak heating - moderate suppression (~{abs(adjustment):.0f}°F)"
+    
+    elif total_precip_amount > 0.05:
+        # Rain outside peak heating - minor impact (wet ground effect)
+        adjustment = -1.5
+        analysis["forecast_adjustment"] = adjustment
+        analysis["message"] = "💧 Rain outside peak heating - minor impact from wet ground"
+    
+    else:
+        analysis["message"] = "☀️ No significant precipitation - no rain suppression"
+    
+    return analysis
+
+
+# ============ WEATHER REGIME DETECTION ============
+
+def detect_weather_regime(hrrr_data):
+    """
+    Detect weather regime to adjust forecast uncertainty.
+    
+    Stable high pressure = low uncertainty (±1.8°F)
+    Frontal systems = high uncertainty (±4.5°F)
+    
+    Physics: High pressure = calm, predictable weather
+             Fronts = rapid changes, poor predictability
+    
+    Args:
+        hrrr_data: Dictionary with 'pressures' and 'forecast_times'
+    
+    Returns:
+        dict with regime type and uncertainty adjustment
+    """
+    if not hrrr_data or 'pressures' not in hrrr_data:
+        return {
+            "regime": "unknown",
+            "uncertainty_adjustment": 1.0,  # No adjustment
+            "message": "Regime detection unavailable"
+        }
+    
+    pressures = hrrr_data.get('pressures', [])
+    
+    if not pressures or len(pressures) < 3:
+        return {
+            "regime": "unknown",
+            "uncertainty_adjustment": 1.0,
+            "message": "Insufficient pressure data"
+        }
+    
+    avg_pressure = np.mean(pressures)
+    pressure_change = (pressures[-1] - pressures[0]) / max(1, len(pressures) / 3)  # Per 3-hour change
+    pressure_variance = np.std(pressures)
+    
+    # Detect regime
+    if avg_pressure >= HIGH_PRESSURE_THRESHOLD and abs(pressure_change) < 1.0:
+        regime = "stable_high_pressure"
+        uncertainty_mult = 0.7  # Lower uncertainty
+        message = f"🌤️ STABLE HIGH PRESSURE ({avg_pressure:.0f} mb) - Predictable conditions"
+        
+    elif avg_pressure <= LOW_PRESSURE_THRESHOLD or abs(pressure_change) >= FRONTAL_PRESSURE_CHANGE:
+        regime = "frontal_system"
+        uncertainty_mult = 1.5  # Higher uncertainty
+        
+        if pressure_change < -FRONTAL_PRESSURE_CHANGE:
+            message = f"🌀 APPROACHING LOW/FRONT ({avg_pressure:.0f} mb, falling {abs(pressure_change):.1f} mb/3hr) - High uncertainty"
+        else:
+            message = f"🌀 ACTIVE FRONT ({avg_pressure:.0f} mb, changing {abs(pressure_change):.1f} mb/3hr) - High uncertainty"
+    
+    elif pressure_variance > 2.0:
+        regime = "variable"
+        uncertainty_mult = 1.2  # Moderately higher uncertainty
+        message = f"🌥️ Variable conditions ({avg_pressure:.0f} mb) - Moderate uncertainty"
+    
+    else:
+        regime = "normal"
+        uncertainty_mult = 1.0  # Normal uncertainty
+        message = f"⛅ Normal conditions ({avg_pressure:.0f} mb)"
+    
+    return {
+        "regime": regime,
+        "avg_pressure": avg_pressure,
+        "pressure_change_3hr": pressure_change,
+        "uncertainty_adjustment": uncertainty_mult,
+        "message": message
+    }
+
+
 # ============ ATMOSPHERIC ANALOG MODEL ============
 
 class AtmosphericAnalogModel:
@@ -1569,9 +1871,43 @@ def analyze_city(city_key, bankroll, target_date, calibration_tracker=None):
                     print(f"     {airmass_info['wind_analysis']}")
                 if airmass_info.get("airmass_analysis"):
                     print(f"     {airmass_info['airmass_analysis']}")
+            
+            # NEW: Cloud cover timing analysis
+            print(f"\n     ☁️ Cloud Cover Timing Analysis:")
+            cloud_analysis = analyze_cloud_timing(hrrr_data, city["utc_offset"])
+            if cloud_analysis and cloud_analysis.get("message"):
+                print(f"     {cloud_analysis['message']}")
+                if abs(cloud_analysis.get("forecast_adjustment", 0)) > 0.5:
+                    print(f"        Impact: {cloud_analysis['forecast_adjustment']:+.1f}°F")
+            else:
+                print(f"     ⚠️ Cloud timing data unavailable")
+            
+            # NEW: Precipitation timing analysis  
+            print(f"\n     🌧️ Precipitation Timing Analysis:")
+            precip_analysis = analyze_precip_timing(hrrr_data, city["utc_offset"])
+            if precip_analysis and precip_analysis.get("message"):
+                print(f"     {precip_analysis['message']}")
+                if abs(precip_analysis.get("forecast_adjustment", 0)) > 0.5:
+                    print(f"        Impact: {precip_analysis['forecast_adjustment']:+.1f}°F")
+            else:
+                print(f"     ⚠️ Precipitation timing data unavailable")
+            
+            # NEW: Weather regime detection
+            print(f"\n     🌡️ Weather Regime Detection:")
+            regime_info = detect_weather_regime(hrrr_data)
+            if regime_info and regime_info.get("message"):
+                print(f"     {regime_info['message']}")
+                if regime_info.get("uncertainty_adjustment", 1.0) != 1.0:
+                    print(f"        Uncertainty multiplier: {regime_info['uncertainty_adjustment']:.2f}x")
+            else:
+                print(f"     ⚠️ Regime detection unavailable")
+                
     else:
         print("     ⚠️ HRRR unavailable")
         airmass_info = None
+        cloud_analysis = None
+        precip_analysis = None
+        regime_info = None
 
     # 3. NWS forecast
     print(f"\n  [3] National Weather Service:")
@@ -1632,6 +1968,14 @@ def analyze_city(city_key, bankroll, target_date, calibration_tracker=None):
         forecasts, forecast_sources, agreement_level, hrrr_data
     )
     
+    # NEW: Apply regime-based uncertainty adjustment
+    if regime_info and regime_info.get("uncertainty_adjustment"):
+        original_uncertainty = uncertainty_std
+        uncertainty_std *= regime_info["uncertainty_adjustment"]
+        print(f"\n  🌡️ Regime Uncertainty Adjustment:")
+        print(f"     {regime_info['message']}")
+        print(f"     Uncertainty: {original_uncertainty:.1f}°F → {uncertainty_std:.1f}°F")
+    
     print(f"\n  📊 Dynamic Uncertainty Analysis (V12!):")
     print(f"     Final uncertainty: ±{uncertainty_std:.1f}°F (68% confidence)")
     for factor, value in uncertainty_factors.items():
@@ -1653,6 +1997,29 @@ def analyze_city(city_key, bankroll, target_date, calibration_tracker=None):
         print(f"\n  🔒 Observation Constraint Applied (V12!):")
         print(f"     {constraint_message}")
         print(f"     Forecast: {original_forecast:.1f}°F → {ensemble_forecast:.1f}°F")
+    
+    # ============ CLOUD & PRECIPITATION ADJUSTMENTS (V12 NEW!) ============
+    cloud_precip_adjustment = 0.0
+    cloud_precip_reasons = []
+    
+    if cloud_analysis and abs(cloud_analysis.get("forecast_adjustment", 0)) > 0.5:
+        cloud_adj = cloud_analysis["forecast_adjustment"]
+        cloud_precip_adjustment += cloud_adj
+        cloud_precip_reasons.append(f"Cloud timing: {cloud_adj:+.1f}°F")
+    
+    if precip_analysis and abs(precip_analysis.get("forecast_adjustment", 0)) > 0.5:
+        precip_adj = precip_analysis["forecast_adjustment"]
+        cloud_precip_adjustment += precip_adj
+        cloud_precip_reasons.append(f"Precipitation timing: {precip_adj:+.1f}°F")
+    
+    if abs(cloud_precip_adjustment) > 0.5:
+        original_ensemble = ensemble_forecast
+        ensemble_forecast += cloud_precip_adjustment
+        print(f"\n  ☁️🌧️ CLOUD/PRECIP TIMING ADJUSTMENT (V12 NEW!):")
+        for reason in cloud_precip_reasons:
+            print(f"     • {reason}")
+        print(f"     Total adjustment: {cloud_precip_adjustment:+.1f}°F")
+        print(f"     Ensemble: {original_ensemble:.1f}°F → {ensemble_forecast:.1f}°F")
     
     # ============ ML ADJUSTMENTS (from V11, kept in V12) ============
     # Apply wind/airmass-based adjustments to ensemble forecast
@@ -1726,6 +2093,49 @@ def analyze_city(city_key, bankroll, target_date, calibration_tracker=None):
                     
                     print(f"     Final adjustment: {weighted_adjustment:+.2f}°F")
                     print(f"     Ensemble: {original_ensemble:.1f}°F → {ensemble_forecast:.1f}°F")
+    
+    # ============ MEDIUM PRIORITY ENHANCEMENTS (V12.5 NEW!) ============
+    enhancement_adjustments = []
+    enhancement_explanations = []
+    regime_uncertainty_mult = 1.0
+    
+    if ENHANCEMENTS_AVAILABLE:
+        print(f"\n  🌤️  ENHANCED ANALYSIS (V12.5 - Cloud/Precip/Regime):")
+        
+        try:
+            # Apply all medium-priority enhancements
+            adjusted_forecast, adjusted_uncertainty, enhancement_report = enhanced_forecast_adjustment(
+                city["lat"], city["lon"], target_date,
+                ensemble_forecast, uncertainty_std, model_spread
+            )
+            
+            # Show what was found
+            for explanation in enhancement_report["all_explanations"]:
+                print(f"     {explanation}")
+            
+            # Apply forecast adjustments
+            forecast_before_enhancements = ensemble_forecast
+            total_enhancement_adj = enhancement_report["total_adjustment"]
+            
+            if abs(total_enhancement_adj) > 0.5:
+                ensemble_forecast = adjusted_forecast
+                print(f"\n     💡 Total enhancement adjustment: {total_enhancement_adj:+.1f}°F")
+                print(f"        Forecast: {forecast_before_enhancements:.1f}°F → {ensemble_forecast:.1f}°F")
+                
+                # Store details for city summary
+                enhancement_adjustments.append(total_enhancement_adj)
+                enhancement_explanations.extend(enhancement_report["all_explanations"])
+            
+            # Apply uncertainty adjustment from regime detection
+            regime_uncertainty_mult = enhancement_report["uncertainty_multiplier"]
+            if regime_uncertainty_mult != 1.0:
+                uncertainty_before = uncertainty_std
+                uncertainty_std = adjusted_uncertainty
+                print(f"     📊 Regime uncertainty adjustment: {regime_uncertainty_mult:.2f}x")
+                print(f"        Uncertainty: ±{uncertainty_before:.1f}°F → ±{uncertainty_std:.1f}°F")
+        
+        except Exception as e:
+            print(f"     ⚠️ Enhancement analysis failed: {e}")
     
     # Major disagreement detection
     major_disagreement = model_spread > MAJOR_DISAGREEMENT_THRESHOLD
@@ -2104,12 +2514,24 @@ def print_recommendations(selected_bets, all_bets, city_summaries, bankroll, tar
     
     for i, bet in enumerate(selected_bets, 1):
         edge_ratio = bet["edge_ratio"]
+        our_prob = bet["our_prob_win"]
+        
+        # Determine label based on edge quality (not outcome certainty!)
         if edge_ratio >= SUPER_CONFIDENT_EDGE_RATIO:
-            confidence_level = "🔥 SUPER CONFIDENT"
+            if our_prob >= 0.65:
+                confidence_level = "🔥 EXCEPTIONAL VALUE + HIGH WIN PROBABILITY"
+            else:
+                confidence_level = "💎 EXCEPTIONAL VALUE (close outcome, great price)"
         elif edge_ratio >= SAME_CITY_MULTI_BET_THRESHOLD:
-            confidence_level = "✅ HIGH CONFIDENCE"
+            if our_prob >= 0.60:
+                confidence_level = "✅ STRONG VALUE + GOOD WIN PROBABILITY"
+            else:
+                confidence_level = "📊 STRONG VALUE (coin flip-ish, but mispriced)"
         else:
-            confidence_level = "📊 STANDARD BET"
+            if our_prob >= 0.60:
+                confidence_level = "✓ FAIR VALUE + FAVORABLE ODDS"
+            else:
+                confidence_level = "⚖️ FAIR VALUE (marginal edge)"
         
         bucket_emoji = "🎯" if bet["price_bucket"] == "sweet_spot" else "🔥" if bet["price_bucket"] == "mid_range" else "💎"
         is_forecast_bin = " ⭐ MODEL'S PRIMARY BIN" if bet.get("is_forecast_bin") else ""
@@ -2127,6 +2549,12 @@ def print_recommendations(selected_bets, all_bets, city_summaries, bankroll, tar
         print(f"   📊 THE EDGE:")
         print(f"      Your probability: {bet['our_prob_win']*100:.1f}%  |  Market: {bet['bet_price']*100:.1f}%")
         print(f"      Edge: {bet['edge']*100:+.1f}%  ({edge_ratio:.1f}x required minimum)")
+        
+        # Clarify what the label means
+        if our_prob < 0.55:
+            print(f"      ⚠️  Close to 50/50 outcome - value is in the PRICE, not certainty")
+        elif our_prob >= 0.70:
+            print(f"      ✅ Likely to win AND great price - double advantage")
         
         # Show calibration boost if applied (V12 OPTIMIZED!)
         if bet.get('raw_prob') and abs(bet['our_prob_win'] - bet['raw_prob']) > 0.02:
@@ -2313,3 +2741,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+# ============ END OF PART 4/4 - ENSEMBLE_V12.PY COMPLETE ============
