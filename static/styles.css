@@ -1,7 +1,7 @@
 :root {
   --green: rgba(9, 194, 133, 1);
   --white: rgba(255, 255, 255, 0.9);
-  --black: rgba(0, 0, 0, 1);
+  --black: rgba(20, 20, 20, 1);
 }
 
 .inter-semibold,
@@ -40,7 +40,7 @@ html {
 }
 
 .nav-link {
-  color: var(--black);
+  color: var(--white);
   text-decoration: none;
   font-size: 0.9rem;
   opacity: 0.6;
@@ -68,7 +68,7 @@ h1 {
 h3 {
   text-align: center;
   font-size: 2.5rem;
-  color: var(--black);
+  color: var(--white);
 }
 
 .content-container {
@@ -95,7 +95,7 @@ h3 {
 }
 
 .setting-group label {
-  color: var(--black);
+  color: var(--white);
   font-size: 1rem;
 }
 
@@ -262,7 +262,7 @@ h3 {
 
 .section-title {
   font-size: 2rem;
-  color: var(--black);
+  color: var(--white);
   text-align: center;
   margin: 40px 0 30px 0;
 }
