@@ -2112,22 +2112,21 @@ def analyze_city(city_key, bankroll, target_date, calibration_tracker=None):
                 ensemble_forecast, uncertainty_std
             )
             
-            # Show what was found
-            for explanation in enhancement_report["all_explanations"]:
-                print(f"     {explanation}")
-            
             # Apply forecast adjustments
             forecast_before_enhancements = ensemble_forecast
-            total_enhancement_adj = enhancement_report["total_adjustment"]
-            
+            total_enhancement_adj = enhancement_report.get("total_forecast_adjustment", 0)
+
             if abs(total_enhancement_adj) > 0.5:
                 ensemble_forecast = adjusted_forecast
                 print(f"\n     💡 Total enhancement adjustment: {total_enhancement_adj:+.1f}°F")
                 print(f"        Forecast: {forecast_before_enhancements:.1f}°F → {ensemble_forecast:.1f}°F")
-                
+
                 # Store details for city summary
                 enhancement_adjustments.append(total_enhancement_adj)
-                enhancement_explanations.extend(enhancement_report["all_explanations"])
+                if enhancement_report.get("cloud_adjustment"):
+                    enhancement_explanations.append(f"Cloud timing: {enhancement_report['cloud_adjustment']:+.1f}°F")
+                if enhancement_report.get("precip_adjustment"):
+                    enhancement_explanations.append(f"Precip timing: {enhancement_report['precip_adjustment']:+.1f}°F")
             
             # Apply uncertainty adjustment from regime detection
             regime_uncertainty_mult = enhancement_report["uncertainty_multiplier"]
