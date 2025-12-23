@@ -2406,7 +2406,7 @@ def analyze_city(city_key, bankroll, target_date, calibration_tracker=None):
 
 # ============ SMART BET SELECTION ============
 
-def smart_select_bets(all_bets):
+def smart_select_bets(all_bets, bankroll=STARTING_BANKROLL):
     """
     Apply smart bet selection logic across all cities.
     
@@ -2414,6 +2414,7 @@ def smart_select_bets(all_bets):
     1. Different cities = uncorrelated → bet freely on best bet from each
     2. Same city = correlated → only stack if SUPER confident (edge_ratio >= 2.0x)
     3. Cap total bets per day
+    4. CRITICAL: Ensure total wager never exceeds bankroll
     """
     if not all_bets:
         return []
@@ -2449,6 +2450,31 @@ def smart_select_bets(all_bets):
     
     # Cap total bets
     selected_bets = selected_bets[:MAX_TOTAL_BETS_PER_DAY]
+    
+    # CRITICAL: Ensure total wager doesn't exceed bankroll
+    # Scale down bet sizes proportionally if needed
+    total_wager = sum(bet["bet_size"] for bet in selected_bets)
+    
+    if total_wager > bankroll:
+        # Calculate scaling factor
+        scale_factor = bankroll / total_wager
+        
+        # Scale down all bet sizes proportionally
+        for bet in selected_bets:
+            original_bet_size = bet["bet_size"]
+            bet["bet_size"] = original_bet_size * scale_factor
+            
+            # Update Kelly info to reflect scaling
+            bet["kelly_info"]["scaled_down"] = True
+            bet["kelly_info"]["scale_factor"] = scale_factor
+            bet["kelly_info"]["original_bet_size"] = original_bet_size
+            
+            # Remove bets that fall below minimum after scaling
+            if bet["bet_size"] < MIN_BET_SIZE:
+                bet["bet_size"] = 0
+        
+        # Filter out bets that are now below minimum
+        selected_bets = [bet for bet in selected_bets if bet["bet_size"] >= MIN_BET_SIZE]
     
     return selected_bets
 
@@ -2517,6 +2543,15 @@ def print_recommendations(selected_bets, all_bets, city_summaries, bankroll, tar
         print("      • No contracts with sufficient edge after filtering")
         return
     
+    # Check if any bets were scaled down
+    any_scaled = any(bet.get("kelly_info", {}).get("scaled_down", False) for bet in selected_bets)
+    if any_scaled:
+        scale_factor = selected_bets[0]["kelly_info"].get("scale_factor", 1.0)
+        print(f"\n   ⚠️  BANKROLL CONSTRAINT APPLIED")
+        print(f"      • Kelly suggested bets would exceed bankroll")
+        print(f"      • All bet sizes scaled down by {scale_factor:.1%} to fit ${bankroll:.2f} bankroll")
+        print()
+    
     print(f"\n   ✅ Found {len(selected_bets)} recommended bet(s)")
     print()
     
@@ -2575,7 +2610,15 @@ def print_recommendations(selected_bets, all_bets, city_summaries, bankroll, tar
         print()
         print(f"   💰 POSITION SIZING:")
         print(f"      Kelly %: {bet['kelly_info'].get('fractional_kelly_pct', 0):.1f}% of bankroll")
-        print(f"      ➜  BET: ${bet['bet_size']:.2f}")
+        
+        # Show if bet was scaled down
+        if bet['kelly_info'].get('scaled_down'):
+            original = bet['kelly_info'].get('original_bet_size', 0)
+            print(f"      Kelly suggested: ${original:.2f}")
+            print(f"      ➜  BET (scaled to fit bankroll): ${bet['bet_size']:.2f}")
+        else:
+            print(f"      ➜  BET: ${bet['bet_size']:.2f}")
+        
         print(f"      ➜  If you win: ${potential_profit:.2f} profit ({roi_pct:.0f}% ROI)")
         print()
         print(f"   🌡️  MODEL FORECAST: {bet['ensemble_forecast']:.1f}°F")
@@ -2591,6 +2634,14 @@ def print_recommendations(selected_bets, all_bets, city_summaries, bankroll, tar
     print(f"   Total bets: {len(selected_bets)}")
     print(f"   Total wager: ${total_wager:.2f} ({100*total_wager/bankroll:.1f}% of bankroll)")
     print(f"   Total potential profit: ${total_potential:.2f}")
+    
+    # Sanity check - this should never trigger now, but good to have
+    if total_wager > bankroll:
+        print(f"   ⚠️  WARNING: Total wager exceeds bankroll by ${total_wager - bankroll:.2f}!")
+        print(f"   ⚠️  This should not happen - please report this bug")
+    elif total_wager > bankroll * 0.95:
+        print(f"   ℹ️  Note: Using {100*total_wager/bankroll:.1f}% of available bankroll")
+    
     print("   " + "=" * 74)
 
 
@@ -2717,8 +2768,8 @@ def main():
         all_bets.extend(city_bets)
         city_summaries.append(city_summary)
 
-    # Smart bet selection
-    selected_bets = smart_select_bets(all_bets)
+    # Smart bet selection (V12: Now ensures total wager ≤ bankroll!)
+    selected_bets = smart_select_bets(all_bets, bankroll)
 
     # Print recommendations
     print_recommendations(selected_bets, all_bets, city_summaries, bankroll, target_date)
