@@ -511,10 +511,10 @@ def calculate_dynamic_uncertainty(forecasts, forecast_sources, agreement_level, 
     """
     
     # Base uncertainty (best case: models agree, stable conditions)
-    BASE_UNCERTAINTY = 2.0  # °F
+    BASE_UNCERTAINTY = 2.5  # °F (increased from 2.0)
     
     # Maximum uncertainty (worst case: models disagree, frontal system)
-    MAX_UNCERTAINTY = 6.0   # °F
+    MAX_UNCERTAINTY = 8.0   # °F (increased from 6.0)
     
     factors = {}
     
@@ -522,10 +522,11 @@ def calculate_dynamic_uncertainty(forecasts, forecast_sources, agreement_level, 
     if len(forecasts) >= 2:
         model_spread = max(forecasts) - min(forecasts)
         
-        # Uncertainty scales with spread
+        # Uncertainty scales MORE aggressively with spread
         # 0°F spread → 0 added uncertainty
-        # 10°F spread → +3°F uncertainty
-        spread_uncertainty = min(model_spread * 0.3, 3.0)
+        # 6°F spread → +3.0°F uncertainty (was +1.8°F)
+        # 10°F spread → +5°F uncertainty (was +3.0°F)
+        spread_uncertainty = min(model_spread * 0.5, 5.0)  # Increased from 0.3
         factors["model_spread"] = spread_uncertainty
     else:
         # Single model = higher baseline uncertainty
@@ -646,14 +647,15 @@ def calculate_smart_weights(forecast_sources, model_spread, agreement_level):
                 explanation_parts.append("Medium agreement: HRRR 45%, GFS sources 27.5% each")
             
             else:
-                # Low agreement - nearly equal, but HRRR still gets slight edge
-                weights[hrrr_idx] = 0.40
+                # Low agreement (>4°F spread) - EQUAL weights
+                # When models disagree this much, no model should dominate
+                weights[hrrr_idx] = 0.333
                 
                 for i, source in enumerate(forecast_sources):
                     if source in ["NWS", "Open-Meteo"]:
-                        weights[i] = 0.30
+                        weights[i] = 0.333
                 
-                explanation_parts.append("Low agreement: HRRR 40%, GFS sources 30% each")
+                explanation_parts.append("Low agreement (>4°F): Equal weights (no model dominant)")
         
         else:
             # HRRR + one GFS source (either NWS or Open-Meteo)

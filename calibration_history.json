@@ -2201,6 +2201,81 @@
       },
       "outcome": null,
       "recorded_at": "2025-12-23T16:25:22.262659"
+    },
+    {
+      "date": "2025-12-24",
+      "city": "New York City",
+      "our_prob": 0.9758030111667675,
+      "market_price": 0.5449999999999999,
+      "contract": {
+        "subtitle": "44\u00b0 to 45\u00b0",
+        "low": 44,
+        "high": 45,
+        "threshold": null,
+        "side": "NO"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-23T16:31:58.434363"
+    },
+    {
+      "date": "2025-12-24",
+      "city": "Chicago",
+      "our_prob": 0.9905085041209145,
+      "market_price": 0.63,
+      "contract": {
+        "subtitle": "46\u00b0 to 47\u00b0",
+        "low": 46,
+        "high": 47,
+        "threshold": null,
+        "side": "NO"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-23T16:31:58.439368"
+    },
+    {
+      "date": "2025-12-24",
+      "city": "New York City",
+      "our_prob": 0.9723387677013482,
+      "market_price": 0.645,
+      "contract": {
+        "subtitle": "42\u00b0 to 43\u00b0",
+        "low": 42,
+        "high": 43,
+        "threshold": null,
+        "side": "NO"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-23T16:31:58.442369"
+    },
+    {
+      "date": "2025-12-24",
+      "city": "Chicago",
+      "our_prob": 0.9878384323013087,
+      "market_price": 0.725,
+      "contract": {
+        "subtitle": "44\u00b0 to 45\u00b0",
+        "low": 44,
+        "high": 45,
+        "threshold": null,
+        "side": "NO"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-23T16:31:58.444786"
+    },
+    {
+      "date": "2025-12-24",
+      "city": "Miami",
+      "our_prob": 0.9903645046830611,
+      "market_price": 0.8049999999999999,
+      "contract": {
+        "subtitle": "82\u00b0 to 83\u00b0",
+        "low": 82,
+        "high": 83,
+        "threshold": null,
+        "side": "NO"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-23T16:31:58.447143"
     }
   ],
   "bins": {
