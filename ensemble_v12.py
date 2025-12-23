@@ -2355,6 +2355,13 @@ def analyze_city(city_key, bankroll, target_date, calibration_tracker=None):
         yes_edge = model_prob - kalshi_prob
         min_edge = get_min_edge(kalshi_prob, agreement_level)
         
+        # MARKET SANITY CHECK: Don't fight heavy favorites
+        # If market is >70% confident, we need MUCH more edge
+        if kalshi_prob > 0.70:
+            min_edge *= 2.0  # Double edge requirement
+        if kalshi_prob > 0.85:
+            min_edge *= 3.0  # Triple edge requirement (rarely worth it)
+        
         if yes_edge > min_edge:
             edge_ratio = yes_edge / min_edge
             our_prob_win = model_prob
@@ -2395,6 +2402,13 @@ def analyze_city(city_key, bankroll, target_date, calibration_tracker=None):
             # Skip NO range bets in sweet spot
             no_bucket = get_price_bucket(no_market)
             skip_no_range = (contract_type == "range" and no_bucket == "sweet_spot")
+            
+            # MARKET SANITY CHECK: Don't bet NO when market is very bearish on this outcome
+            # If NO market is >70% (YES market <30%), we need more edge
+            if no_market > 0.70:
+                no_min_edge *= 2.0  # Double edge requirement
+            if no_market > 0.85:
+                no_min_edge *= 3.0  # Triple edge requirement
             
             if no_edge > no_min_edge and not skip_no_range:
                 edge_ratio = no_edge / no_min_edge
