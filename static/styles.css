@@ -18,7 +18,16 @@
 }
 
 html {
-  background-color: var(--green);
+  background-color: var(--black);
+}
+
+/* Title colors */
+.title-kalshi {
+  color: var(--green);
+}
+
+.title-weather-bets {
+  color: var(--white);
 }
 
 .navbar {
