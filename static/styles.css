@@ -30,6 +30,10 @@ html {
   color: var(--white);
 }
 
+.title-sports-bets {
+  color: var(--white);
+}
+
 .navbar {
   position: absolute;
   top: 20px;
