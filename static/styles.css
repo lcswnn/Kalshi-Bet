@@ -515,7 +515,7 @@ h3 {
 .portfolio-summary {
   margin-top: 40px;
   padding: 30px;
-  background: linear-gradient(135deg, rgba(9, 194, 133, 0.2), rgba(9, 194, 133, 0.3));
+  background: linear-gradient(135deg, rgba(9, 194, 133, 1), rgba(9, 194, 133, 1));
   border-radius: 1.2rem;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
