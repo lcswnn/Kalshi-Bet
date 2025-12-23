@@ -123,12 +123,13 @@
         }
 
         // Parse city forecasts
-        if (currentSection === 'forecasts' && line.match(/🏙️\s+(\w+)/)) {
+        if (currentSection === 'forecasts' && line.match(/🏙️\s+(.+)/)) {
           if (currentCity) data.forecasts.push(currentCity);
           currentCity = {
-            name: line.match(/🏙️\s+(\w+)/)[1],
+            name: line.match(/🏙️\s+(.+)/)[1].trim(),
             models: [],
             spread: '',
+            uncertainty: '',
             wind: '',
             airmass: '',
             mlAdjustments: [],
@@ -140,6 +141,12 @@
           if (line.includes('HRRR:') || line.includes('Open-Meteo:') || line.includes('NWS:')) {
             const match = line.match(/(HRRR|Open-Meteo|NWS):\s*([\d.]+)°F/);
             if (match) currentCity.models.push({ name: match[1], temp: match[2] });
+          } else if (line.includes('Ensemble Forecast:')) {
+            const match = line.match(/Ensemble Forecast:\s*([\d.]+°F)/);
+            if (match) currentCity.finalForecast = match[1];
+          } else if (line.includes('Forecast Uncertainty:')) {
+            const match = line.match(/Forecast Uncertainty:\s*([±\d.]+°F)/);
+            if (match) currentCity.uncertainty = match[1];
           } else if (line.includes('Model Spread:')) {
             currentCity.spread = line.match(/Model Spread:\s*(.+)/)[1];
           } else if (line.includes('🌬️')) {
@@ -148,12 +155,11 @@
             currentCity.airmass = line.replace(/\s*🌡️\s*/, '').trim();
           } else if (line.includes('• ') && line.includes('ML')) {
             currentCity.mlAdjustments.push(line.replace(/.*•\s*/, '').trim());
-          } else if (line.includes('FINAL FORECAST:')) {
-            currentCity.finalForecast = line.match(/FINAL FORECAST:\s*(.+)/)[1];
-          } else if (line.includes('Predicted Bin:')) {
-            currentCity.predictedBin = line.match(/Predicted Bin:\s*(.+)/)[1];
-          } else if (line.includes('WARNING:')) {
-            currentCity.warnings.push(line.replace(/.*WARNING:\s*/, '').trim());
+          } else if (line.includes('Predicted Bin:') || line.includes('📍')) {
+            const match = line.match(/(?:Predicted Bin:|📍)\s*(.+)/);
+            if (match) currentCity.predictedBin = match[1].trim();
+          } else if (line.includes('WARNING:') || line.includes('⚠️')) {
+            currentCity.warnings.push(line.replace(/.*(?:WARNING:|⚠️)\s*/, '').trim());
           }
         }
 
@@ -288,7 +294,8 @@
               ` : ''}
 
               <div class="final-forecast">
-                <p class="inter-semibold forecast-value">⭐ ${city.finalForecast}</p>
+                <p class="inter-semibold forecast-value">⭐ Ensemble Forecast: ${city.finalForecast}</p>
+                ${city.uncertainty ? `<p class="inter-medium uncertainty-value">Uncertainty: ${city.uncertainty}</p>` : ''}
                 ${city.predictedBin ? `<p class="inter-medium bin-value">📍 ${city.predictedBin}</p>` : ''}
               </div>
 
