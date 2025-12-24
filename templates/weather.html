@@ -463,9 +463,9 @@
       document.getElementById("loader").style.display = "block";
       document.getElementById("resultsContainer").style.display = "none";
 
-      // Increase fetch timeout to 2 minutes
+      // Increase fetch timeout to 5 minutes (matches backend timeout)
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minute timeout
+      const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minute timeout
 
       fetch(url, { signal: controller.signal })
         .then(response => response.json())
@@ -504,7 +504,7 @@
           
           let errorMsg = "Unknown error occurred";
           if (err.name === 'AbortError') {
-            errorMsg = `Request timed out after 2 minutes.
+            errorMsg = `Request timed out after 5 minutes.
 
 This usually means:
 • HRRR data is taking too long to fetch
