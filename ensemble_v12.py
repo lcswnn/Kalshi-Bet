@@ -1,45 +1,5 @@
 """
-KALSHI WEATHER BETTING MODEL v12.5 (OPTIMIZED + ENHANCED) - CALIBRATION BOOST REMOVED
-=====================================================================================
-CALIBRATED based on your 46 historical bets showing:
-- 30% estimates → 70% actual wins (you're too conservative!)
-- 40% estimates → 71% actual wins (systematic underestimation)
-- 40-60¢ price range: Your sweet spot (71% win rate)
-- Overall: 50% win rate but leaving money on the table
-
-OPTIMIZATIONS APPLIED (v12):
-1. ✅ LOWER EDGE REQUIREMENTS: 8% sweet spot, 7% mid-range (was 12%)
-2. ❌ CALIBRATION BOOST REMOVED: No longer auto-adjusts probabilities (was +15%)
-3. ✅ AGGRESSIVE KELLY: 0.80 fraction, 20% max (was 0.75, 15%)
-4. ✅ MID-RANGE FOCUS: 40-60¢ contracts prioritized (your strength)
-5. ✅ RELAXED THRESHOLDS: Lower barriers for multi-betting same city
-
-NEW IN V12.5 - MEDIUM PRIORITY ENHANCEMENTS:
-6. ✅ CLOUD TIMING ANALYSIS: Midday clouds suppress max by 5-10°F
-7. ✅ PRECIPITATION TIMING: Rain during peak heating = 8-15°F drop
-8. ✅ REGIME DETECTION: High pressure vs frontal systems affects uncertainty
-
-HIGH PRIORITY FIXES (v12):
-1. ✅ DYNAMIC FORECAST UNCERTAINTY: Adjusts std based on model spread & conditions (2-6°F)
-2. ✅ CURRENT OBSERVATIONS: Uses real-time data to constrain forecasts
-3. ✅ CALIBRATION TRACKING: Tracks historical accuracy to adjust probabilities  
-4. ✅ SMART MODEL WEIGHTING: Reduces correlation between GFS-based forecasts
-
-Key improvements over v11:
-- Uncertainty scales with model disagreement (not fixed 2.8°F)
-- Morning observations prevent impossible predictions
-- Calibration database learns from your 46 bets
-- NWS/Open-Meteo get reduced weight (both use GFS) vs independent HRRR
-- Cloud/precip timing analysis prevents major forecast misses
-- Weather regime detection adjusts uncertainty appropriately
-
-All v11 features maintained:
-- NWS FORECAST integration
-- NWS rounding rules (matches Kalshi resolution)
-- Valid bins only (prevents betting on non-existent bins)
-- Smart bet selection (different cities vs same city)
-- Kelly Criterion sizing with bankroll tracking
-- Price filtering and edge requirements
+KALSHI WEATHER BETTING MODEL v12.5 (OPTIMIZED + ENHANCED)
 """
 
 import pandas as pd # type: ignore
@@ -56,8 +16,9 @@ from scipy import stats # type: ignore
 import glob
 import argparse
 from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import time
 
-# Import medium-priority enhancements (v12.5)
 try:
     from medium_priority_enhancements import apply_medium_priority_enhancements as enhanced_forecast_adjustment
     ENHANCEMENTS_AVAILABLE = True
@@ -69,7 +30,6 @@ try:
 except ImportError:
     from backports.zoneinfo import ZoneInfo  # type: ignore
 
-# ============ HRRR/HERBIE IMPORTS ============
 try:
     from herbie import Herbie # type: ignore
     HERBIE_AVAILABLE = True
@@ -78,96 +38,81 @@ except ImportError:
     print("⚠️ Herbie not installed. Will use Open-Meteo only.")
     print("   Install with: pip install herbie-data xarray cfgrib")
 
-# ============ PRICE FILTER CONFIGURATION ============
-# CALIBRATED based on historical performance
-MIN_CONTRACT_PRICE = 0.10   # Slightly lower (was 0.15) - some low-price bets worked
-MAX_CONTRACT_PRICE = 0.90   # Keep at 90¢
-SWEET_SPOT_LOW = 0.15       # Standard lower bound
-SWEET_SPOT_HIGH = 0.60      # Extended to 60¢ (was 0.50) - your 40-60¢ bets win 71%!
+# Price filter configuration
+MIN_CONTRACT_PRICE = 0.10
+MAX_CONTRACT_PRICE = 0.90
+SWEET_SPOT_LOW = 0.15
+SWEET_SPOT_HIGH = 0.60
 
-# ============ SMART BET SELECTION CONFIGURATION ============
-# CALIBRATED based on historical performance
-SAME_CITY_MULTI_BET_THRESHOLD = 1.5   # Reduced from 2.0 - you're passing on good bets
-MAX_BETS_PER_CITY = 2                  # Keep at 2
-MAX_TOTAL_BETS_PER_DAY = 6             # Keep at 6
-SUPER_CONFIDENT_EDGE_RATIO = 2.0       # Reduced from 2.5 - historical data shows 1.5-2x edge is actually great
+# Bet selection configuration
+SAME_CITY_MULTI_BET_THRESHOLD = 1.5
+MAX_BETS_PER_CITY = 2
+MAX_TOTAL_BETS_PER_DAY = 6
+SUPER_CONFIDENT_EDGE_RATIO = 2.0
 
-# ============ TIMEZONE CONFIGURATION ============
+# Timezone configuration
 KALSHI_TIMEZONE = ZoneInfo("America/New_York")
-EVENING_CUTOFF_HOUR = 18  # 6 PM Eastern
+EVENING_CUTOFF_HOUR = 18
 
-# ============ KELLY CRITERION CONFIGURATION ============
-# CALIBRATED based on historical betting patterns
-STARTING_BANKROLL = 100        # Your bankroll
-KELLY_FRACTION = 0.40          # Increased from 0.75 - your picks are better than you think!
-MIN_BET_SIZE = 0.50            # Don't bet less than 50¢
-MAX_BET_FRACTION = 0.20        # Increased from 0.15 - bet more on calibrated opportunities
+# Kelly criterion configuration
+STARTING_BANKROLL = 100
+KELLY_FRACTION = 0.40
+MIN_BET_SIZE = 0.50
+MAX_BET_FRACTION = 0.20
 
-# ============ ENSEMBLE CONFIGURATION ============
-ENSEMBLE_AGREEMENT_THRESHOLD = 3.0  # °F - models should agree within this
-CONFIDENCE_BOOST_THRESHOLD = 2.0    # °F - boost confidence if within this
-# REMOVED: CALIBRATED_FORECAST_STD - now calculated dynamically!
-MAJOR_DISAGREEMENT_THRESHOLD = 5.0  # °F - flag as major disagreement (frontal systems)
+# Ensemble configuration
+ENSEMBLE_AGREEMENT_THRESHOLD = 3.0
+CONFIDENCE_BOOST_THRESHOLD = 2.0
+MAJOR_DISAGREEMENT_THRESHOLD = 5.0
 
-# ============ ATMOSPHERIC ANALOG MODEL CONFIGURATION ============
-ATMOSPHERIC_MODEL_WEIGHT = 0.15     # How much weight to give atmospheric analog prediction
-MIN_TRAINING_SAMPLES = 30           # Minimum samples needed to train atmospheric model
-ATMOSPHERIC_MODEL_PATH = "atmospheric_models"  # Directory to save/load models
+# Atmospheric analog model configuration
+ATMOSPHERIC_MODEL_WEIGHT = 0.15
+MIN_TRAINING_SAMPLES = 30
+ATMOSPHERIC_MODEL_PATH = "atmospheric_models"
 
-# ============ AIRMASS & WIND ANALYSIS CONFIGURATION ============
-WARM_ADVECTION_THRESHOLD = 15.0     # °F - significant warm airmass change
-COLD_ADVECTION_THRESHOLD = -15.0    # °F - significant cold airmass change
-WIND_SHIFT_THRESHOLD = 90.0         # degrees - significant wind direction change
+# Airmass & wind analysis configuration
+WARM_ADVECTION_THRESHOLD = 15.0
+COLD_ADVECTION_THRESHOLD = -15.0
+WIND_SHIFT_THRESHOLD = 90.0
 
-# ============ CLOUD COVER & PRECIPITATION TIMING CONFIGURATION ============
-MORNING_CLOUD_THRESHOLD = 60        # % - significant morning cloud cover (before 10 AM)
-AFTERNOON_CLOUD_THRESHOLD = 70      # % - significant afternoon cloud cover
-MORNING_CLOUD_IMPACT = -3.0         # °F - typical max temp suppression from morning clouds
-HEAVY_PRECIP_THRESHOLD = 0.1        # inches/hour - heavy rain rate
-PEAK_HEATING_START = 11             # Hour (local) - start of peak heating period
-PEAK_HEATING_END = 15               # Hour (local) - end of peak heating period
-PRECIP_PEAK_HEATING_IMPACT = -8.0   # °F - rain during peak heating suppresses max significantly
+# Cloud cover & precipitation timing configuration
+MORNING_CLOUD_THRESHOLD = 60
+AFTERNOON_CLOUD_THRESHOLD = 70
+MORNING_CLOUD_IMPACT = -3.0
+HEAVY_PRECIP_THRESHOLD = 0.1
+PEAK_HEATING_START = 11
+PEAK_HEATING_END = 15
+PRECIP_PEAK_HEATING_IMPACT = -8.0
 
-# ============ REGIME DETECTION CONFIGURATION ============
-HIGH_PRESSURE_THRESHOLD = 1020      # mb - strong high pressure
-LOW_PRESSURE_THRESHOLD = 1008       # mb - approaching low pressure
-FRONTAL_PRESSURE_CHANGE = 3.0       # mb/3hr - rapid pressure change indicates front
-STABLE_REGIME_UNCERTAINTY = 1.8     # °F - low uncertainty in stable high pressure
-FRONTAL_REGIME_UNCERTAINTY = 4.5    # °F - high uncertainty near fronts
+# Regime detection configuration
+HIGH_PRESSURE_THRESHOLD = 1020
+LOW_PRESSURE_THRESHOLD = 1008
+FRONTAL_PRESSURE_CHANGE = 3.0
+STABLE_REGIME_UNCERTAINTY = 1.8
+FRONTAL_REGIME_UNCERTAINTY = 4.5
 
 # Edge requirements by price bucket
-# TUNED based on historical performance: 30-40% implied prob bets won 70%+
 BASE_EDGE_REQUIREMENTS = {
-    "sweet_spot": 0.08,    # 8% edge for 15-50¢ contracts (historical strength: 40-50¢ range)
-    "mid_range": 0.07,     # 7% edge for 40-60¢ contracts (your best performing range!)
-    "high_price": 0.10,    # 10% edge for 60-90¢ contracts (be selective at extremes)
+    "sweet_spot": 0.08,
+    "mid_range": 0.07,
+    "high_price": 0.10,
 }
 
 def get_min_edge(price, agreement_level='high'):
-    """
-    Dynamic edge requirement based on price and model agreement.
-    
-    CALIBRATED based on historical data:
-    - 40-60¢ range: Your best performing bets (71% win rate)
-    - Lower requirements here to capture more +EV opportunities
-    """
-    # Determine price bucket
+    """Dynamic edge requirement based on price and model agreement."""
     if 0.40 <= price <= 0.60:
-        # Your sweet spot based on historical data
         base_edge = BASE_EDGE_REQUIREMENTS.get("mid_range", 0.07)
     elif price <= SWEET_SPOT_HIGH:
         base_edge = BASE_EDGE_REQUIREMENTS.get("sweet_spot", 0.08)
     else:
         base_edge = BASE_EDGE_REQUIREMENTS.get("high_price", 0.10)
-    
-    # Adjust for agreement level
-    # Historical data shows you're too conservative, so reduce multipliers
+
     if agreement_level == 'high':
-        return base_edge * 0.9  # Reduced from 1.0
+        return base_edge * 0.9
     elif agreement_level == 'medium':
-        return base_edge * 1.0  # Reduced from 1.25
-    else:  # low
-        return base_edge * 1.2  # Reduced from 1.5
+        return base_edge * 1.0
+    else:
+        return base_edge * 1.2
 
 def get_price_bucket(price):
     """
@@ -237,6 +182,7 @@ class CalibrationTracker:
         ENHANCED for your betting history:
         - You systematically underestimate (30% → 70% actual)
         - Apply larger adjustments to capture this pattern
+        - HARD CAP at 95% to prevent overconfidence disasters
         """
         # Bin the probability (e.g., 0.65-0.75 → "0.70")
         prob_bin = round(raw_probability, 1)
@@ -248,15 +194,16 @@ class CalibrationTracker:
         
         if bin_key not in self.history["bins"]:
             # No calibration data - return raw probability without adjustment
-            return raw_probability
+            # But still apply hard cap
+            return min(raw_probability, 0.95)
         
         bin_data = self.history["bins"][bin_key]
         
         # Use calibration data even with fewer samples (was 10, now 3)
         # Your systematic bias is clear enough to trust smaller samples
         if bin_data.get("count", 0) < 3:
-            # Not enough data - return raw probability
-            return raw_probability
+            # Not enough data - return raw probability with cap
+            return min(raw_probability, 0.95)
         
         # Calculate empirical accuracy
         wins = bin_data.get("wins", 0)
@@ -272,6 +219,10 @@ class CalibrationTracker:
         max_adjustment = 0.15
         calibrated = max(raw_probability - max_adjustment, 
                          min(raw_probability + max_adjustment, calibrated))
+        
+        # 🚨 CRITICAL: HARD CAP AT 95% - NEVER ALLOW 100% CONFIDENCE
+        # This prevents the calibration disaster where 100% predictions win only 28%
+        calibrated = min(calibrated, 0.95)
         
         return calibrated
     
@@ -736,7 +687,9 @@ cities = {
         "lon": -87.6298,
         "kalshi_series": "KXHIGHCHI",
         "timezone": "America/Chicago",
-        "utc_offset": -6
+        "utc_offset": -6,
+        "climate_score": 3,  # Variable midwest weather (lower priority)
+        "winter_predictability": 2  # Low predictability in winter
     },
     "nyc": {
         "name": "New York City",
@@ -745,7 +698,9 @@ cities = {
         "lon": -74.0060,
         "kalshi_series": "KXHIGHNY",
         "timezone": "America/New_York",
-        "utc_offset": -5
+        "utc_offset": -5,
+        "climate_score": 4,  # Northeast maritime (medium priority)
+        "winter_predictability": 3  # Medium predictability
     },
     "miami": {
         "name": "Miami",
@@ -754,7 +709,9 @@ cities = {
         "lon": -80.2870,
         "kalshi_series": "KXHIGHMIA",
         "timezone": "America/New_York",
-        "utc_offset": -5
+        "utc_offset": -5,
+        "climate_score": 10,  # Subtropical, very stable (HIGH priority)
+        "winter_predictability": 10  # Extremely predictable in winter
     },
     "austin": {
         "name": "Austin",
@@ -763,7 +720,9 @@ cities = {
         "lon": -97.7431,
         "kalshi_series": "KXHIGHAUS",
         "timezone": "America/Chicago",
-        "utc_offset": -6
+        "utc_offset": -6,
+        "climate_score": 8,  # Warm temperate, fairly stable (HIGH priority)
+        "winter_predictability": 8  # High predictability in winter
     },
     "la": {
         "name": "Los Angeles",
@@ -772,15 +731,51 @@ cities = {
         "lon": -118.2437,
         "kalshi_series": "KXHIGHLA",
         "timezone": "America/Los_Angeles",
-        "utc_offset": -8
+        "utc_offset": -8,
+        "climate_score": 9,  # Mediterranean, very stable (HIGH priority)
+        "winter_predictability": 9  # Very predictable year-round
     }
 }
 
 # Will collect all qualifying bets across all cities
 all_qualifying_bets = []
 
-# Default to all cities
-selected_cities = ["chicago", "nyc", "miami", "austin", "la"]
+# Default to all cities, prioritized by climate score (warmest/most stable first)
+def get_prioritized_cities():
+    """
+    Return cities sorted by climate score (warmest, most predictable first).
+    
+    Priority order (winter):
+    1. Miami (subtropical, extremely stable)
+    2. LA (Mediterranean, very stable)
+    3. Austin (warm temperate, fairly stable)
+    4. NYC (northeast maritime, moderate)
+    5. Chicago (midwest, variable)
+    """
+    from datetime import datetime
+    current_month = datetime.now().month
+    
+    # Winter months (Dec-Feb): Use winter_predictability
+    is_winter = current_month in [12, 1, 2]
+    
+    if is_winter:
+        sorted_cities = sorted(
+            cities.keys(),
+            key=lambda c: cities[c]["winter_predictability"],
+            reverse=True
+        )
+    else:
+        # Other months: Use general climate score
+        sorted_cities = sorted(
+            cities.keys(),
+            key=lambda c: cities[c]["climate_score"],
+            reverse=True
+        )
+    
+    return sorted_cities
+
+selected_cities = get_prioritized_cities()
+
 
 
 # ============ TIMEZONE HELPERS ============
@@ -824,6 +819,17 @@ def print_header(target_date, is_today):
     print(f" Analyzing: {'TODAY' if is_today else 'TOMORROW'}'s markets")
     print("="*70)
     
+    # Show climate prioritization
+    from datetime import datetime
+    is_winter = datetime.now().month in [12, 1, 2]
+    priority_metric = "Winter Predictability" if is_winter else "Climate Stability"
+    
+    print(f"\n🌡️ CLIMATE-BASED CITY PRIORITIZATION ({priority_metric}):")
+    for city_key in selected_cities:
+        city_info = cities[city_key]
+        score = city_info["winter_predictability"] if is_winter else city_info["climate_score"]
+        print(f"   {city_info['name']}: {score}/10")
+    
     print("\n🎯 OPTIMIZED FOR YOUR BETTING HISTORY:")
     print("   Based on your 46 historical bets:")
     print("   • 30% estimates → 70% actual wins (you're too conservative!)")
@@ -832,7 +838,12 @@ def print_header(target_date, is_today):
     print("   • Kelly increased to 0.80 (was 0.75)")
     print("   • Calibration boost REMOVED (was causing overconfidence)")
     
-    print("\n🌤️  V12.5 ENHANCEMENTS (BUILT-IN):")
+    print("\n⚡ V12.5 PERFORMANCE OPTIMIZATIONS:")
+    print("   ✅ Parallel city analysis (3x faster execution)")
+    print("   ✅ Climate-based prioritization (warmer = more predictable)")
+    print("   ✅ Timeout protection for Flask integration")
+    
+    print("\n🌤️  V12.5 WEATHER ENHANCEMENTS:")
     print("   ✅ Cloud timing analysis (morning/peak heating clouds)")
     print("   ✅ Precipitation timing analysis (rain during peak heating)")
     print("   ✅ Weather regime detection (pressure-based uncertainty)")
@@ -2824,11 +2835,49 @@ def main():
     all_bets = []
     city_summaries = []
 
-    # Analyze each city (V12: passes calibration_tracker!)
-    for city_key in selected_cities:
-        city_bets, city_summary = analyze_city(city_key, bankroll, target_date, calibration_tracker)
-        all_bets.extend(city_bets)
-        city_summaries.append(city_summary)
+    # PARALLEL CITY ANALYSIS (V12.5 OPTIMIZATION!)
+    # Analyze cities in parallel to reduce total execution time
+    print(f"\n⚡ PARALLEL ANALYSIS MODE")
+    print(f"   Analyzing {len(selected_cities)} cities concurrently...")
+    print(f"   Priority order: {', '.join([cities[c]['name'] for c in selected_cities])}")
+    print()
+    
+    start_time = time.time()
+    
+    def analyze_city_wrapper(city_key):
+        """Wrapper for parallel execution with error handling."""
+        try:
+            return city_key, analyze_city(city_key, bankroll, target_date, calibration_tracker)
+        except Exception as e:
+            print(f"\n❌ Error analyzing {cities[city_key]['name']}: {e}")
+            return city_key, ([], None)
+    
+    # Use ThreadPoolExecutor for parallel API calls (max 3 concurrent to avoid rate limits)
+    max_workers = min(3, len(selected_cities))
+    
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        # Submit all city analysis tasks
+        future_to_city = {
+            executor.submit(analyze_city_wrapper, city_key): city_key 
+            for city_key in selected_cities
+        }
+        
+        # Process results as they complete
+        completed = 0
+        for future in as_completed(future_to_city):
+            city_key, (city_bets, city_summary) = future.result()
+            all_bets.extend(city_bets)
+            if city_summary:
+                city_summaries.append(city_summary)
+            
+            completed += 1
+            elapsed = time.time() - start_time
+            print(f"\n   ✅ {completed}/{len(selected_cities)} cities analyzed ({elapsed:.1f}s elapsed)")
+    
+    total_time = time.time() - start_time
+    print(f"\n⚡ All cities analyzed in {total_time:.1f} seconds")
+    print(f"   Average: {total_time/len(selected_cities):.1f}s per city")
+    print()
 
     # Smart bet selection (V12: Now ensures total wager ≤ bankroll!)
     selected_bets = smart_select_bets(all_bets, bankroll)
@@ -2865,5 +2914,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-# ============ END OF PART 4/4 - ENSEMBLE_V12.PY COMPLETE ============

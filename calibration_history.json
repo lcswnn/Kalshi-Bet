@@ -2569,6 +2569,36 @@
       },
       "outcome": null,
       "recorded_at": "2025-12-24T14:16:47.491536"
+    },
+    {
+      "date": "2025-12-25",
+      "city": "Miami",
+      "our_prob": 0.975540612892446,
+      "market_price": 0.485,
+      "contract": {
+        "subtitle": "79\u00b0 to 80\u00b0",
+        "low": 79,
+        "high": 80,
+        "threshold": null,
+        "side": "NO"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-24T14:44:39.004470"
+    },
+    {
+      "date": "2025-12-25",
+      "city": "Miami",
+      "our_prob": 0.9856906310058094,
+      "market_price": 0.635,
+      "contract": {
+        "subtitle": "81\u00b0 to 82\u00b0",
+        "low": 81,
+        "high": 82,
+        "threshold": null,
+        "side": "NO"
+      },
+      "outcome": null,
+      "recorded_at": "2025-12-24T14:44:39.006404"
     }
   ],
   "bins": {

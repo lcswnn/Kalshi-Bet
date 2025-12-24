@@ -79,13 +79,13 @@ def run_model():
     # Calculate the prediction date to return in the response
     prediction_date = get_prediction_date(date_option, custom_date)
 
-    # Run the script and capture output with extended timeout (120 seconds)
+    # Run the script and capture output with extended timeout (5 minutes for all cities)
     try:
         result = subprocess.run(
             cmd,
             capture_output=True,
             text=True,
-            timeout=120  # 2 minute timeout for HRRR data fetching
+            timeout=300  # 5 minute timeout for HRRR data fetching across multiple cities
         )
 
         # Return both raw output and parsed data
@@ -100,7 +100,7 @@ def run_model():
         return jsonify({
             "success": False,
             "output": "",
-            "error": "Model execution timed out after 120 seconds. Try running with a single city filter or check if HRRR data is accessible."
+            "error": "Model execution timed out after 5 minutes. HRRR data may be slow or unavailable. Try running with fewer cities or wait a few minutes and retry."
         })
     except Exception as e:
         return jsonify({
