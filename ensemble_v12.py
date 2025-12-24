@@ -755,6 +755,24 @@ cities = {
         "kalshi_series": "KXHIGHMIA",
         "timezone": "America/New_York",
         "utc_offset": -5
+    },
+    "austin": {
+        "name": "Austin",
+        "csv_file": "weather_data_austin.csv",
+        "lat": 30.2672,
+        "lon": -97.7431,
+        "kalshi_series": "KXHIGHAUS",
+        "timezone": "America/Chicago",
+        "utc_offset": -6
+    },
+    "la": {
+        "name": "Los Angeles",
+        "csv_file": "weather_data_la.csv",
+        "lat": 34.0522,
+        "lon": -118.2437,
+        "kalshi_series": "KXHIGHLA",
+        "timezone": "America/Los_Angeles",
+        "utc_offset": -8
     }
 }
 
@@ -762,7 +780,7 @@ cities = {
 all_qualifying_bets = []
 
 # Default to all cities
-selected_cities = ["chicago", "nyc", "miami"]
+selected_cities = ["chicago", "nyc", "miami", "austin", "la"]
 
 
 # ============ TIMEZONE HELPERS ============
