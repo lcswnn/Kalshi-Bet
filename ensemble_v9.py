@@ -190,8 +190,8 @@ selected_cities = ["chicago", "nyc", "miami", "austin", "la"]
 # ============ HEADER ============
 def print_header():
     print("=" * 70)
-    print("KALSHI WEATHER BETTING MODEL v9")
-    print("(Smart Bet Selection + Kelly Criterion)")
+    print("KALSHI WEATHER BETTING MODEL v9.1")
+    print("(Smart Bet Selection + Kelly Criterion + NWS)")
     print("=" * 70)
     print(f"\nAnalyzing: Chicago, New York City, Miami, Austin, Los Angeles")
     print(f"Agreement Threshold: ±{ENSEMBLE_AGREEMENT_THRESHOLD}°F")
@@ -202,7 +202,7 @@ def print_header():
     print(f"   • Same city: Only stack if edge ratio ≥ {SAME_CITY_MULTI_BET_THRESHOLD}x")
     print(f"   • Max {MAX_BETS_PER_CITY} bets/city, {MAX_TOTAL_BETS_PER_DAY} total/day")
     print(f"\n💰 BANKROLL: ${STARTING_BANKROLL:.2f} | {KELLY_FRACTION:.0%} Kelly")
-    print("Data Sources: NOAA HRRR (3km) + Open-Meteo")
+    print("Data Sources: HRRR (45%) + NWS (30%) + Open-Meteo (25%)")
 
 
 # ============ DATA FUNCTIONS ============
@@ -237,6 +237,56 @@ def fetch_open_meteo(lat, lon, timezone):
     }
     response = requests.get(open_meteo_url, params=params)
     return response.json()
+
+
+def fetch_nws_forecast(lat, lon, target_date):
+    """
+    Fetch forecast from National Weather Service API.
+    NWS forecasters add human judgment to model output.
+    """
+    try:
+        # Step 1: Get the grid point for this location
+        points_url = f"https://api.weather.gov/points/{lat:.4f},{lon:.4f}"
+        points_response = requests.get(
+            points_url,
+            headers={"User-Agent": "(KalshiWeatherModel, contact@example.com)"},
+            timeout=10
+        )
+
+        if points_response.status_code != 200:
+            return None
+
+        points_data = points_response.json()
+        forecast_url = points_data["properties"]["forecast"]
+
+        # Step 2: Get the actual forecast
+        forecast_response = requests.get(
+            forecast_url,
+            headers={"User-Agent": "(KalshiWeatherModel, contact@example.com)"},
+            timeout=10
+        )
+
+        if forecast_response.status_code != 200:
+            return None
+
+        forecast_data = forecast_response.json()
+        periods = forecast_data["properties"]["periods"]
+
+        # Step 3: Find the forecast for the target date
+        target_str = target_date.strftime("%Y-%m-%d")
+
+        for period in periods:
+            period_start = period.get("startTime", "")
+            if target_str in period_start and period.get("isDaytime", False):
+                temp = period.get("temperature")
+                if temp:
+                    return float(temp)
+
+        return None
+
+    except Exception as e:
+        print(f"     ⚠️ NWS API error: {e}")
+        return None
 
 
 def fetch_hrrr_forecast_fixed(lat, lon, target_date, utc_offset):
@@ -476,31 +526,62 @@ def analyze_city(city_key, bankroll):
     if hrrr_forecast:
         print(f"     ✅ Forecast: {hrrr_forecast:.1f}°F")
     else:
-        print("     ⚠️ HRRR unavailable, using Open-Meteo only")
+        print("     ⚠️ HRRR unavailable")
+
+    # 3. NWS forecast (human-adjusted)
+    print(f"\n  [3] NWS (human-adjusted):")
+    nws_forecast = fetch_nws_forecast(city["lat"], city["lon"], target_date)
+
+    if nws_forecast:
+        print(f"     ✅ Forecast: {nws_forecast:.1f}°F")
+    else:
+        print("     ⚠️ NWS unavailable")
 
     # ============ ENSEMBLE FORECAST ============
-    if hrrr_forecast and open_meteo_forecast:
-        ensemble_forecast = (hrrr_forecast * 0.6) + (open_meteo_forecast * 0.4)
-        model_diff = abs(hrrr_forecast - open_meteo_forecast)
+    # Collect available forecasts
+    forecasts = []
+    if hrrr_forecast:
+        forecasts.append(("HRRR", hrrr_forecast))
+    if open_meteo_forecast:
+        forecasts.append(("Open-Meteo", open_meteo_forecast))
+    if nws_forecast:
+        forecasts.append(("NWS", nws_forecast))
 
-        if model_diff <= CONFIDENCE_BOOST_THRESHOLD:
-            agreement_level = 'high'
-        elif model_diff <= ENSEMBLE_AGREEMENT_THRESHOLD:
-            agreement_level = 'medium'
-        else:
-            agreement_level = 'low'
-
-        print(f"\n  📊 Model Comparison:")
-        print(f"     HRRR: {hrrr_forecast:.1f}°F")
-        print(f"     Open-Meteo: {open_meteo_forecast:.1f}°F")
-        print(f"     Difference: {model_diff:.1f}°F → Agreement: {agreement_level.upper()}")
-    elif open_meteo_forecast:
-        ensemble_forecast = open_meteo_forecast
-        agreement_level = 'medium'
-        print(f"\n  📊 Using Open-Meteo only: {ensemble_forecast:.1f}°F")
-    else:
+    if len(forecasts) == 0:
         print(f"\n  ❌ No forecasts available!")
         return qualifying_bets, None
+
+    # Calculate ensemble with fixed weights based on what's available
+    if len(forecasts) == 3:
+        # All three: HRRR 45%, NWS 30%, Open-Meteo 25%
+        ensemble_forecast = (hrrr_forecast * 0.45) + (nws_forecast * 0.30) + (open_meteo_forecast * 0.25)
+    elif len(forecasts) == 2:
+        if hrrr_forecast and open_meteo_forecast:
+            ensemble_forecast = (hrrr_forecast * 0.6) + (open_meteo_forecast * 0.4)
+        elif hrrr_forecast and nws_forecast:
+            ensemble_forecast = (hrrr_forecast * 0.55) + (nws_forecast * 0.45)
+        else:  # open_meteo and nws
+            ensemble_forecast = (nws_forecast * 0.55) + (open_meteo_forecast * 0.45)
+    else:
+        # Single forecast
+        ensemble_forecast = forecasts[0][1]
+
+    # Calculate model spread for agreement level
+    temps = [f[1] for f in forecasts]
+    model_diff = max(temps) - min(temps) if len(temps) > 1 else 0
+
+    if model_diff <= CONFIDENCE_BOOST_THRESHOLD:
+        agreement_level = 'high'
+    elif model_diff <= ENSEMBLE_AGREEMENT_THRESHOLD:
+        agreement_level = 'medium'
+    else:
+        agreement_level = 'low'
+
+    print(f"\n  📊 Model Comparison:")
+    for name, temp in forecasts:
+        print(f"     {name}: {temp:.1f}°F")
+    if len(forecasts) > 1:
+        print(f"     Spread: {model_diff:.1f}°F → Agreement: {agreement_level.upper()}")
 
     print(f"\n  🎯 ENSEMBLE FORECAST: {ensemble_forecast:.1f}°F")
 
@@ -515,6 +596,7 @@ def analyze_city(city_key, bankroll):
         "agreement_level": agreement_level,
         "hrrr_forecast": hrrr_forecast,
         "open_meteo_forecast": open_meteo_forecast,
+        "nws_forecast": nws_forecast,
     }
 
     # ============ FETCH KALSHI DATA ============
@@ -872,7 +954,7 @@ def main():
     print_recommendations(selected_bets, all_bets, city_summaries, bankroll)
     
     print(f"\n{'='*70}")
-    print("ANALYSIS COMPLETE (v9 - Smart Bet Selection)")
+    print("ANALYSIS COMPLETE (v9.1 - Smart Bet Selection + NWS)")
     print(f"{'='*70}")
 
 

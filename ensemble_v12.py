@@ -862,7 +862,7 @@ def print_header(target_date, is_today):
 
 # ============ END OF PART 1/4 ============
 
-# ============ PART 2/4 OF ENSEMBLE_V12.PY ============
+# ============ PART 2/4 OF ENSEMBLE_V9.PY ============
 # Data fetching, wind/airmass analysis, atmospheric features
 
 # ============ DATA FUNCTIONS ============
@@ -1807,10 +1807,10 @@ class AtmosphericAnalogModel:
 
 # ============ END OF PART 2/4 ============
 
-# ============ PART 3/4 OF ENSEMBLE_V12.PY ============
-# Modified probability functions and enhanced analyze_city with V12 features
+# ============ PART 3/4 OF ENSEMBLE_V9.PY ============
+# Modified probability functions and enhanced analyze_city with V9 features
 
-# ============ PROBABILITY MODELS (MODIFIED FOR V12!) ============
+# ============ PROBABILITY MODELS (MODIFIED FOR V9!) ============
 
 def calibrated_probability(contract_low, contract_high, forecast, uncertainty_std, 
                           agreement_level='high', calibration_tracker=None):
@@ -2954,14 +2954,10 @@ def main():
     print(f"\n{'='*70}")
     print("ANALYSIS COMPLETE (v12 ENHANCED)")
     print(f"{'='*70}")
-    print("\n💡 After bets resolve, update calibration:")
-    print(f"   python ensemble_v12.py --update-outcome {target_date} CITY ACTUAL_TEMP")
-    print("\n📊 View calibration accuracy:")
-    print("   python ensemble_v12.py --calibration-report")
     print()
 
 
 if __name__ == "__main__":
     main()
 
-# ============ END OF PART 4/4 - ENSEMBLE_V12.PY COMPLETE ============
+# ============ END OF PART 4/4 - V9.PY COMPLETE ============
