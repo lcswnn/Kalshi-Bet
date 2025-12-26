@@ -120,20 +120,21 @@
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
 
-        // Detect sections
-        if (line.includes('FORECAST ANALYSIS BY CITY')) {
+        // Detect sections - v9 format
+        if (line.includes('FORECAST ANALYSIS BY CITY') || line.includes('ANALYZING:')) {
           currentSection = 'forecasts';
         } else if (line.includes('BETTING RECOMMENDATIONS')) {
           currentSection = 'bets';
-        } else if (line.includes('PORTFOLIO SUMMARY')) {
+        } else if (line.includes('PORTFOLIO SUMMARY') || line.includes('TOTAL WAGER:')) {
           currentSection = 'summary';
         }
 
-        // Parse city forecasts
-        if (currentSection === 'forecasts' && line.match(/🏙️\s+(.+)/)) {
+        // Parse city forecasts - v9 format uses "ANALYZING: CHICAGO" instead of "🏙️ Chicago"
+        if (currentSection === 'forecasts' && (line.match(/🏙️\s+(.+)/) || line.match(/ANALYZING:\s+(\w+)/))) {
           if (currentCity) data.forecasts.push(currentCity);
+          const cityMatch = line.match(/🏙️\s+(.+)/) || line.match(/ANALYZING:\s+(\w+)/);
           currentCity = {
-            name: line.match(/🏙️\s+(.+)/)[1].trim(),
+            name: cityMatch[1].trim(),
             models: [],
             spread: '',
             uncertainty: '',
@@ -145,23 +146,40 @@
             warnings: []
           };
         } else if (currentCity) {
+          // v9 model format: "Open-Meteo: 41.8°F" or "✅ Forecast: 41.8°F"
           if (line.includes('HRRR:') || line.includes('Open-Meteo:') || line.includes('NWS:')) {
             const match = line.match(/(HRRR|Open-Meteo|NWS):\s*([\d.]+)°F/);
             if (match) currentCity.models.push({ name: match[1], temp: match[2] });
+          } else if (line.includes('✅ Forecast:')) {
+            // v9 format for individual model forecasts
+            const match = line.match(/Forecast:\s*([\d.]+)°F/);
+            if (match) {
+              // Try to identify which model based on context (previous lines)
+              currentCity.models.push({ name: 'Forecast', temp: match[1] });
+            }
+          } else if (line.includes('ENSEMBLE FORECAST:')) {
+            // v9 format: "🎯 ENSEMBLE FORECAST: 43.0°F"
+            const match = line.match(/ENSEMBLE FORECAST:\s*([\d.]+)°F/);
+            if (match) currentCity.finalForecast = match[1] + '°F';
           } else if (line.includes('Ensemble Forecast:')) {
             const match = line.match(/Ensemble Forecast:\s*([\d.]+°F)/);
             if (match) currentCity.finalForecast = match[1];
           } else if (line.includes('Forecast Uncertainty:')) {
             const match = line.match(/Forecast Uncertainty:\s*([±\d.]+°F)/);
             if (match) currentCity.uncertainty = match[1];
-          } else if (line.includes('Model Spread:')) {
-            currentCity.spread = line.match(/Model Spread:\s*(.+)/)[1];
+          } else if (line.includes('Model Spread:') || line.includes('Spread:')) {
+            const match = line.match(/(?:Model )?Spread:\s*(.+)/);
+            if (match) currentCity.spread = match[1].replace(/→.*/, '').trim();
           } else if (line.includes('🌬️')) {
             currentCity.wind = line.replace(/\s*🌬️\s*/, '').trim();
           } else if (line.includes('🌡️')) {
             currentCity.airmass = line.replace(/\s*🌡️\s*/, '').trim();
           } else if (line.includes('• ') && line.includes('ML')) {
             currentCity.mlAdjustments.push(line.replace(/.*•\s*/, '').trim());
+          } else if (line.includes('Primary bin:')) {
+            // v9 format: "Primary bin: 43°-44°F"
+            const match = line.match(/Primary bin:\s*(.+)/);
+            if (match) currentCity.predictedBin = match[1].trim();
           } else if (line.includes('Predicted Bin:') || line.includes('📍')) {
             const match = line.match(/(?:Predicted Bin:|📍)\s*(.+)/);
             if (match) currentCity.predictedBin = match[1].trim();
@@ -170,15 +188,16 @@
           }
         }
 
-        // Parse bets
-        if (currentSection === 'bets' && line.match(/BET #(\d+):/)) {
+        // Parse bets - v9 format: "BET #1: Chicago (best in city)" with confidence on next line
+        if (currentSection === 'bets' && line.includes('BET #')) {
           if (currentBet) data.bets.push(currentBet);
-          const betMatch = line.match(/BET #(\d+):\s*(\w+(?:\s+\w+)*)\s*-\s*(.+)/);
+          // Match format: "┌─ BET #1: Chicago (reason)" or "BET #1: Chicago - confidence"
+          const betMatch = line.match(/BET #(\d+):\s*(\w+)/);
           if (betMatch) {
             currentBet = {
               number: betMatch[1],
               city: betMatch[2],
-              confidence: betMatch[3],
+              confidence: '',
               contract: '',
               side: '',
               edge: {},
@@ -188,29 +207,43 @@
             };
           }
         } else if (currentBet) {
-          if (line.includes('Contract:')) {
-            currentBet.contract = line.match(/Contract:\s*(.+)/)[1];
+          // Parse confidence line (comes right after BET # line in v9)
+          if ((line.includes('SUPER CONFIDENT') || line.includes('High confidence') || line.includes('Best opportunity')) && !currentBet.confidence) {
+            currentBet.confidence = line.replace(/[│┌└─\s]*/g, '').trim();
+          } else if (line.includes('Contract:')) {
+            const match = line.match(/Contract:\s*(.+)/);
+            if (match) currentBet.contract = match[1].replace(/[│📍]/g, '').trim();
           } else if (line.includes('Side:')) {
-            currentBet.side = line.match(/Side:\s*(.+)/)[1];
+            const match = line.match(/Side:\s*(.+)/);
+            if (match) currentBet.side = match[1].replace(/[│📊]/g, '').trim();
           } else if (line.includes('Your probability:')) {
-            const match = line.match(/Your probability:\s*([\d.]+)%\s*\|\s*Market:\s*([\d.]+)%/);
+            // v9 format: "Your probability: 97.9%" (no market prob on same line)
+            const match = line.match(/Your probability:\s*([\d.]+)%/);
             if (match) {
               currentBet.edge.yourProb = match[1];
-              currentBet.edge.marketProb = match[2];
             }
           } else if (line.includes('Edge:')) {
+            // v9 format: "Edge: +32.4% (2.2x minimum)"
             const match = line.match(/Edge:\s*([+-]?[\d.]+)%\s*\((.+)\)/);
             if (match) {
               currentBet.edge.percentage = match[1];
               currentBet.edge.ratio = match[2];
             }
-          } else if (line.includes('Kelly %:')) {
-            currentBet.sizing.kelly = line.match(/Kelly %:\s*([\d.]+)%/)[1];
-          } else if (line.includes('BET') && line.match(/\$[\d.]+/)) {
-            // Match "BET: $X" or "➜  BET: $X" or "➜  BET (scaled...): $X"
+          } else if (line.includes('Kelly:')) {
+            // v9 format: "Kelly: 15.0% of bankroll"
+            const match = line.match(/Kelly:\s*([\d.]+)%/);
+            if (match) currentBet.sizing.kelly = match[1];
+          } else if (line.includes('💰 BET:')) {
+            // v9 format: "💰 BET: $6.00"
             const match = line.match(/\$([\d.]+)/);
             if (match && !currentBet.sizing.amount) {
               currentBet.sizing.amount = match[1];
+            }
+          } else if (line.includes('📈 Potential profit:')) {
+            // v9 format: "📈 Potential profit: $3.16"
+            const match = line.match(/\$([\d.]+)/);
+            if (match) {
+              currentBet.sizing.profit = match[1];
             }
           } else if (line.includes('If you win:')) {
             const match = line.match(/If you win:\s*\$?([\d.]+)\s*profit\s*\(([\d.]+)% ROI\)/);
@@ -225,20 +258,25 @@
           }
         }
 
-        // Parse summary
+        // Parse summary - v9 format: "TOTAL WAGER: $6.00 (15.0% of bankroll)"
         if (currentSection === 'summary') {
           if (line.includes('Total bets:')) {
             data.summary.totalBets = line.match(/Total bets:\s*(\d+)/)[1];
-          } else if (line.includes('Total wager:')) {
-            const match = line.match(/Total wager:\s*\$?([\d.]+)\s*\(([\d.]+)%/);
+          } else if (line.includes('TOTAL WAGER:') || line.includes('Total wager:')) {
+            // v9 format: "TOTAL WAGER: $6.00 (15.0% of bankroll)"
+            const match = line.match(/TOTAL WAGER:\s*\$?([\d.]+)\s*\(([\d.]+)%/) ||
+                          line.match(/Total wager:\s*\$?([\d.]+)\s*\(([\d.]+)%/);
             if (match) {
               data.summary.totalWager = match[1];
               data.summary.wagerPercent = match[2];
             }
-          } else if (line.includes('Total potential profit:')) {
-            data.summary.totalProfit = line.match(/Total potential profit:\s*\$?([\d.]+)/)[1];
+          } else if (line.includes('POTENTIAL PROFIT:') || line.includes('Total potential profit:')) {
+            // v9 format: "POTENTIAL PROFIT: $3.16"
+            const match = line.match(/(?:POTENTIAL PROFIT|Total potential profit):\s*\$?([\d.]+)/);
+            if (match) data.summary.totalProfit = match[1];
           } else if (line.includes('Portfolio ROI')) {
-            data.summary.portfolioROI = line.match(/Portfolio ROI.*:\s*([\d.]+)%/)[1];
+            const match = line.match(/Portfolio ROI.*:\s*([\d.]+)%/);
+            if (match) data.summary.portfolioROI = match[1];
           }
         }
 
