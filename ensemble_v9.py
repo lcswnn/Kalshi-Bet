@@ -51,8 +51,8 @@ MAX_TOTAL_BETS_PER_DAY = 6             # Cap total daily bets across all cities
 SUPER_CONFIDENT_EDGE_RATIO = 2.5       # What counts as "super confident"
 
 # ============ KELLY CRITERION CONFIGURATION ============
-STARTING_BANKROLL = 40        # Your bankroll
-KELLY_FRACTION = 0.75         # Half Kelly (balanced risk/reward)
+STARTING_BANKROLL = 70        # Your bankroll
+KELLY_FRACTION = 0.50         # Half Kelly (balanced risk/reward)
 MIN_BET_SIZE = 0.50           # Don't bet less than 50¢
 MAX_BET_FRACTION = 0.15       # Never bet more than 15% of bankroll
 
@@ -781,48 +781,23 @@ def analyze_city(city_key, bankroll):
 
 def smart_select_bets(all_bets):
     """
-    Apply smart bet selection logic across all cities.
-    
-    Rules:
-    1. Different cities = uncorrelated → bet freely on best bet from each
-    2. Same city = correlated → only stack if SUPER confident (edge_ratio >= 2.0x)
-    3. Cap total bets per day
+    Select the top 6 bets by edge ratio.
+
+    Simple selection: rank all bets by edge ratio and return the top 6.
     """
     if not all_bets:
         return []
-    
-    # Group bets by city
-    bets_by_city = {}
-    for bet in all_bets:
-        city = bet["city"]
-        if city not in bets_by_city:
-            bets_by_city[city] = []
-        bets_by_city[city].append(bet)
-    
-    # Select bets from each city
-    selected_bets = []
-    
-    for city, city_bets in bets_by_city.items():
-        # Sort by edge ratio (best first)
-        city_bets = sorted(city_bets, key=lambda x: -x["edge_ratio"])
-        
-        # Always take the best bet from each city
-        best_bet = city_bets[0]
-        best_bet["selection_reason"] = "best_in_city"
-        selected_bets.append(best_bet)
-        
-        # Add additional same-city bets ONLY if super confident
-        for bet in city_bets[1:MAX_BETS_PER_CITY]:
-            if bet["edge_ratio"] >= SAME_CITY_MULTI_BET_THRESHOLD:
-                bet["selection_reason"] = "super_confident_stack"
-                selected_bets.append(bet)
-    
-    # Sort final selection by edge ratio
-    selected_bets = sorted(selected_bets, key=lambda x: -x["edge_ratio"])
-    
-    # Cap total bets
-    selected_bets = selected_bets[:MAX_TOTAL_BETS_PER_DAY]
-    
+
+    # Sort all bets by edge ratio (best first)
+    sorted_bets = sorted(all_bets, key=lambda x: -x["edge_ratio"])
+
+    # Take top 6 (or fewer if not enough bets)
+    selected_bets = sorted_bets[:MAX_TOTAL_BETS_PER_DAY]
+
+    # Mark selection reason based on rank
+    for i, bet in enumerate(selected_bets):
+        bet["selection_reason"] = f"top_{i+1}_by_edge"
+
     return selected_bets
 
 
@@ -875,29 +850,26 @@ def print_recommendations(selected_bets, all_bets, city_summaries, bankroll):
     # Print each bet
     total_wager = 0
     total_potential = 0
-    
+
     for i, bet in enumerate(selected_bets, 1):
-        # Confidence indicator
+        # Confidence indicator based on edge ratio
         if bet["edge_ratio"] >= SUPER_CONFIDENT_EDGE_RATIO:
             confidence = "🔥 SUPER CONFIDENT"
         elif bet["edge_ratio"] >= SAME_CITY_MULTI_BET_THRESHOLD:
             confidence = "✓ High confidence"
         else:
-            confidence = "⭐ Best opportunity"
-        
-        # Selection reason
-        if bet.get("selection_reason") == "super_confident_stack":
-            reason = "(stacked - high edge)"
-        else:
-            reason = "(best in city)"
-        
+            confidence = "⭐ Good opportunity"
+
+        # Show rank
+        rank_label = f"(#{i} by edge)"
+
         bucket_emoji = "🎯" if bet["price_bucket"] == "sweet_spot" else "📊"
         forecast_marker = "📍" if bet.get("is_forecast_bin") else ""
-        
+
         odds = bet["kelly_info"].get("odds", 0)
         potential_profit = bet["bet_size"] * odds
-        
-        print(f"   ┌─ BET #{i}: {bet['city']} {reason}")
+
+        print(f"   ┌─ BET #{i}: {bet['city']} {rank_label}")
         print(f"   │  {confidence}")
         print(f"   │  Contract: {bet['subtitle']} {forecast_marker}")
         print(f"   │  Side: {bet['side']} at {bet['bet_price']*100:.0f}¢ {bucket_emoji}")
@@ -909,28 +881,28 @@ def print_recommendations(selected_bets, all_bets, city_summaries, bankroll):
         print(f"   │  📈 Potential profit: ${potential_profit:.2f}")
         print(f"   └{'─'*50}")
         print()
-        
+
         total_wager += bet["bet_size"]
         total_potential += potential_profit
-    
+
     # Summary
     print(f"   {'='*55}")
     print(f"   TOTAL WAGER: ${total_wager:.2f} ({100*total_wager/bankroll:.1f}% of bankroll)")
     print(f"   POTENTIAL PROFIT: ${total_potential:.2f}")
     print(f"   {'='*55}")
-    
+
     # City forecasts summary
     print(f"\n📊 FORECAST SUMMARY:")
     for summary in city_summaries:
         if summary:
             agreement_emoji = "✅" if summary["agreement_level"] == "high" else "⚠️" if summary["agreement_level"] == "medium" else "❌"
             print(f"   {summary['city']}: {summary['ensemble_forecast']:.1f}°F → Bin {summary['forecast_bin'][0]}-{summary['forecast_bin'][1]}° {agreement_emoji} {summary['agreement_level'].upper()}")
-    
+
     # Show what we didn't bet on
     not_selected = [b for b in all_bets if b not in selected_bets]
     if not_selected:
         print(f"\n📋 Also considered but not selected: {len(not_selected)} other opportunities")
-        print("   (Either same-city with edge ratio < 2.0x, or beyond daily limit)")
+        print("   (Beyond top 6 by edge ratio)")
 
 
 # ============ ARGUMENT PARSING ============
