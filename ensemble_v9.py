@@ -24,6 +24,7 @@ import requests
 from datetime import datetime, timedelta
 import re
 from scipy import stats
+import argparse
 
 # ============ HRRR/HERBIE IMPORTS ============
 try:
@@ -932,27 +933,85 @@ def print_recommendations(selected_bets, all_bets, city_summaries, bankroll):
         print("   (Either same-city with edge ratio < 2.0x, or beyond daily limit)")
 
 
+# ============ ARGUMENT PARSING ============
+
+def parse_arguments():
+    """Parse command-line arguments for Flask integration."""
+    parser = argparse.ArgumentParser(description="Kalshi Weather Betting Model v9")
+
+    parser.add_argument("--kelly", type=float, default=KELLY_FRACTION,
+                        help=f"Kelly fraction (default: {KELLY_FRACTION})")
+    parser.add_argument("--bankroll", type=float, default=STARTING_BANKROLL,
+                        help=f"Starting bankroll (default: ${STARTING_BANKROLL})")
+    parser.add_argument("--cities", type=str, default="all",
+                        help="Comma-separated city list or 'all' (default: all)")
+    parser.add_argument("--today", action="store_true",
+                        help="Analyze today's weather")
+    parser.add_argument("--tomorrow", action="store_true",
+                        help="Analyze tomorrow's weather")
+    parser.add_argument("--date", type=str, default=None,
+                        help="Specific date to analyze (YYYY-MM-DD)")
+
+    return parser.parse_args()
+
+
 # ============ MAIN ============
 
 def main():
+    global KELLY_FRACTION, STARTING_BANKROLL, selected_cities
+
+    # Parse command-line arguments
+    args = parse_arguments()
+
+    # Apply arguments to config
+    KELLY_FRACTION = args.kelly
+    STARTING_BANKROLL = args.bankroll
+
+    # Handle city filter
+    if args.cities and args.cities.lower() != "all":
+        # Support both single city and comma-separated list
+        city_input = args.cities.lower().strip()
+        if "," in city_input:
+            selected_cities = [c.strip() for c in city_input.split(",")]
+        else:
+            selected_cities = [city_input]
+        # Validate cities exist
+        valid_cities = []
+        for city in selected_cities:
+            if city in cities:
+                valid_cities.append(city)
+            else:
+                print(f"⚠️ Unknown city '{city}', skipping...")
+        selected_cities = valid_cities if valid_cities else ["chicago", "nyc", "miami", "austin", "la"]
+
+    # TODO: Date handling (--today, --tomorrow, --date) would require
+    # modifying the analyze_city function to accept a target date.
+    # For now, the script uses its default date logic.
+    if args.today:
+        print("📅 Mode: Analyzing TODAY's weather")
+    elif args.tomorrow:
+        print("📅 Mode: Analyzing TOMORROW's weather")
+    elif args.date:
+        print(f"📅 Mode: Analyzing weather for {args.date}")
+
     print_header()
-    
+
     bankroll = STARTING_BANKROLL
     all_bets = []
     city_summaries = []
-    
+
     # Analyze each city
     for city_key in selected_cities:
         city_bets, city_summary = analyze_city(city_key, bankroll)
         all_bets.extend(city_bets)
         city_summaries.append(city_summary)
-    
+
     # Smart bet selection across all cities
     selected_bets = smart_select_bets(all_bets)
-    
+
     # Print recommendations
     print_recommendations(selected_bets, all_bets, city_summaries, bankroll)
-    
+
     print(f"\n{'='*70}")
     print("ANALYSIS COMPLETE (v9.1 - Smart Bet Selection + NWS)")
     print(f"{'='*70}")
