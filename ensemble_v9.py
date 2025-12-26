@@ -159,6 +159,24 @@ cities = {
         "kalshi_series": "KXHIGHMIA",
         "timezone": "America/New_York",
         "utc_offset": -5
+    },
+    "austin": {
+        "name": "Austin",
+        "csv_file": "weather_data_austin.csv",
+        "lat": 30.2,
+        "lon": 97.68,
+        "kalshi_series": "KXHIGHAUS",
+        "timezone": "America/Chicago",
+        "utc_offset": -6
+    },
+    "la": {
+        "name": "Los Angeles",
+        "csv_file": "weather_data_la.csv",
+        "lat": 33.94,
+        "lon": 118.42,
+        "kalshi_series": "KXHIGHLAX",
+        "timezone": "America/Los_Angeles",
+        "utc_offset": -8
     }
 }
 
@@ -166,7 +184,7 @@ cities = {
 all_qualifying_bets = []
 
 # Default to all cities
-selected_cities = ["chicago", "nyc", "miami"]
+selected_cities = ["chicago", "nyc", "miami", "austin", "la"]
 
 
 # ============ HEADER ============
@@ -175,7 +193,7 @@ def print_header():
     print("KALSHI WEATHER BETTING MODEL v9")
     print("(Smart Bet Selection + Kelly Criterion)")
     print("=" * 70)
-    print(f"\nAnalyzing: Chicago, New York City, Miami")
+    print(f"\nAnalyzing: Chicago, New York City, Miami, Austin, Los Angeles")
     print(f"Agreement Threshold: ±{ENSEMBLE_AGREEMENT_THRESHOLD}°F")
     print(f"Price Filter: {MIN_CONTRACT_PRICE*100:.0f}¢ - {MAX_CONTRACT_PRICE*100:.0f}¢")
     print(f"Sweet Spot: {SWEET_SPOT_LOW*100:.0f}¢ - {SWEET_SPOT_HIGH*100:.0f}¢")
@@ -321,28 +339,30 @@ def fetch_hrrr_forecast_fixed(lat, lon, target_date, utc_offset):
 def get_bin_for_temp(temp):
     """
     Get the Kalshi bin that contains this temperature.
-    
+
+    NOAA stations round temperatures: 0.5 and above rounds UP.
+    So we first round the forecast, then find the bin.
+
     Kalshi uses 2-degree bins with ODD lower bounds:
     ..., 27-28, 29-30, 31-32, 33-34, ...
-    
-    Examples:
-        27.5°F → bin (27, 28)
-        29.0°F → bin (29, 30)
-        29.9°F → bin (29, 30)
-        30.0°F → bin (29, 30)  # 30 is the upper bound of 29-30
-        30.1°F → bin (31, 32)  # Just above 30 goes to next bin
+
+    Examples (with NOAA rounding):
+        29.4°F → rounds to 29 → bin (29, 30)
+        29.5°F → rounds to 30 → bin (29, 30)
+        30.4°F → rounds to 30 → bin (29, 30)
+        30.5°F → rounds to 31 → bin (31, 32)
     """
-    # Floor to get the integer part
-    temp_floor = int(np.floor(temp))
-    
+    # NOAA rounding: 0.5 and above rounds up
+    temp_rounded = int(np.round(temp))
+
     # Find the odd number that starts the bin containing this temp
-    # If temp_floor is odd, that's our lower bound
-    # If temp_floor is even, the bin started at temp_floor - 1
-    if temp_floor % 2 == 1:  # odd
-        lower = temp_floor
+    # If temp_rounded is odd, that's our lower bound
+    # If temp_rounded is even, the bin started at temp_rounded - 1
+    if temp_rounded % 2 == 1:  # odd
+        lower = temp_rounded
     else:  # even
-        lower = temp_floor - 1
-    
+        lower = temp_rounded - 1
+
     return (lower, lower + 1)
 
 
@@ -412,8 +432,20 @@ def analyze_city(city_key, bankroll):
         return qualifying_bets, None
 
     # Set target date
-    today = datetime.now().date()
-    target_date = today + timedelta(days=1)
+    # If running between midnight and 6 AM, we likely want TODAY's forecast
+    # (the day that just started), not tomorrow's
+    now = datetime.now()
+    today = now.date()
+    current_hour = now.hour
+
+    if current_hour < 6:
+        # Late night/early morning: target TODAY (the day we're in)
+        target_date = today
+        print(f"  ⏰ Running at {now.strftime('%I:%M %p')} - targeting TODAY ({today})")
+    else:
+        # Normal hours: target tomorrow
+        target_date = today + timedelta(days=1)
+
     target_str = target_date.strftime("%Y-%m-%d")
 
     # ============ FETCH FORECASTS ============
@@ -713,8 +745,13 @@ def smart_select_bets(all_bets):
 
 def print_recommendations(selected_bets, all_bets, city_summaries, bankroll):
     """Print the final betting recommendations in a clear format."""
-    
-    target_date = (datetime.now().date() + timedelta(days=1)).strftime("%A, %B %d, %Y")
+
+    # Match the same logic used in analyze_city
+    now = datetime.now()
+    if now.hour < 6:
+        target_date = now.date().strftime("%A, %B %d, %Y")
+    else:
+        target_date = (now.date() + timedelta(days=1)).strftime("%A, %B %d, %Y")
     
     print(f"\n{'='*70}")
     print("🎯 TODAY'S BETTING RECOMMENDATIONS")
