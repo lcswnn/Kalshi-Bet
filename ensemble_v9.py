@@ -165,7 +165,7 @@ cities = {
         "name": "Austin",
         "csv_file": "weather_data_austin.csv",
         "lat": 30.2,
-        "lon": 97.68,
+        "lon": -97.68,
         "kalshi_series": "KXHIGHAUS",
         "timezone": "America/Chicago",
         "utc_offset": -6
@@ -174,7 +174,7 @@ cities = {
         "name": "Los Angeles",
         "csv_file": "weather_data_la.csv",
         "lat": 33.94,
-        "lon": 118.42,
+        "lon": -118.42,
         "kalshi_series": "KXHIGHLAX",
         "timezone": "America/Los_Angeles",
         "utc_offset": -8
