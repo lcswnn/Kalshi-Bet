@@ -132,9 +132,9 @@
         }
 
         // Parse city forecasts - v9 format uses "ANALYZING: CHICAGO" instead of "🏙️ Chicago"
-        if (currentSection === 'forecasts' && (line.match(/🏙️\s+(.+)/) || line.match(/ANALYZING:\s+(\w+)/))) {
+        if (currentSection === 'forecasts' && (line.match(/🏙️\s+(.+)/) || line.match(/ANALYZING:\s+(.+)/))) {
           if (currentCity) data.forecasts.push(currentCity);
-          const cityMatch = line.match(/🏙️\s+(.+)/) || line.match(/ANALYZING:\s+(\w+)/);
+          const cityMatch = line.match(/🏙️\s+(.+)/) || line.match(/ANALYZING:\s+(.+)/);
           currentCity = {
             name: cityMatch[1].trim(),
             models: [],
@@ -162,7 +162,13 @@
           // v9 format: direct model output like "HRRR: 41.8°F" or "Open-Meteo: 41.8°F"
           if (line.includes('HRRR:') || line.includes('Open-Meteo:') || line.includes('NWS:')) {
             const match = line.match(/(HRRR|Open-Meteo|NWS):\s*([\d.]+)°F/);
-            if (match) currentCity.models.push({ name: match[1], temp: match[2] });
+            if (match) {
+              // Only add if we don't already have this model
+              const existingModel = currentCity.models.find(m => m.name === match[1]);
+              if (!existingModel) {
+                currentCity.models.push({ name: match[1], temp: match[2] });
+              }
+            }
           } else if (line.includes('✅ Forecast:')) {
             // v9 format for individual model forecasts - use tracked model name
             const match = line.match(/Forecast:\s*([\d.]+)°F/);
@@ -337,6 +343,7 @@
       function formatCityName(name) {
         const cityMap = {
           'NYC': 'New York',
+          'NEW YORK': 'New York',
           'NEW YORK CITY': 'New York',
           'CHICAGO': 'Chicago',
           'MIAMI': 'Miami',
