@@ -116,6 +116,8 @@
       let currentSection = null;
       let currentCity = null;
       let currentBet = null;
+      // Track current model being parsed (for v9 format where forecast comes on next line)
+      let currentModelName = null;
 
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
@@ -145,17 +147,34 @@
             predictedBin: '',
             warnings: []
           };
+          currentModelName = null;
         } else if (currentCity) {
-          // v9 model format: "Open-Meteo: 41.8°F" or "✅ Forecast: 41.8°F"
+          // v9 model format: "[1] Open-Meteo:" on one line, then "✅ Forecast: 41.8°F" on next
+          // First, detect model header lines
+          if (line.includes('[1] Open-Meteo:') || line.includes('[1] Open-Meteo')) {
+            currentModelName = 'Open-Meteo';
+          } else if (line.includes('[2] HRRR')) {
+            currentModelName = 'HRRR';
+          } else if (line.includes('[3] NWS')) {
+            currentModelName = 'NWS';
+          }
+
+          // v9 format: direct model output like "HRRR: 41.8°F" or "Open-Meteo: 41.8°F"
           if (line.includes('HRRR:') || line.includes('Open-Meteo:') || line.includes('NWS:')) {
             const match = line.match(/(HRRR|Open-Meteo|NWS):\s*([\d.]+)°F/);
             if (match) currentCity.models.push({ name: match[1], temp: match[2] });
           } else if (line.includes('✅ Forecast:')) {
-            // v9 format for individual model forecasts
+            // v9 format for individual model forecasts - use tracked model name
             const match = line.match(/Forecast:\s*([\d.]+)°F/);
             if (match) {
-              // Try to identify which model based on context (previous lines)
-              currentCity.models.push({ name: 'Forecast', temp: match[1] });
+              // Use the model name we tracked from the header line
+              const modelName = currentModelName || 'Forecast';
+              // Only add if we don't already have this model
+              const existingModel = currentCity.models.find(m => m.name === modelName);
+              if (!existingModel) {
+                currentCity.models.push({ name: modelName, temp: match[1] });
+              }
+              currentModelName = null; // Reset after using
             }
           } else if (line.includes('ENSEMBLE FORECAST:')) {
             // v9 format: "🎯 ENSEMBLE FORECAST: 43.0°F"
@@ -216,6 +235,11 @@
           } else if (line.includes('Side:')) {
             const match = line.match(/Side:\s*(.+)/);
             if (match) currentBet.side = match[1].replace(/[│📊]/g, '').trim();
+            // v9 format: "Side: YES at 50¢" - extract market price
+            const priceMatch = line.match(/at\s*(\d+)¢/);
+            if (priceMatch) {
+              currentBet.edge.marketProb = priceMatch[1]; // Store as percentage (e.g., "50" for 50%)
+            }
           } else if (line.includes('Your probability:')) {
             // v9 format: "Your probability: 97.9%" (no market prob on same line)
             const match = line.match(/Your probability:\s*([\d.]+)%/);
@@ -244,6 +268,14 @@
             const match = line.match(/\$([\d.]+)/);
             if (match) {
               currentBet.sizing.profit = match[1];
+              // Calculate ROI if we have bet amount
+              if (currentBet.sizing.amount) {
+                const profit = parseFloat(match[1]);
+                const amount = parseFloat(currentBet.sizing.amount);
+                if (amount > 0) {
+                  currentBet.sizing.roi = ((profit / amount) * 100).toFixed(1);
+                }
+              }
             }
           } else if (line.includes('If you win:')) {
             const match = line.match(/If you win:\s*\$?([\d.]+)\s*profit\s*\(([\d.]+)% ROI\)/);
