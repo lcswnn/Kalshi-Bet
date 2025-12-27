@@ -1,0 +1,82 @@
+[
+  {
+    "date": "2025-12-27",
+    "city": "Austin",
+    "our_prob": 0.7765691460406826,
+    "market_price": 0.515,
+    "subtitle": "81\u00b0 to 82\u00b0",
+    "side": "NO",
+    "outcome": null,
+    "recorded_at": "2025-12-26T21:23:41.671839"
+  },
+  {
+    "date": "2025-12-27",
+    "city": "New York City",
+    "our_prob": 0.8327200741796427,
+    "market_price": 0.525,
+    "subtitle": "33\u00b0 to 34\u00b0",
+    "side": "NO",
+    "outcome": null,
+    "recorded_at": "2025-12-26T21:23:41.672295"
+  },
+  {
+    "date": "2025-12-27",
+    "city": "Chicago",
+    "our_prob": 0.9412750011148368,
+    "market_price": 0.65,
+    "subtitle": "47\u00b0 to 48\u00b0",
+    "side": "NO",
+    "outcome": null,
+    "recorded_at": "2025-12-26T21:23:41.672585"
+  },
+  {
+    "date": "2025-12-27",
+    "city": "Chicago",
+    "our_prob": 0.921897364188027,
+    "market_price": 0.635,
+    "subtitle": "45\u00b0 to 46\u00b0",
+    "side": "NO",
+    "outcome": null,
+    "recorded_at": "2025-12-26T21:23:41.672691"
+  },
+  {
+    "date": "2025-12-27",
+    "city": "Chicago",
+    "our_prob": 0.921897364188027,
+    "market_price": 0.63,
+    "subtitle": "45\u00b0 to 46\u00b0",
+    "side": "NO",
+    "outcome": null,
+    "recorded_at": "2025-12-26T21:44:42.142039"
+  },
+  {
+    "date": "2025-12-27",
+    "city": "Chicago",
+    "our_prob": 0.9412750011148368,
+    "market_price": 0.65,
+    "subtitle": "47\u00b0 to 48\u00b0",
+    "side": "NO",
+    "outcome": null,
+    "recorded_at": "2025-12-26T21:44:42.143890"
+  },
+  {
+    "date": "2025-12-27",
+    "city": "New York City",
+    "our_prob": 0.836043269973396,
+    "market_price": 0.55,
+    "subtitle": "33\u00b0 to 34\u00b0",
+    "side": "NO",
+    "outcome": null,
+    "recorded_at": "2025-12-26T21:44:42.144306"
+  },
+  {
+    "date": "2025-12-27",
+    "city": "Austin",
+    "our_prob": 0.7765691460406826,
+    "market_price": 0.54,
+    "subtitle": "81\u00b0 to 82\u00b0",
+    "side": "NO",
+    "outcome": null,
+    "recorded_at": "2025-12-26T21:44:42.144635"
+  }
+]
