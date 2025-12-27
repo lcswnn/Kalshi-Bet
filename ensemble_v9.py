@@ -50,6 +50,11 @@ MAX_BETS_PER_CITY = 2                  # Never more than 2 bets in same city
 MAX_TOTAL_BETS_PER_DAY = 6             # Cap total daily bets across all cities
 SUPER_CONFIDENT_EDGE_RATIO = 2.5       # What counts as "super confident"
 
+# ============ FEE CONFIGURATION ============
+KALSHI_FEE_RATE = 0.04        # ~4% fee on entry (based on actual transaction data)
+# Fees reduce your effective payout on wins and increase your loss on losses
+# A winning 50¢ bet at 2:1 odds becomes: $1.00 profit - $0.04 fee = $0.96 net profit
+
 # ============ KELLY CRITERION CONFIGURATION ============
 STARTING_BANKROLL = 70        # Your bankroll
 KELLY_FRACTION = 0.50         # Half Kelly (balanced risk/reward)
@@ -61,10 +66,10 @@ ENSEMBLE_AGREEMENT_THRESHOLD = 3.0  # °F - models should agree within this
 CONFIDENCE_BOOST_THRESHOLD = 2.0    # °F - boost confidence if within this
 CALIBRATED_FORECAST_STD = 2.8       # °F - typical day-ahead forecast error
 
-# Edge requirements by price bucket
+# Edge requirements by price bucket (INCREASED TO ACCOUNT FOR ~4% FEE DRAG)
 BASE_EDGE_REQUIREMENTS = {
-    "sweet_spot": 0.12,    # 12% edge for 15-50¢ contracts
-    "high_price": 0.12,    # 12% edge for 50-90¢ contracts
+    "sweet_spot": 0.16,    # 16% edge for 15-50¢ contracts (was 12%, +4% for fees)
+    "high_price": 0.16,    # 16% edge for 50-90¢ contracts (was 12%, +4% for fees)
 }
 
 def get_min_edge(price, agreement_level='high'):
@@ -91,7 +96,10 @@ def get_price_bucket(price):
 
 def calculate_kelly_bet(bankroll, our_prob, bet_price, kelly_fraction=KELLY_FRACTION):
     """
-    Calculate optimal bet size using Kelly Criterion.
+    Calculate optimal bet size using Kelly Criterion, accounting for Kalshi fees.
+    
+    Kalshi charges ~4% fee on entry, which reduces your effective payout.
+    If you bet $1 at 50¢ and win, you get $2 - $0.04 fee = $1.96 net
     
     Returns:
         bet_size: Dollar amount to bet
@@ -100,14 +108,22 @@ def calculate_kelly_bet(bankroll, our_prob, bet_price, kelly_fraction=KELLY_FRAC
     if bet_price <= 0 or bet_price >= 1:
         return 0, {}
     
-    # Odds received: profit per $1 wagered if win
-    b = (1 / bet_price) - 1
+    # Odds received before fees: profit per $1 wagered if win
+    b_gross = (1 / bet_price) - 1
+    
+    # Adjust odds for fees - fees reduce your effective payout
+    # If you bet $1 and win, you pay KALSHI_FEE_RATE on the $1 position
+    # So your net profit is: b_gross - KALSHI_FEE_RATE
+    b_net = b_gross - KALSHI_FEE_RATE
+    
+    # Also, if you lose, you still lose your full bet (no fee refund)
+    # So the Kelly formula uses net odds
     
     p = our_prob  # Probability of winning
     q = 1 - p     # Probability of losing
     
-    # Full Kelly formula
-    full_kelly = (p * b - q) / b if b > 0 else 0
+    # Full Kelly formula with fee-adjusted odds
+    full_kelly = (p * b_net - q) / b_net if b_net > 0 else 0
     
     # Apply fractional Kelly
     fractional_kelly = full_kelly * kelly_fraction
@@ -126,7 +142,9 @@ def calculate_kelly_bet(bankroll, our_prob, bet_price, kelly_fraction=KELLY_FRAC
     kelly_info = {
         "full_kelly_pct": full_kelly * 100,
         "fractional_kelly_pct": fractional_kelly * 100,
-        "odds": b,
+        "odds_gross": b_gross,
+        "odds_net": b_net,
+        "fee_impact": KALSHI_FEE_RATE,
     }
     
     return bet_size, kelly_info
@@ -191,13 +209,14 @@ selected_cities = ["chicago", "nyc", "miami", "austin", "la"]
 # ============ HEADER ============
 def print_header():
     print("=" * 70)
-    print("KALSHI WEATHER BETTING MODEL v9.1")
-    print("(Smart Bet Selection + Kelly Criterion + NWS)")
+    print("KALSHI WEATHER BETTING MODEL v9.2-FEE-AWARE")
+    print("(Smart Bet Selection + Kelly Criterion + NWS + Fee Adjustment)")
     print("=" * 70)
     print(f"\nAnalyzing: Chicago, New York City, Miami, Austin, Los Angeles")
     print(f"Agreement Threshold: ±{ENSEMBLE_AGREEMENT_THRESHOLD}°F")
     print(f"Price Filter: {MIN_CONTRACT_PRICE*100:.0f}¢ - {MAX_CONTRACT_PRICE*100:.0f}¢")
     print(f"Sweet Spot: {SWEET_SPOT_LOW*100:.0f}¢ - {SWEET_SPOT_HIGH*100:.0f}¢")
+    print(f"⚠️ FEE ADJUSTMENT: {KALSHI_FEE_RATE*100:.0f}% entry fee built into odds")
     print(f"\n🎯 SMART BET SELECTION:")
     print(f"   • Different cities: Bet freely (uncorrelated)")
     print(f"   • Same city: Only stack if edge ratio ≥ {SAME_CITY_MULTI_BET_THRESHOLD}x")
@@ -866,7 +885,7 @@ def print_recommendations(selected_bets, all_bets, city_summaries, bankroll):
         bucket_emoji = "🎯" if bet["price_bucket"] == "sweet_spot" else "📊"
         forecast_marker = "📍" if bet.get("is_forecast_bin") else ""
 
-        odds = bet["kelly_info"].get("odds", 0)
+        odds = bet["kelly_info"].get("odds_net", 0)
         potential_profit = bet["bet_size"] * odds
 
         print(f"   ┌─ BET #{i}: {bet['city']} {rank_label}")
@@ -985,7 +1004,7 @@ def main():
     print_recommendations(selected_bets, all_bets, city_summaries, bankroll)
 
     print(f"\n{'='*70}")
-    print("ANALYSIS COMPLETE (v9.1 - Smart Bet Selection + NWS)")
+    print("ANALYSIS COMPLETE (v9.2-FEE-AWARE - Fees Factored Into Kelly + Edge)")
     print(f"{'='*70}")
 
 
