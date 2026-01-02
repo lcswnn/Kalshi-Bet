@@ -78,5 +78,245 @@
     "side": "NO",
     "outcome": null,
     "recorded_at": "2025-12-26T21:44:42.144635"
+  },
+  {
+    "date": "2025-12-29",
+    "city": "Austin",
+    "our_prob": 0.7594339013834113,
+    "market_price": 0.285,
+    "subtitle": "52\u00b0 or below",
+    "side": "YES",
+    "outcome": null,
+    "recorded_at": "2025-12-28T17:41:53.642852"
+  },
+  {
+    "date": "2025-12-29",
+    "city": "New York City",
+    "our_prob": 0.8034421345551196,
+    "market_price": 0.5900000000000001,
+    "subtitle": "48\u00b0 to 49\u00b0",
+    "side": "NO",
+    "outcome": null,
+    "recorded_at": "2025-12-28T17:41:53.643420"
+  },
+  {
+    "date": "2025-12-29",
+    "city": "Austin",
+    "our_prob": 0.9206717905324696,
+    "market_price": 0.62,
+    "subtitle": "53\u00b0 to 54\u00b0",
+    "side": "NO",
+    "outcome": null,
+    "recorded_at": "2025-12-28T17:41:53.643877"
+  },
+  {
+    "date": "2025-12-29",
+    "city": "Austin",
+    "our_prob": 0.7594339013834113,
+    "market_price": 0.305,
+    "subtitle": "52\u00b0 or below",
+    "side": "YES",
+    "outcome": null,
+    "recorded_at": "2025-12-28T17:45:53.580408"
+  },
+  {
+    "date": "2025-12-29",
+    "city": "New York City",
+    "our_prob": 0.8034421345551196,
+    "market_price": 0.5900000000000001,
+    "subtitle": "48\u00b0 to 49\u00b0",
+    "side": "NO",
+    "outcome": null,
+    "recorded_at": "2025-12-28T17:45:53.581494"
+  },
+  {
+    "date": "2025-12-29",
+    "city": "Austin",
+    "our_prob": 0.9206717905324696,
+    "market_price": 0.61,
+    "subtitle": "53\u00b0 to 54\u00b0",
+    "side": "NO",
+    "outcome": null,
+    "recorded_at": "2025-12-28T17:45:53.582140"
+  },
+  {
+    "date": "2025-12-29",
+    "city": "Austin",
+    "our_prob": 0.744790831595325,
+    "market_price": 0.365,
+    "subtitle": "52\u00b0 or below",
+    "side": "YES",
+    "outcome": null,
+    "recorded_at": "2025-12-28T21:03:43.426558"
+  },
+  {
+    "date": "2025-12-29",
+    "city": "Austin",
+    "our_prob": 0.9176091041701115,
+    "market_price": 0.585,
+    "subtitle": "53\u00b0 to 54\u00b0",
+    "side": "NO",
+    "outcome": null,
+    "recorded_at": "2025-12-28T21:03:43.428578"
+  },
+  {
+    "date": "2025-12-29",
+    "city": "Chicago",
+    "our_prob": 0.80527977688137,
+    "market_price": 0.53,
+    "subtitle": "26\u00b0 to 27\u00b0",
+    "side": "NO",
+    "outcome": null,
+    "recorded_at": "2025-12-28T21:03:43.428971"
+  },
+  {
+    "date": "2025-12-29",
+    "city": "Chicago",
+    "our_prob": 0.8562966383923352,
+    "market_price": 0.53,
+    "subtitle": "26\u00b0 to 27\u00b0",
+    "side": "NO",
+    "outcome": null,
+    "recorded_at": "2025-12-28T21:14:38.418543"
+  },
+  {
+    "date": "2025-12-29",
+    "city": "Austin",
+    "our_prob": 0.5976885231539688,
+    "market_price": 0.325,
+    "subtitle": "52\u00b0 or below",
+    "side": "YES",
+    "outcome": null,
+    "recorded_at": "2025-12-28T21:14:38.420787"
+  },
+  {
+    "date": "2025-12-29",
+    "city": "Miami",
+    "our_prob": 0.6907494363298642,
+    "market_price": 0.52,
+    "subtitle": "83\u00b0 to 84\u00b0",
+    "side": "NO",
+    "outcome": null,
+    "recorded_at": "2025-12-28T21:14:38.421285"
+  },
+  {
+    "date": "2025-12-29",
+    "city": "Austin",
+    "our_prob": 0.8674055648769101,
+    "market_price": 0.615,
+    "subtitle": "53\u00b0 to 54\u00b0",
+    "side": "NO",
+    "outcome": null,
+    "recorded_at": "2025-12-28T21:14:38.421728"
+  },
+  {
+    "date": "2025-12-29",
+    "city": "Chicago",
+    "our_prob": 0.8555344884418853,
+    "market_price": 0.5349999999999999,
+    "subtitle": "26\u00b0 to 27\u00b0",
+    "side": "NO",
+    "outcome": null,
+    "recorded_at": "2025-12-28T21:33:15.947973"
+  },
+  {
+    "date": "2025-12-29",
+    "city": "Austin",
+    "our_prob": 0.5923647987201726,
+    "market_price": 0.325,
+    "subtitle": "52\u00b0 or below",
+    "side": "YES",
+    "outcome": null,
+    "recorded_at": "2025-12-28T21:33:15.950108"
+  },
+  {
+    "date": "2025-12-29",
+    "city": "Austin",
+    "our_prob": 0.866640333879741,
+    "market_price": 0.615,
+    "subtitle": "53\u00b0 to 54\u00b0",
+    "side": "NO",
+    "outcome": null,
+    "recorded_at": "2025-12-28T21:33:15.950563"
+  },
+  {
+    "date": "2025-12-29",
+    "city": "New York City",
+    "our_prob": 0.7452438758134993,
+    "market_price": 0.5449999999999999,
+    "subtitle": "48\u00b0 to 49\u00b0",
+    "side": "NO",
+    "outcome": null,
+    "recorded_at": "2025-12-28T21:33:15.951148"
+  },
+  {
+    "date": "2025-12-30",
+    "city": "Miami",
+    "our_prob": 0.8465932729595962,
+    "market_price": 0.565,
+    "subtitle": "73\u00b0 to 74\u00b0",
+    "side": "NO",
+    "outcome": null,
+    "recorded_at": "2025-12-29T13:13:29.853470"
+  },
+  {
+    "date": "2025-12-30",
+    "city": "Chicago",
+    "our_prob": 0.5546715177850188,
+    "market_price": 0.15,
+    "subtitle": "25\u00b0 or below",
+    "side": "YES",
+    "outcome": null,
+    "recorded_at": "2025-12-29T13:15:04.547075"
+  },
+  {
+    "date": "2025-12-30",
+    "city": "Miami",
+    "our_prob": 0.8857743843755153,
+    "market_price": 0.565,
+    "subtitle": "73\u00b0 to 74\u00b0",
+    "side": "NO",
+    "outcome": null,
+    "recorded_at": "2025-12-29T13:15:04.548125"
+  },
+  {
+    "date": "2025-12-30",
+    "city": "New York City",
+    "our_prob": 0.8158479398572497,
+    "market_price": 0.575,
+    "subtitle": "32\u00b0 to 33\u00b0",
+    "side": "NO",
+    "outcome": null,
+    "recorded_at": "2025-12-29T13:15:04.548927"
+  },
+  {
+    "date": "2025-12-30",
+    "city": "Miami",
+    "our_prob": 0.8716606465399158,
+    "market_price": 0.565,
+    "subtitle": "73\u00b0 to 74\u00b0",
+    "side": "NO",
+    "outcome": null,
+    "recorded_at": "2025-12-29T17:30:02.777094"
+  },
+  {
+    "date": "2025-12-30",
+    "city": "New York City",
+    "our_prob": 0.818128434009211,
+    "market_price": 0.5449999999999999,
+    "subtitle": "32\u00b0 to 33\u00b0",
+    "side": "NO",
+    "outcome": null,
+    "recorded_at": "2025-12-29T17:30:02.777863"
+  },
+  {
+    "date": "2026-01-02",
+    "city": "Miami",
+    "our_prob": 0.6862205846060525,
+    "market_price": 0.515,
+    "subtitle": "73\u00b0 to 74\u00b0",
+    "side": "NO",
+    "outcome": null,
+    "recorded_at": "2026-01-01T17:47:10.313396"
   }
 ]

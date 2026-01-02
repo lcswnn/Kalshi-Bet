@@ -1,13 +1,27 @@
 """
-KALSHI WEATHER BETTING MODEL v10
+KALSHI WEATHER BETTING MODEL v14
 ================================
-ENHANCED V9 + SELECTIVE V12 FEATURES (per analysis recommendations)
+ENHANCED V10 + FULL 24-HOUR CALENDAR DAY SAMPLING
 
-Changes from v9:
-1. DYNAMIC UNCERTAINTY: Scales with model spread (1.8-4.5°F) instead of fixed 2.8°F
-2. CURRENT OBSERVATION CONSTRAINT: Prevents impossible afternoon forecasts
-3. LEAD-TIME AWARE UNCERTAINTY: Adjusts for forecast horizon (6hr vs 24hr)
-4. SIMPLE CALIBRATION TRACKER: Lightweight tracking for review (no auto-adjustment)
+Key changes from v13/v10:
+1. HRRR now samples the FULL 24-hour calendar day (midnight to midnight local)
+   - This is CRITICAL for Kalshi contracts which use calendar day high
+   - Cold front scenarios (high at midnight) are now properly captured
+   - Example: Austin Dec 29 - high of 52°F at 12am, drops to 40s by afternoon
+
+2. Open-Meteo now uses HOURLY data for true 24h max (consistent with HRRR)
+   - Fetches hourly temps and finds max across midnight-to-midnight window
+   - Falls back to daily max if hourly unavailable
+
+3. NWS divergence warning on midnight-high days (informational only)
+   - Warns when NWS "daytime high" differs significantly from HRRR 24h max
+   - No model changes, just a helpful alert
+
+Previous v10 features kept:
+- DYNAMIC UNCERTAINTY: Scales with model spread (1.8-4.5°F) instead of fixed 2.8°F
+- CURRENT OBSERVATION CONSTRAINT: Prevents impossible afternoon forecasts
+- LEAD-TIME AWARE UNCERTAINTY: Adjusts for forecast horizon (6hr vs 24hr)
+- SIMPLE CALIBRATION TRACKER: Lightweight tracking for review (no auto-adjustment)
 
 What we KEPT from v9:
 - Clean ensemble weighting: 45% HRRR, 30% NWS, 25% Open-Meteo
@@ -26,6 +40,8 @@ What we AVOIDED from v12:
 
 import pandas as pd
 import numpy as np
+from sklearn.ensemble import GradientBoostingRegressor
+from sklearn.metrics import mean_absolute_error
 import requests
 from datetime import datetime, timedelta
 import re
@@ -241,19 +257,60 @@ class SimpleCalibrationTracker:
         })
         self._save()
     
-    def update_outcome(self, date, city, won):
-        """Update a prediction with actual outcome (True if won, False if lost)."""
-        updated = 0
-        for pred in self.predictions:
-            if pred['date'] == str(date) and pred['city'].lower() == city.lower() and pred['outcome'] is None:
-                pred['outcome'] = 'win' if won else 'loss'
-                updated += 1
+    def update_outcome(self, date, city, won, contract_search=None):
+        """
+        Update a prediction with actual outcome (True if won, False if lost).
         
-        if updated > 0:
+        If contract_search is provided, only update the matching contract.
+        Otherwise, if there's exactly one pending prediction for date/city, update it.
+        If multiple pending, show them and ask for clarification.
+        """
+        # Find all matching predictions
+        pending = []
+        for i, pred in enumerate(self.predictions):
+            if (pred['date'] == str(date) and 
+                pred['city'].lower() == city.lower() and 
+                pred['outcome'] is None):
+                pending.append((i, pred))
+        
+        if not pending:
+            print(f"⚠️ No pending predictions found for {city} on {date}")
+            return
+        
+        # If contract_search provided, filter to matching
+        if contract_search:
+            search_lower = contract_search.lower()
+            matching = [(i, p) for i, p in pending if search_lower in p['subtitle'].lower()]
+            
+            if len(matching) == 0:
+                print(f"⚠️ No contracts matching '{contract_search}' found for {city} on {date}")
+                print(f"   Available contracts:")
+                for i, pred in pending:
+                    print(f"   [{i}] {pred['side']} - {pred['subtitle']}")
+                return
+            elif len(matching) == 1:
+                idx, pred = matching[0]
+                pred['outcome'] = 'win' if won else 'loss'
+                self._save()
+                print(f"✅ Marked as {'WIN' if won else 'LOSS'}: {pred['side']} {pred['subtitle']}")
+                return
+            else:
+                pending = matching  # Narrow down but still multiple
+        
+        # If exactly one pending, update it
+        if len(pending) == 1:
+            idx, pred = pending[0]
+            pred['outcome'] = 'win' if won else 'loss'
             self._save()
-            print(f"✅ Updated {updated} prediction(s) for {city} on {date}")
-        else:
-            print(f"⚠️ No matching predictions found for {city} on {date}")
+            print(f"✅ Marked as {'WIN' if won else 'LOSS'}: {pred['side']} {pred['subtitle']}")
+            return
+        
+        # Multiple pending - show options
+        print(f"⚠️ Multiple pending predictions for {city} on {date}:")
+        print(f"   Please specify which contract (use --contract flag):\n")
+        for i, pred in pending:
+            print(f"   • {pred['side']} - {pred['subtitle']} @ {pred['market_price']*100:.0f}¢")
+        print(f"\n   Example: --update-win {date} {city} --contract \"45 to 46\"")
     
     def get_calibration_report(self):
         """Generate calibration report showing predicted vs actual win rates."""
@@ -416,8 +473,8 @@ selected_cities = ["chicago", "nyc", "miami", "austin", "la"]
 # ============ HEADER ============
 def print_header():
     print("=" * 70)
-    print("KALSHI WEATHER BETTING MODEL v10")
-    print("(v9 Foundation + Dynamic Uncertainty + Observation Constraints)")
+    print("KALSHI WEATHER BETTING MODEL v14")
+    print("(Full 24h Calendar Day Sampling + Dynamic Uncertainty)")
     print("=" * 70)
     print(f"\nAnalyzing: Chicago, New York City, Miami, Austin, Los Angeles")
     print(f"Agreement Threshold: ±{ENSEMBLE_AGREEMENT_THRESHOLD}°F")
@@ -430,7 +487,8 @@ def print_header():
     print(f"   • Max {MAX_BETS_PER_CITY} bets/city, {MAX_TOTAL_BETS_PER_DAY} total/day")
     print(f"\n💰 BANKROLL: ${STARTING_BANKROLL:.2f} | {KELLY_FRACTION:.0%} Kelly")
     print("Data Sources: HRRR (45%) + NWS (30%) + Open-Meteo (25%)")
-    print(f"\n🆕 V10 ENHANCEMENTS:")
+    print(f"\n🆕 V14 ENHANCEMENTS:")
+    print(f"   • FULL 24-hour calendar day sampling (catches midnight highs!)")
     print(f"   • Dynamic uncertainty (1.8-4.5°F based on model spread)")
     print(f"   • Afternoon observation constraints")
     print(f"   • Lead-time aware uncertainty")
@@ -449,7 +507,7 @@ def load_and_prepare_data(city_config):
 
 
 def fetch_open_meteo(lat, lon, timezone):
-    """Fetch forecast from Open-Meteo API."""
+    """Fetch forecast from Open-Meteo API using HOURLY data for true 24h max."""
     open_meteo_url = "https://api.open-meteo.com/v1/forecast"
     params = {
         "latitude": lat,
@@ -460,6 +518,7 @@ def fetch_open_meteo(lat, lon, timezone):
             "wind_speed_10m_max",
             "wind_direction_10m_dominant",
         ],
+        "hourly": "temperature_2m",  # Also fetch hourly for true 24h max
         "past_days": 7,
         "forecast_days": 3,
         "temperature_unit": "fahrenheit",
@@ -468,6 +527,39 @@ def fetch_open_meteo(lat, lon, timezone):
     }
     response = requests.get(open_meteo_url, params=params)
     return response.json()
+
+
+def get_open_meteo_24h_max(meteo_data, target_date_str):
+    """
+    Extract the true 24-hour max from Open-Meteo hourly data.
+    
+    This ensures Open-Meteo uses the same midnight-to-midnight definition as HRRR.
+    Falls back to daily max if hourly data unavailable.
+    """
+    # Try hourly data first
+    if "hourly" in meteo_data and "time" in meteo_data["hourly"]:
+        hourly_times = meteo_data["hourly"]["time"]
+        hourly_temps = meteo_data["hourly"]["temperature_2m"]
+        
+        # Find all hours for target date
+        target_temps = []
+        for i, time_str in enumerate(hourly_times):
+            if target_date_str in time_str and hourly_temps[i] is not None:
+                target_temps.append(hourly_temps[i])
+        
+        if target_temps:
+            return max(target_temps), True  # Return max and flag for hourly source
+    
+    # Fallback to daily max
+    if "daily" in meteo_data:
+        daily_dates = meteo_data["daily"]["time"]
+        daily_maxes = meteo_data["daily"]["temperature_2m_max"]
+        
+        for i, d in enumerate(daily_dates):
+            if d == target_date_str:
+                return daily_maxes[i], False  # Return daily max and flag for daily source
+    
+    return None, False
 
 
 def fetch_nws_forecast(lat, lon, target_date):
@@ -515,13 +607,22 @@ def fetch_nws_forecast(lat, lon, target_date):
 
 
 def fetch_hrrr_forecast_fixed(lat, lon, target_date, utc_offset):
-    """Fetch HRRR forecast with FIXED sampling to get actual daily high."""
+    """
+    Fetch HRRR forecast sampling the FULL 24-hour calendar day (midnight to midnight local).
+    
+    This is critical for Kalshi contracts which use the calendar day high, not just
+    the afternoon high. On days with cold fronts, the high may occur at midnight.
+    
+    For example: If Austin has a cold front on Dec 29, the high might be 52°F at 12:01 AM
+    before temps drop to 40°F by afternoon. We need to capture that midnight high.
+    """
     if not HERBIE_AVAILABLE:
         return None, None
     
     today = datetime.now().date()
     current_hour = datetime.now().hour
     
+    # Select best available model run
     if current_hour >= 14:
         model_run_date = today
         model_run_hour = 12
@@ -535,18 +636,44 @@ def fetch_hrrr_forecast_fixed(lat, lon, target_date, utc_offset):
     model_run_str = f"{model_run_date.strftime('%Y-%m-%d')} {model_run_hour:02d}:00"
     model_run_datetime = datetime.combine(model_run_date, datetime.min.time().replace(hour=model_run_hour))
     
-    target_12_local_utc = 12 - utc_offset
-    target_start = datetime.combine(target_date, datetime.min.time().replace(hour=target_12_local_utc % 24))
-    if target_12_local_utc >= 24:
-        target_start += timedelta(days=1)
+    # Calculate FULL 24-hour window in UTC
+    # Midnight local time in UTC = 0 - utc_offset (e.g., CST is UTC-6, so midnight CST = 6:00 UTC)
+    midnight_local_utc = (0 - utc_offset) % 24
     
-    hours_to_start = int((target_start - model_run_datetime).total_seconds() / 3600)
-    forecast_hours = list(range(max(1, hours_to_start), min(48, hours_to_start + 7)))
+    # Start of target day (midnight local) in UTC
+    target_start_utc = datetime.combine(target_date, datetime.min.time().replace(hour=midnight_local_utc))
+    if midnight_local_utc > 12:  # If midnight local is late in UTC day, it's actually previous calendar day
+        target_start_utc -= timedelta(days=1)
+    
+    # End of target day (11:59 PM local, i.e., next midnight) 
+    target_end_utc = target_start_utc + timedelta(hours=24)
+    
+    # Calculate forecast hours from model run
+    hours_to_day_start = int((target_start_utc - model_run_datetime).total_seconds() / 3600)
+    hours_to_day_end = int((target_end_utc - model_run_datetime).total_seconds() / 3600)
+    
+    # Sample every 2-3 hours across the full day (to stay within HRRR's 48-hour range)
+    # But ensure we get good coverage especially around midnight and afternoon
+    forecast_hours = []
+    
+    # Key hours to sample (in hours from midnight local):
+    # 0 (midnight), 3, 6, 9, 12 (noon), 14, 16, 18, 21
+    key_local_hours = [0, 2, 4, 6, 9, 12, 14, 16, 18, 21, 23]
+    
+    for local_hour in key_local_hours:
+        utc_hour_offset = hours_to_day_start + local_hour
+        if 1 <= utc_hour_offset <= 48:  # Within HRRR forecast range
+            forecast_hours.append(utc_hour_offset)
+    
+    # Remove duplicates and sort
+    forecast_hours = sorted(set(forecast_hours))
     
     print(f"     HRRR Model run: {model_run_str} UTC")
-    print(f"     Sampling hours: {forecast_hours} (local afternoon)")
+    print(f"     Sampling FULL 24h calendar day (fxx hours: {forecast_hours[:3]}...{forecast_hours[-3:]})")
+    print(f"     Target: {target_date} local midnight-to-midnight")
     
     temperatures = []
+    temp_by_hour = {}  # Track which hour each temp came from
     wind_speeds = []
     wind_dirs = []
     
@@ -572,6 +699,10 @@ def fetch_hrrr_forecast_fixed(lat, lon, target_date, utc_offset):
             temp_f = (temp_k - 273.15) * 9/5 + 32
             temperatures.append(temp_f)
             
+            # Calculate what local hour this corresponds to
+            local_hour = (fxx - hours_to_day_start) % 24
+            temp_by_hour[local_hour] = temp_f
+            
             try:
                 ds_u = H.xarray("UGRD:10 m", remove_grib=True)
                 ds_v = H.xarray("VGRD:10 m", remove_grib=True)
@@ -593,18 +724,31 @@ def fetch_hrrr_forecast_fixed(lat, lon, target_date, utc_offset):
     
     forecast_high = max(temperatures)
     
-    print(f"     ✅ Retrieved {len(temperatures)} samples")
-    print(f"     📊 Afternoon temps: {min(temperatures):.1f}°F to {max(temperatures):.1f}°F")
+    # Find when the high occurs
+    max_temp_hour = max(temp_by_hour.keys(), key=lambda h: temp_by_hour[h]) if temp_by_hour else None
+    high_time_str = f"{max_temp_hour}:00 local" if max_temp_hour is not None else "unknown"
+    
+    # Check if high is near midnight (cold front scenario)
+    is_midnight_high = max_temp_hour is not None and (max_temp_hour <= 2 or max_temp_hour >= 22)
+    
+    print(f"     ✅ Retrieved {len(temperatures)} samples across 24h")
+    print(f"     📊 24h temp range: {min(temperatures):.1f}°F to {max(temperatures):.1f}°F")
+    print(f"     🎯 High of {forecast_high:.1f}°F expected around {high_time_str}")
+    if is_midnight_high:
+        print(f"     ⚠️  COLD FRONT DETECTED: High occurs near midnight!")
     
     avg_wind_speed = np.mean(wind_speeds) if wind_speeds else None
     avg_wind_dir = np.mean(wind_dirs) if wind_dirs else None
     
     # Calculate hours until target for lead-time adjustment
-    hours_until_target = hours_to_start + 3  # Approximate middle of forecast window
+    hours_until_target = hours_to_day_start + 12  # Approximate middle of day
     
     weather_data = {
         'forecast_high': forecast_high,
         'all_temps': temperatures,
+        'temp_by_hour': temp_by_hour,
+        'high_occurs_at': high_time_str,
+        'is_midnight_high': is_midnight_high,
         'wind_speed': avg_wind_speed,
         'wind_dir': avg_wind_dir,
         'model_run': model_run_str,
@@ -706,23 +850,19 @@ def analyze_city(city_key, bankroll):
     # ============ FETCH FORECASTS ============
     print(f"\n  📡 Fetching forecasts for {target_str}...")
 
-    # 1. Open-Meteo forecast
+    # 1. Open-Meteo forecast (using hourly data for true 24h max)
     print(f"\n  [1] Open-Meteo:")
     meteo_data = fetch_open_meteo(city["lat"], city["lon"], city["timezone"])
-    meteo_dates = meteo_data["daily"]["time"]
-    meteo_temps = meteo_data["daily"]["temperature_2m_max"]
-
-    open_meteo_forecast = None
-    for i, d in enumerate(meteo_dates):
-        if d == target_str:
-            open_meteo_forecast = meteo_temps[i]
-            print(f"     ✅ Forecast: {open_meteo_forecast:.1f}°F")
-            break
-
-    if open_meteo_forecast is None:
+    
+    open_meteo_forecast, used_hourly = get_open_meteo_24h_max(meteo_data, target_str)
+    
+    if open_meteo_forecast is not None:
+        source_note = "(24h hourly max)" if used_hourly else "(daily max)"
+        print(f"     ✅ Forecast: {open_meteo_forecast:.1f}°F {source_note}")
+    else:
         print(f"     ❌ No forecast found for {target_str}")
 
-    # 2. HRRR forecast
+    # 2. HRRR forecast (full 24h calendar day sampling)
     print(f"\n  [2] HRRR (3km):")
     hrrr_forecast, hrrr_data = fetch_hrrr_forecast_fixed(
         city["lat"], city["lon"], target_date, city["utc_offset"]
@@ -793,6 +933,14 @@ def analyze_city(city_key, bankroll):
     if len(forecasts) > 1:
         print(f"     Spread: {model_diff:.1f}°F → Agreement: {agreement_level.upper()}")
 
+    # V14: Check for NWS divergence on midnight-high days (informational warning only)
+    is_midnight_high = hrrr_data.get('is_midnight_high', False) if hrrr_data else False
+    if is_midnight_high and nws_forecast and hrrr_forecast:
+        nws_hrrr_diff = abs(nws_forecast - hrrr_forecast)
+        if nws_hrrr_diff >= 3.0:
+            print(f"     ⚠️  NWS DIVERGENCE: NWS reports {nws_forecast:.0f}°F (daytime high) vs HRRR {hrrr_forecast:.0f}°F (24h max)")
+            print(f"        → NWS may miss the midnight high. Trusting HRRR/Open-Meteo more.")
+
     print(f"\n  🎯 ENSEMBLE FORECAST: {ensemble_forecast:.1f}°F")
 
     # ============ V10: APPLY OBSERVATION CONSTRAINT (for same-day bets) ============
@@ -816,7 +964,9 @@ def analyze_city(city_key, bankroll):
     forecast_bin = get_bin_for_temp(ensemble_forecast)
     print(f"     Primary bin: {forecast_bin[0]}°-{forecast_bin[1]}°F")
 
-    # Store city summary
+    # Store city summary (is_midnight_high already extracted above for NWS check)
+    high_occurs_at = hrrr_data.get('high_occurs_at', 'afternoon') if hrrr_data else 'afternoon'
+    
     city_summary = {
         "city": city["name"],
         "ensemble_forecast": ensemble_forecast,
@@ -827,6 +977,8 @@ def analyze_city(city_key, bankroll):
         "nws_forecast": nws_forecast,
         "dynamic_uncertainty": dynamic_std,
         "constraint_applied": constraint_applied,
+        "is_midnight_high": is_midnight_high,
+        "high_occurs_at": high_occurs_at,
     }
 
     # ============ FETCH KALSHI DATA ============
@@ -1035,7 +1187,7 @@ def print_recommendations(selected_bets, all_bets, city_summaries, bankroll):
         target_date = (now.date() + timedelta(days=1)).strftime("%A, %B %d, %Y")
     
     print(f"\n{'='*70}")
-    print("🎯 TODAY'S BETTING RECOMMENDATIONS (v10)")
+    print("🎯 TODAY'S BETTING RECOMMENDATIONS (v14)")
     print(f"📅 Target Date: {target_date}")
     print(f"💰 Bankroll: ${bankroll:.2f}")
     print(f"{'='*70}")
@@ -1123,7 +1275,9 @@ def print_recommendations(selected_bets, all_bets, city_summaries, bankroll):
         if summary:
             agreement_emoji = "✅" if summary["agreement_level"] == "high" else "⚠️" if summary["agreement_level"] == "medium" else "❌"
             constraint_marker = "🔒" if summary.get("constraint_applied") else ""
-            print(f"   {summary['city']}: {summary['ensemble_forecast']:.1f}°F → Bin {summary['forecast_bin'][0]}-{summary['forecast_bin'][1]}° {agreement_emoji} {summary['agreement_level'].upper()} (σ={summary.get('dynamic_uncertainty', 2.8):.1f}°F) {constraint_marker}")
+            midnight_marker = "🌙" if summary.get("is_midnight_high") else ""
+            high_time = f" (high @ {summary.get('high_occurs_at', 'afternoon')})" if summary.get("is_midnight_high") else ""
+            print(f"   {summary['city']}: {summary['ensemble_forecast']:.1f}°F → Bin {summary['forecast_bin'][0]}-{summary['forecast_bin'][1]}° {agreement_emoji} {summary['agreement_level'].upper()} (σ={summary.get('dynamic_uncertainty', 2.8):.1f}°F) {constraint_marker}{midnight_marker}{high_time}")
 
     not_selected = [b for b in all_bets if b not in selected_bets]
     if not_selected:
@@ -1135,7 +1289,7 @@ def print_recommendations(selected_bets, all_bets, city_summaries, bankroll):
 
 def parse_arguments():
     """Parse command-line arguments."""
-    parser = argparse.ArgumentParser(description="Kalshi Weather Betting Model v10")
+    parser = argparse.ArgumentParser(description="Kalshi Weather Betting Model v14")
 
     parser.add_argument("--kelly", type=float, default=KELLY_FRACTION,
                         help=f"Kelly fraction (default: {KELLY_FRACTION})")
@@ -1157,6 +1311,8 @@ def parse_arguments():
                         help="Mark a prediction as WON (DATE CITY)")
     parser.add_argument("--update-loss", nargs=2, metavar=('DATE', 'CITY'),
                         help="Mark a prediction as LOST (DATE CITY)")
+    parser.add_argument("--contract", type=str, default=None,
+                        help="Specify contract when multiple bets in same city (e.g., '45 to 46')")
 
     return parser.parse_args()
 
@@ -1175,13 +1331,13 @@ def main():
     
     if args.update_win:
         date_str, city = args.update_win
-        calibration_tracker.update_outcome(date_str, city, won=True)
+        calibration_tracker.update_outcome(date_str, city, won=True, contract_search=args.contract)
         print(calibration_tracker.get_calibration_report())
         return
     
     if args.update_loss:
         date_str, city = args.update_loss
-        calibration_tracker.update_outcome(date_str, city, won=False)
+        calibration_tracker.update_outcome(date_str, city, won=False, contract_search=args.contract)
         print(calibration_tracker.get_calibration_report())
         return
 
@@ -1225,7 +1381,7 @@ def main():
     print_recommendations(selected_bets, all_bets, city_summaries, bankroll)
 
     print(f"\n{'='*70}")
-    print("ANALYSIS COMPLETE (v10 - Dynamic Uncertainty + Observation Constraints)")
+    print("ANALYSIS COMPLETE (v14 - Full 24h Calendar Day + Dynamic Uncertainty)")
     print(f"{'='*70}")
     print("\n💡 TIP: Track your results with:")
     print("   --update-win DATE CITY    (e.g., --update-win 2024-01-15 Chicago)")
