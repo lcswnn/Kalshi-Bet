@@ -318,5 +318,85 @@
     "side": "NO",
     "outcome": null,
     "recorded_at": "2026-01-01T17:47:10.313396"
+  },
+  {
+    "date": "2026-01-03",
+    "city": "Austin",
+    "our_prob": 0.5961083451375074,
+    "market_price": 0.165,
+    "subtitle": "72\u00b0 or below",
+    "side": "YES",
+    "outcome": null,
+    "recorded_at": "2026-01-02T14:10:57.037337"
+  },
+  {
+    "date": "2026-01-03",
+    "city": "Austin",
+    "our_prob": 0.8209008051721521,
+    "market_price": 0.505,
+    "subtitle": "73\u00b0 to 74\u00b0",
+    "side": "NO",
+    "outcome": null,
+    "recorded_at": "2026-01-02T17:33:16.135091"
+  },
+  {
+    "date": "2026-01-04",
+    "city": "New York City",
+    "our_prob": 0.7440733659934716,
+    "market_price": 0.5449999999999999,
+    "subtitle": "33\u00b0 to 34\u00b0",
+    "side": "NO",
+    "outcome": null,
+    "recorded_at": "2026-01-03T17:50:09.596919"
+  },
+  {
+    "date": "2026-01-04",
+    "city": "Austin",
+    "our_prob": 0.8580272593605184,
+    "market_price": 0.56,
+    "subtitle": "70\u00b0 to 71\u00b0",
+    "side": "NO",
+    "outcome": null,
+    "recorded_at": "2026-01-03T17:50:09.597997"
+  },
+  {
+    "date": "2026-01-04",
+    "city": "Chicago",
+    "our_prob": 0.8205946929073943,
+    "market_price": 0.615,
+    "subtitle": "33\u00b0 to 34\u00b0",
+    "side": "NO",
+    "outcome": null,
+    "recorded_at": "2026-01-03T17:50:09.598911"
+  },
+  {
+    "date": "2026-01-05",
+    "city": "Chicago",
+    "our_prob": 0.6057135622305212,
+    "market_price": 0.22,
+    "subtitle": "38\u00b0 or below",
+    "side": "YES",
+    "outcome": null,
+    "recorded_at": "2026-01-04T18:10:15.322116"
+  },
+  {
+    "date": "2026-01-05",
+    "city": "Chicago",
+    "our_prob": 0.9109156220943619,
+    "market_price": 0.635,
+    "subtitle": "41\u00b0 to 42\u00b0",
+    "side": "NO",
+    "outcome": null,
+    "recorded_at": "2026-01-04T18:10:15.324713"
+  },
+  {
+    "date": "2026-01-05",
+    "city": "Miami",
+    "our_prob": 0.7597384557878033,
+    "market_price": 0.5900000000000001,
+    "subtitle": "81\u00b0 to 82\u00b0",
+    "side": "NO",
+    "outcome": null,
+    "recorded_at": "2026-01-04T18:10:15.325698"
   }
 ]
