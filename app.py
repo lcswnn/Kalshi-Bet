@@ -53,16 +53,17 @@ def sports():
 def run_model():
     # Get parameters from query string
     kelly_fraction = request.args.get("kelly", "0.50")
+    max_bet_fraction = request.args.get("maxbet", "0.20")
     starting_bankroll = request.args.get("bankroll", "40")
     date_option = request.args.get("dateOption", "auto")
     custom_date = request.args.get("customDate", "")
     city_filter = request.args.get("city", "all")
 
-    # Path to ensemble_v9.py
-    script_path = os.path.join(os.path.dirname(__file__), "ensemble_v9.py")
+    # Path to ensemble_v9-3-1.py
+    script_path = os.path.join(os.path.dirname(__file__), "ensemble_v9-3-1.py")
 
     # Build command with date arguments
-    cmd = [sys.executable, script_path, "--kelly", kelly_fraction, "--bankroll", starting_bankroll]
+    cmd = [sys.executable, script_path, "--kelly", kelly_fraction, "--maxbet", max_bet_fraction, "--bankroll", starting_bankroll]
 
     if date_option == "today":
         cmd.append("--today")

@@ -1,42 +1,27 @@
 """
-KALSHI WEATHER BETTING MODEL v15
-================================
-DEFENSIVE REBUILD based on actual performance data analysis.
+KALSHI WEATHER BETTING MODEL v9.3.1-AUSTIN-MIAMI
+================================================
+FOCUSED VERSION: Only Austin + Miami (best performing cities)
 
-KEY CHANGES FROM v9:
-1. ASYMMETRIC EDGE REQUIREMENTS:
-   - YES bets at low prices: 14% edge (favorable risk/reward)
-   - NO bets at high prices: 22-28% edge (unfavorable risk/reward)
-   
-2. CITY-SPECIFIC UNCERTAINTY:
-   - Miami/Austin: σ=2.2-2.5°F (stable weather, you're profitable here)
-   - Chicago/NYC: σ=3.5-4.0°F (volatile weather, you were losing here)
-   
-3. POSITION-AWARE KELLY SIZING:
-   - Full Kelly fraction for YES bets at low prices
-   - Reduced Kelly (40-60%) for NO bets at high prices
-   
-4. IMPROVED FEE TRACKING:
-   - Tracks estimated fees per bet
-   - Shows fee impact in recommendations
-   
-5. CONSERVATIVE DEFAULTS:
-   - Lower max bet fraction (12% vs 15%)
-   - Higher minimum edge overall
-   - Warns on volatile city bets
+v9.3.1 CHANGE: Fixed Kalshi fee calculation
+- OLD: Flat 4% fee assumption (WRONG)
+- NEW: Actual Kalshi formula: fee = round_up(0.07 × C × P × (1-P))
+  This is per-contract and varies by price:
+  - At 20¢: ~5.6% effective fee
+  - At 50¢: ~3.5% effective fee  
+  - At 80¢: ~1.4% effective fee
 
-WHAT WE KEPT FROM v9:
-- Clean ensemble weighting: 45% HRRR, 30% NWS, 25% Open-Meteo
-- Smart bet selection across cities
-- Price filtering (15¢-90¢)
-- Agreement threshold system
+Based on performance analysis:
+- Miami: +$64 profit, 67% win rate - BEST CITY
+- Austin: +$30 profit, 77% win rate - SECOND BEST
 
-PERFORMANCE DATA THAT DROVE THESE CHANGES:
-- Your YES bets: +$3.59 (20.8% WR, but good risk/reward)
-- Your NO bets: -$16.88 (62.9% WR, but bad risk/reward)
-- Miami/Austin: +$48 combined
-- Chicago/NYC: -$61 combined
-- Every NO loss hit the EXACT bin you bet against (1 bin off)
+Features:
+1. CITY-SPECIFIC UNCERTAINTY:
+   - Miami: σ=2.5°F (stable subtropical weather)
+   - Austin: σ=2.8°F (moderate continental)
+2. SMART BET SELECTION with edge-based ranking
+3. KELLY CRITERION: Half Kelly sizing with bankroll tracking
+4. CORRECT FEE CALCULATION: Uses actual Kalshi fee formula
 """
 
 import pandas as pd
@@ -48,12 +33,10 @@ from datetime import datetime, timedelta
 import re
 from scipy import stats
 import argparse
-import json
-from pathlib import Path
 
 # ============ HRRR/HERBIE IMPORTS ============
 try:
-    from herbie import Herbie  # type: ignore
+    from herbie import Herbie # type: ignore
     HERBIE_AVAILABLE = True
 except ImportError:
     HERBIE_AVAILABLE = False
@@ -62,167 +45,136 @@ except ImportError:
 
 # ============ PRICE FILTER CONFIGURATION ============
 MIN_CONTRACT_PRICE = 0.15   # Never bet on contracts below 15¢
-MAX_CONTRACT_PRICE = 0.85   # Reduced from 90¢ - extreme prices are traps
+MAX_CONTRACT_PRICE = 0.90   # Never bet on contracts above 90¢
 SWEET_SPOT_LOW = 0.15       # Preferred range lower bound
-SWEET_SPOT_HIGH = 0.45      # Reduced from 50¢ - be more conservative
+SWEET_SPOT_HIGH = 0.50      # Preferred range upper bound
 
 # ============ SMART BET SELECTION CONFIGURATION ============
-SAME_CITY_MULTI_BET_THRESHOLD = 2.0
-MAX_BETS_PER_CITY = 2
-MAX_TOTAL_BETS_PER_DAY = 5   # Reduced from 6 - quality over quantity
-SUPER_CONFIDENT_EDGE_RATIO = 2.5
+# Different cities = uncorrelated, safe to bet on multiple
+# Same city = correlated, only stack if SUPER confident
+
+SAME_CITY_MULTI_BET_THRESHOLD = 2.0   # Need 2x the minimum edge to stack same-city bets
+MAX_BETS_PER_CITY = 2                  # Never more than 2 bets in same city
+MAX_TOTAL_BETS_PER_DAY = 6             # Cap total daily bets across all cities
+SUPER_CONFIDENT_EDGE_RATIO = 2.5       # What counts as "super confident"
 
 # ============ FEE CONFIGURATION ============
-KALSHI_FEE_RATE = 0.035     # ~3.5% fee (based on your actual $28 fees on $790 wagered)
+# CORRECTED: Kalshi's actual fee formula (not a flat percentage!)
+# Formula: fee = round_up(0.07 × contracts × price × (1-price))
+# This means fees vary by price - highest at 50¢, lowest at extremes
+KALSHI_FEE_MULTIPLIER = 0.07  # 7% of expected earnings
+
+def calculate_kalshi_fee(num_contracts, price_per_contract):
+    """
+    Calculate Kalshi's actual fee using their official formula.
+    fee = round_up(0.07 × C × P × (1-P))
+    
+    Examples:
+    - 10 contracts at 50¢: fee = ceil(0.07 × 10 × 0.50 × 0.50) = ceil(0.175) = $0.18
+    - 10 contracts at 20¢: fee = ceil(0.07 × 10 × 0.20 × 0.80) = ceil(0.112) = $0.12
+    - 10 contracts at 80¢: fee = ceil(0.07 × 10 × 0.80 × 0.20) = ceil(0.112) = $0.12
+    """
+    P = price_per_contract
+    C = num_contracts
+    raw_fee = KALSHI_FEE_MULTIPLIER * C * P * (1 - P)
+    # Round up to nearest cent
+    return np.ceil(raw_fee * 100) / 100
 
 # ============ KELLY CRITERION CONFIGURATION ============
-STARTING_BANKROLL = 70
-KELLY_FRACTION = 0.40        # Reduced from 0.50 - more conservative base
-MIN_BET_SIZE = 0.50
-MAX_BET_FRACTION = 0.12      # Reduced from 0.15 - smaller max position
+STARTING_BANKROLL = 70        # Your bankroll
+KELLY_FRACTION = 0.50         # Half Kelly (balanced risk/reward)
+MIN_BET_SIZE = 0.50           # Don't bet less than 50¢
+MAX_BET_FRACTION = 0.20       # Never bet more than 20% of bankroll
 
 # ============ ENSEMBLE CONFIGURATION ============
-ENSEMBLE_AGREEMENT_THRESHOLD = 3.0
-CONFIDENCE_BOOST_THRESHOLD = 2.0
+ENSEMBLE_AGREEMENT_THRESHOLD = 3.0  # °F - models should agree within this
+CONFIDENCE_BOOST_THRESHOLD = 2.0    # °F - boost confidence if within this
+CALIBRATED_FORECAST_STD = 2.8       # °F - fallback if city not in CITY_UNCERTAINTY
 
-# ============ NEW IN V15: CITY-SPECIFIC UNCERTAINTY ============
-# Based on your actual performance data:
-# - Miami: +$32.35 (62.5% WR) → model works well, lower uncertainty
-# - Austin: +$15.61 (57.1% WR) → model works well, moderate uncertainty  
-# - Chicago: -$18.80 (50% WR) → model overconfident, higher uncertainty
-# - NYC: -$42.45 (40.7% WR) → model very overconfident, highest uncertainty
-
+# ============ CITY-SPECIFIC UNCERTAINTY ============
+# Based on actual performance data - FOCUSED ON BEST PERFORMERS:
+# - Miami: +$64 profit (67% WR) → stable subtropical, lower uncertainty
+# - Austin: +$30 profit (77% WR) → moderate continental volatility
 CITY_UNCERTAINTY = {
-    "chicago": 3.8,    # Lake effect + fronts → high uncertainty (was 2.8)
-    "nyc": 4.0,        # Coastal + urban effects → highest uncertainty (was 2.8)
-    "miami": 2.2,      # Stable subtropical → low uncertainty
-    "austin": 2.5,     # Continental but less volatile than north
-    "la": 2.3,         # Mediterranean climate → stable
+    "miami": 2.5,      # Stable subtropical → lower uncertainty
+    "austin": 2.8,     # Continental, moderate volatility
 }
 
-# Fallback for unknown cities
-DEFAULT_UNCERTAINTY = 3.0
+# Edge requirements by price bucket (INCREASED TO ACCOUNT FOR ~4% FEE DRAG)
+BASE_EDGE_REQUIREMENTS = {
+    "sweet_spot": 0.16,    # 16% edge for 15-50¢ contracts (was 12%, +4% for fees)
+    "high_price": 0.16,    # 16% edge for 50-90¢ contracts (was 12%, +4% for fees)
+}
 
-# ============ NEW IN V15: ASYMMETRIC EDGE REQUIREMENTS ============
-# Your data showed:
-# - YES bets at low prices: Good risk/reward (lose small, win big)
-# - NO bets at high prices: Bad risk/reward (win small, lose big)
-#
-# Every single NO loss hit the EXACT bin you bet against.
-# This means you need MORE edge on high-priced NOs to be profitable.
-
-def get_min_edge(price, side, agreement_level='high', city_key=None):
-    """
-    Dynamic edge requirement based on price, position side, agreement, and city.
-    
-    NEW IN V15: Asymmetric requirements for YES vs NO.
-    """
-    # Base edge by position type and price
-    if side == "YES":
-        if price <= 0.35:
-            base_edge = 0.14   # Low-priced YES: favorable risk/reward
-        elif price <= 0.50:
-            base_edge = 0.16   # Mid-priced YES: moderate
-        else:
-            base_edge = 0.18   # High-priced YES: less favorable
-    else:  # NO
-        if price <= 0.40:
-            base_edge = 0.16   # Low-priced NO: okay risk/reward
-        elif price <= 0.55:
-            base_edge = 0.18   # Mid-priced NO: moderate
-        elif price <= 0.65:
-            base_edge = 0.22   # High-priced NO: unfavorable (was 0.16)
-        elif price <= 0.75:
-            base_edge = 0.25   # Very high-priced NO: very unfavorable
-        else:
-            base_edge = 0.30   # Extreme NO: basically don't bet
+def get_min_edge(price, agreement_level='high'):
+    """Dynamic edge requirement based on price and model agreement."""
+    base_edge = BASE_EDGE_REQUIREMENTS.get(
+        "sweet_spot" if price <= SWEET_SPOT_HIGH else "high_price", 
+        0.12
+    )
     
     # Adjust for agreement level
     if agreement_level == 'high':
-        agreement_mult = 1.0
+        return base_edge
     elif agreement_level == 'medium':
-        agreement_mult = 1.25
+        return base_edge * 1.25
     else:  # low
-        agreement_mult = 1.5
-    
-    # NEW: City risk adjustment for volatile cities
-    city_mult = 1.0
-    if city_key in ['chicago', 'nyc']:
-        city_mult = 1.15  # 15% higher edge required for volatile cities
-    
-    return base_edge * agreement_mult * city_mult
-
+        return base_edge * 1.5
 
 def get_price_bucket(price):
     """Categorize price into buckets."""
-    if price <= 0.35:
-        return "low"
-    elif price <= SWEET_SPOT_HIGH:
-        return "sweet_spot"
-    elif price <= 0.65:
-        return "mid_high"
-    else:
-        return "high"
+    return "sweet_spot" if price <= SWEET_SPOT_HIGH else "high_price"
 
 
-# ============ NEW IN V15: POSITION-AWARE KELLY ============
+# ============ KELLY CRITERION ============
 
-def calculate_kelly_bet(bankroll, our_prob, bet_price, side, city_key=None, kelly_fraction=None):
+def calculate_kelly_bet(bankroll, our_prob, bet_price, kelly_fraction=KELLY_FRACTION):
     """
-    Calculate optimal bet size using Kelly Criterion with position-aware adjustments.
+    Calculate optimal bet size using Kelly Criterion with CORRECT Kalshi fees.
     
-    NEW IN V15:
-    - Reduces Kelly fraction for high-priced NO bets (bad risk/reward)
-    - Increases slightly for low-priced YES bets (good risk/reward)
-    - City-specific adjustments for volatile markets
+    Kalshi fee formula: fee = round_up(0.07 × contracts × price × (1-price))
+    Fee is charged on entry, reduces effective payout.
+    
+    Returns:
+        bet_size: Dollar amount to bet
+        kelly_info: Dict with calculation details
     """
-    if kelly_fraction is None:
-        kelly_fraction = KELLY_FRACTION
-        
     if bet_price <= 0 or bet_price >= 1:
         return 0, {}
     
-    # Odds received before fees
-    b_gross = (1 / bet_price) - 1
-    b_net = b_gross - KALSHI_FEE_RATE
+    # Estimate number of contracts for a reasonable bet (~$10 position)
+    est_contracts = max(1, int(10 / bet_price))
     
-    p = our_prob
-    q = 1 - p
+    # Calculate actual fee for this trade
+    fee = calculate_kalshi_fee(est_contracts, bet_price)
+    
+    # Cost to enter position
+    position_cost = est_contracts * bet_price
+    total_cost = position_cost + fee
+    
+    # If we win: we get $1 per contract, minus what we paid
+    gross_win = est_contracts * 1.0
+    net_profit_if_win = gross_win - position_cost - fee
+    
+    # If we lose: we lose our position cost + fee
+    net_loss_if_lose = total_cost
+    
+    # Calculate effective odds for Kelly (profit / risk)
+    b_net = net_profit_if_win / total_cost if total_cost > 0 else 0
+    
+    # Also calculate fee as percentage for display
+    fee_rate = (fee / position_cost * 100) if position_cost > 0 else 0
+    
+    p = our_prob  # Probability of winning
+    q = 1 - p     # Probability of losing
     
     # Full Kelly formula with fee-adjusted odds
     full_kelly = (p * b_net - q) / b_net if b_net > 0 else 0
     
-    # Apply base fractional Kelly
+    # Apply fractional Kelly
     fractional_kelly = full_kelly * kelly_fraction
     
-    # ============ NEW: Position-aware adjustments ============
-    position_mult = 1.0
-    position_reason = "standard"
-    
-    if side == "YES":
-        if bet_price <= 0.35:
-            position_mult = 1.15  # Slightly larger on favorable YES bets
-            position_reason = "favorable_yes"
-    else:  # NO
-        if bet_price >= 0.70:
-            position_mult = 0.40  # Much smaller on high-priced NOs
-            position_reason = "high_price_no_reduction"
-        elif bet_price >= 0.60:
-            position_mult = 0.60  # Smaller on mid-high NOs
-            position_reason = "mid_high_no_reduction"
-        elif bet_price >= 0.50:
-            position_mult = 0.80  # Slightly smaller on mid NOs
-            position_reason = "mid_no_reduction"
-    
-    # City volatility adjustment
-    city_mult = 1.0
-    if city_key in ['chicago', 'nyc']:
-        city_mult = 0.75  # 25% smaller positions in volatile cities
-        position_reason += "_volatile_city"
-    
-    fractional_kelly *= position_mult * city_mult
-    
-    # Clamp to bounds
+    # Clamp to reasonable bounds
     fractional_kelly = max(0, fractional_kelly)
     fractional_kelly = min(fractional_kelly, MAX_BET_FRACTION)
     
@@ -233,46 +185,21 @@ def calculate_kelly_bet(bankroll, our_prob, bet_price, side, city_key=None, kell
     if bet_size < MIN_BET_SIZE:
         bet_size = 0
     
-    # Calculate estimated fee for this bet
-    estimated_fee = bet_size * KALSHI_FEE_RATE
-    
     kelly_info = {
         "full_kelly_pct": full_kelly * 100,
         "fractional_kelly_pct": fractional_kelly * 100,
-        "odds_gross": b_gross,
         "odds_net": b_net,
-        "fee_rate": KALSHI_FEE_RATE,
-        "estimated_fee": estimated_fee,
-        "position_mult": position_mult,
-        "city_mult": city_mult,
-        "position_reason": position_reason,
+        "fee": fee,
+        "fee_rate": fee_rate,
+        "est_contracts": est_contracts,
     }
     
     return bet_size, kelly_info
 
 
 # ============ CITY CONFIGURATION ============
+# FOCUSED: Only Austin and Miami (best performers)
 cities = {
-    "chicago": {
-        "name": "Chicago",
-        "csv_file": "weather_data_chicago.csv",
-        "lat": 41.8781,
-        "lon": -87.6298,
-        "kalshi_series": "KXHIGHCHI",
-        "timezone": "America/Chicago",
-        "utc_offset": -6,
-        "volatility": "high",  # NEW: volatility flag
-    },
-    "nyc": {
-        "name": "New York City",
-        "csv_file": "weather_data_nyc.csv",
-        "lat": 40.7128,
-        "lon": -74.0060,
-        "kalshi_series": "KXHIGHNY",
-        "timezone": "America/New_York",
-        "utc_offset": -5,
-        "volatility": "high",
-    },
     "miami": {
         "name": "Miami",
         "csv_file": "weather_data_miami.csv",
@@ -280,8 +207,7 @@ cities = {
         "lon": -80.2870,
         "kalshi_series": "KXHIGHMIA",
         "timezone": "America/New_York",
-        "utc_offset": -5,
-        "volatility": "low",
+        "utc_offset": -5
     },
     "austin": {
         "name": "Austin",
@@ -290,39 +216,39 @@ cities = {
         "lon": -97.68,
         "kalshi_series": "KXHIGHAUS",
         "timezone": "America/Chicago",
-        "utc_offset": -6,
-        "volatility": "medium",
-    },
-    "la": {
-        "name": "Los Angeles",
-        "csv_file": "weather_data_la.csv",
-        "lat": 33.94,
-        "lon": -118.42,
-        "kalshi_series": "KXHIGHLAX",
-        "timezone": "America/Los_Angeles",
-        "utc_offset": -8,
-        "volatility": "low",
+        "utc_offset": -6
     }
 }
 
-# Default to all cities
-selected_cities = ["chicago", "nyc", "miami", "austin", "la"]
+# Will collect all qualifying bets across all cities
+all_qualifying_bets = []
+
+# Default to Austin and Miami only (best performers)
+selected_cities = ["austin", "miami"]
 
 
 # ============ HEADER ============
 def print_header():
     print("=" * 70)
-    print("KALSHI WEATHER BETTING MODEL v15 - DEFENSIVE REBUILD")
-    print("(Asymmetric Edge + City Uncertainty + Position-Aware Kelly)")
+    print("KALSHI WEATHER BETTING MODEL v9.3.1-AUSTIN-MIAMI")
+    print("(Smart Bet Selection + Kelly Criterion + CORRECT FEE CALCULATION)")
     print("=" * 70)
-    print(f"\nAnalyzing: {', '.join(cities[c]['name'] for c in selected_cities)}")
-    print(f"\n🛡️ DEFENSIVE FEATURES:")
-    print(f"   • City-specific uncertainty (Miami/Austin: ~2.3°F, Chi/NYC: ~3.9°F)")
-    print(f"   • Asymmetric edge requirements (YES: 14-18%, NO: 16-30%)")
-    print(f"   • Position-aware Kelly (reduced sizing on high-priced NOs)")
-    print(f"   • Fee tracking: {KALSHI_FEE_RATE*100:.1f}% built into all calculations")
-    print(f"\n💰 BANKROLL: ${STARTING_BANKROLL:.2f} | {KELLY_FRACTION:.0%} Base Kelly")
-    print(f"📊 Price Filter: {MIN_CONTRACT_PRICE*100:.0f}¢ - {MAX_CONTRACT_PRICE*100:.0f}¢")
+    print(f"\nAnalyzing: Austin, Miami (best performing cities)")
+    print(f"Agreement Threshold: ±{ENSEMBLE_AGREEMENT_THRESHOLD}°F")
+    print(f"Price Filter: {MIN_CONTRACT_PRICE*100:.0f}¢ - {MAX_CONTRACT_PRICE*100:.0f}¢")
+    print(f"Sweet Spot: {SWEET_SPOT_LOW*100:.0f}¢ - {SWEET_SPOT_HIGH*100:.0f}¢")
+    print(f"\n💰 KALSHI FEE (CORRECTED):")
+    print(f"   Formula: fee = round_up(0.07 × contracts × price × (1-price))")
+    print(f"   At 20¢: ~5.6% | At 50¢: ~3.5% | At 80¢: ~1.4%")
+    print(f"\n🌡️ CITY UNCERTAINTY:")
+    for city_key, sigma in CITY_UNCERTAINTY.items():
+        print(f"   • {city_key.upper()}: σ={sigma}°F")
+    print(f"\n🎯 SMART BET SELECTION:")
+    print(f"   • Different cities: Bet freely (uncorrelated)")
+    print(f"   • Same city: Only stack if edge ratio ≥ {SAME_CITY_MULTI_BET_THRESHOLD}x")
+    print(f"   • Max {MAX_BETS_PER_CITY} bets/city, {MAX_TOTAL_BETS_PER_DAY} total/day")
+    print(f"\n💰 BANKROLL: ${STARTING_BANKROLL:.2f} | {KELLY_FRACTION:.0%} Kelly | Max Bet: {MAX_BET_FRACTION:.0%}")
+    print("Data Sources: HRRR (45%) + NWS (30%) + Open-Meteo (25%)")
 
 
 # ============ DATA FUNCTIONS ============
@@ -360,8 +286,12 @@ def fetch_open_meteo(lat, lon, timezone):
 
 
 def fetch_nws_forecast(lat, lon, target_date):
-    """Fetch forecast from National Weather Service API."""
+    """
+    Fetch forecast from National Weather Service API.
+    NWS forecasters add human judgment to model output.
+    """
     try:
+        # Step 1: Get the grid point for this location
         points_url = f"https://api.weather.gov/points/{lat:.4f},{lon:.4f}"
         points_response = requests.get(
             points_url,
@@ -375,6 +305,7 @@ def fetch_nws_forecast(lat, lon, target_date):
         points_data = points_response.json()
         forecast_url = points_data["properties"]["forecast"]
 
+        # Step 2: Get the actual forecast
         forecast_response = requests.get(
             forecast_url,
             headers={"User-Agent": "(KalshiWeatherModel, contact@example.com)"},
@@ -387,6 +318,7 @@ def fetch_nws_forecast(lat, lon, target_date):
         forecast_data = forecast_response.json()
         periods = forecast_data["properties"]["periods"]
 
+        # Step 3: Find the forecast for the target date
         target_str = target_date.strftime("%Y-%m-%d")
 
         for period in periods:
@@ -404,7 +336,7 @@ def fetch_nws_forecast(lat, lon, target_date):
 
 
 def fetch_hrrr_forecast_fixed(lat, lon, target_date, utc_offset):
-    """Fetch HRRR forecast with proper sampling for daily high."""
+    """Fetch HRRR forecast with FIXED sampling to get actual daily high."""
     if not HERBIE_AVAILABLE:
         return None, None
     
@@ -436,6 +368,8 @@ def fetch_hrrr_forecast_fixed(lat, lon, target_date, utc_offset):
     print(f"     Sampling hours: {forecast_hours} (local afternoon)")
     
     temperatures = []
+    wind_speeds = []
+    wind_dirs = []
     
     for fxx in forecast_hours:
         try:
@@ -458,6 +392,18 @@ def fetch_hrrr_forecast_fixed(lat, lon, target_date, utc_offset):
             temp_k = float(temp_data.values[min_idx])
             temp_f = (temp_k - 273.15) * 9/5 + 32
             temperatures.append(temp_f)
+            
+            try:
+                ds_u = H.xarray("UGRD:10 m", remove_grib=True)
+                ds_v = H.xarray("VGRD:10 m", remove_grib=True)
+                u = float(ds_u['u10'].values[min_idx]) if 'u10' in ds_u else float(ds_u['u'].values[min_idx])
+                v = float(ds_v['v10'].values[min_idx]) if 'v10' in ds_v else float(ds_v['v'].values[min_idx])
+                wind_speed = np.sqrt(u**2 + v**2) * 2.237
+                wind_dir = (np.arctan2(-u, -v) * 180 / np.pi) % 360
+                wind_speeds.append(wind_speed)
+                wind_dirs.append(wind_dir)
+            except:
+                pass
                 
         except Exception as e:
             continue
@@ -471,9 +417,14 @@ def fetch_hrrr_forecast_fixed(lat, lon, target_date, utc_offset):
     print(f"     ✅ Retrieved {len(temperatures)} samples")
     print(f"     📊 Afternoon temps: {min(temperatures):.1f}°F to {max(temperatures):.1f}°F")
     
+    avg_wind_speed = np.mean(wind_speeds) if wind_speeds else None
+    avg_wind_dir = np.mean(wind_dirs) if wind_dirs else None
+    
     weather_data = {
         'forecast_high': forecast_high,
         'all_temps': temperatures,
+        'wind_speed': avg_wind_speed,
+        'wind_dir': avg_wind_dir,
         'model_run': model_run_str,
         'source': 'HRRR'
     }
@@ -482,21 +433,36 @@ def fetch_hrrr_forecast_fixed(lat, lon, target_date, utc_offset):
 
 
 def get_bin_for_temp(temp):
-    """Get the Kalshi bin that contains this temperature."""
+    """
+    Get the Kalshi bin that contains this temperature.
+
+    NOAA stations round temperatures: 0.5 and above rounds UP.
+    So we first round the forecast, then find the bin.
+
+    Kalshi uses 2-degree bins with ODD lower bounds:
+    ..., 27-28, 29-30, 31-32, 33-34, ...
+
+    Examples (with NOAA rounding):
+        29.4°F → rounds to 29 → bin (29, 30)
+        29.5°F → rounds to 30 → bin (29, 30)
+        30.4°F → rounds to 30 → bin (29, 30)
+        30.5°F → rounds to 31 → bin (31, 32)
+    """
+    # NOAA rounding: 0.5 and above rounds up
     temp_rounded = int(np.round(temp))
-    if temp_rounded % 2 == 1:
+
+    # Find the odd number that starts the bin containing this temp
+    # If temp_rounded is odd, that's our lower bound
+    # If temp_rounded is even, the bin started at temp_rounded - 1
+    if temp_rounded % 2 == 1:  # odd
         lower = temp_rounded
-    else:
+    else:  # even
         lower = temp_rounded - 1
+
     return (lower, lower + 1)
 
 
 # ============ PROBABILITY MODELS ============
-
-def get_city_uncertainty(city_key):
-    """Get the uncertainty (std dev) for a specific city."""
-    return CITY_UNCERTAINTY.get(city_key, DEFAULT_UNCERTAINTY)
-
 
 def calibrated_probability(contract_low, contract_high, forecast, uncertainty_std, agreement_level='high'):
     """Calibrated probability model using Gaussian distribution."""
@@ -542,20 +508,15 @@ def calibrated_above_probability(threshold, forecast, uncertainty_std, agreement
 # ============ CITY ANALYSIS ============
 
 def analyze_city(city_key, bankroll):
-    """Analyze a single city and return all qualifying bets."""
+    """
+    Analyze a single city and return all qualifying bets.
+    Does NOT make final bet selection - that happens across all cities.
+    """
     city = cities[city_key]
     qualifying_bets = []
 
-    # Get city-specific uncertainty
-    city_uncertainty = get_city_uncertainty(city_key)
-    volatility = city.get("volatility", "medium")
-
     print(f"\n{'='*70}")
     print(f"ANALYZING: {city['name'].upper()}")
-    if volatility == "high":
-        print(f"⚠️ HIGH VOLATILITY CITY - Using σ={city_uncertainty}°F, stricter requirements")
-    else:
-        print(f"📊 Uncertainty: σ={city_uncertainty}°F")
     print(f"{'='*70}")
 
     # Load historical data
@@ -567,14 +528,18 @@ def analyze_city(city_key, bankroll):
         return qualifying_bets, None
 
     # Set target date
+    # If running between midnight and 6 AM, we likely want TODAY's forecast
+    # (the day that just started), not tomorrow's
     now = datetime.now()
     today = now.date()
     current_hour = now.hour
 
     if current_hour < 6:
+        # Late night/early morning: target TODAY (the day we're in)
         target_date = today
         print(f"  ⏰ Running at {now.strftime('%I:%M %p')} - targeting TODAY ({today})")
     else:
+        # Normal hours: target tomorrow
         target_date = today + timedelta(days=1)
 
     target_str = target_date.strftime("%Y-%m-%d")
@@ -609,7 +574,7 @@ def analyze_city(city_key, bankroll):
     else:
         print("     ⚠️ HRRR unavailable")
 
-    # 3. NWS forecast
+    # 3. NWS forecast (human-adjusted)
     print(f"\n  [3] NWS (human-adjusted):")
     nws_forecast = fetch_nws_forecast(city["lat"], city["lon"], target_date)
 
@@ -619,6 +584,7 @@ def analyze_city(city_key, bankroll):
         print("     ⚠️ NWS unavailable")
 
     # ============ ENSEMBLE FORECAST ============
+    # Collect available forecasts
     forecasts = []
     if hrrr_forecast:
         forecasts.append(("HRRR", hrrr_forecast))
@@ -631,17 +597,19 @@ def analyze_city(city_key, bankroll):
         print(f"\n  ❌ No forecasts available!")
         return qualifying_bets, None
 
-    # Calculate ensemble with fixed weights
+    # Calculate ensemble with fixed weights based on what's available
     if len(forecasts) == 3:
+        # All three: HRRR 45%, NWS 30%, Open-Meteo 25%
         ensemble_forecast = (hrrr_forecast * 0.45) + (nws_forecast * 0.30) + (open_meteo_forecast * 0.25)
     elif len(forecasts) == 2:
         if hrrr_forecast and open_meteo_forecast:
             ensemble_forecast = (hrrr_forecast * 0.6) + (open_meteo_forecast * 0.4)
         elif hrrr_forecast and nws_forecast:
             ensemble_forecast = (hrrr_forecast * 0.55) + (nws_forecast * 0.45)
-        else:
+        else:  # open_meteo and nws
             ensemble_forecast = (nws_forecast * 0.55) + (open_meteo_forecast * 0.45)
     else:
+        # Single forecast
         ensemble_forecast = forecasts[0][1]
 
     # Calculate model spread for agreement level
@@ -661,7 +629,11 @@ def analyze_city(city_key, bankroll):
     if len(forecasts) > 1:
         print(f"     Spread: {model_diff:.1f}°F → Agreement: {agreement_level.upper()}")
 
-    print(f"\n  🎯 ENSEMBLE FORECAST: {ensemble_forecast:.1f}°F (σ={city_uncertainty}°F)")
+    print(f"\n  🎯 ENSEMBLE FORECAST: {ensemble_forecast:.1f}°F")
+
+    # Get city-specific uncertainty
+    city_uncertainty = CITY_UNCERTAINTY.get(city_key, CALIBRATED_FORECAST_STD)
+    print(f"     Uncertainty (σ): {city_uncertainty}°F")
 
     forecast_bin = get_bin_for_temp(ensemble_forecast)
     print(f"     Primary bin: {forecast_bin[0]}°-{forecast_bin[1]}°F")
@@ -669,12 +641,10 @@ def analyze_city(city_key, bankroll):
     # Store city summary
     city_summary = {
         "city": city["name"],
-        "city_key": city_key,
         "ensemble_forecast": ensemble_forecast,
         "forecast_bin": forecast_bin,
         "agreement_level": agreement_level,
         "uncertainty": city_uncertainty,
-        "volatility": volatility,
         "hrrr_forecast": hrrr_forecast,
         "open_meteo_forecast": open_meteo_forecast,
         "nws_forecast": nws_forecast,
@@ -708,6 +678,14 @@ def analyze_city(city_key, bankroll):
 
         if not markets:
             print(f"     ❌ No markets found for {target_str}")
+            available_dates = set()
+            for m in all_markets[:20]:
+                ticker = m.get("ticker", "")
+                parts = ticker.split("-")
+                if len(parts) >= 2:
+                    available_dates.add(parts[1])
+            if available_dates:
+                print(f"        Available dates: {', '.join(sorted(available_dates)[:5])}")
             return qualifying_bets, city_summary
 
         print(f"     ✅ Found {len(markets)} contracts for {target_str}")
@@ -718,12 +696,11 @@ def analyze_city(city_key, bankroll):
 
     # ============ ANALYZE CONTRACTS ============
     print(f"\n  {'='*60}")
-    print(f"  CONTRACT ANALYSIS (Price: {MIN_CONTRACT_PRICE*100:.0f}¢-{MAX_CONTRACT_PRICE*100:.0f}¢)")
+    print(f"  CONTRACT ANALYSIS (Filtered: {MIN_CONTRACT_PRICE*100:.0f}¢-{MAX_CONTRACT_PRICE*100:.0f}¢)")
     print(f"  {'='*60}")
 
     skipped_cheap = 0
     skipped_expensive = 0
-    skipped_low_edge = 0
 
     for market in markets:
         ticker = market.get("ticker", "")
@@ -740,7 +717,7 @@ def analyze_city(city_key, bankroll):
         else:
             continue
 
-        # Price filters
+        # === PRICE FILTERS ===
         if kalshi_prob < MIN_CONTRACT_PRICE:
             skipped_cheap += 1
             continue
@@ -757,6 +734,7 @@ def analyze_city(city_key, bankroll):
             high = int(numbers[1])
             model_prob = calibrated_probability(low, high, ensemble_forecast, 
                                                 city_uncertainty, agreement_level)
+            # Check if this contract IS our forecast bin
             is_forecast_bin = (low == forecast_bin[0])
             contract_type = "range"
 
@@ -776,16 +754,14 @@ def analyze_city(city_key, bankroll):
         else:
             continue
 
-        # ============ EVALUATE YES BET ============
+        # Evaluate YES bet
         yes_edge = model_prob - kalshi_prob
-        min_edge_yes = get_min_edge(kalshi_prob, "YES", agreement_level, city_key)
+        min_edge = get_min_edge(kalshi_prob, agreement_level)
         
-        if yes_edge > min_edge_yes:
-            edge_ratio = yes_edge / min_edge_yes
+        if yes_edge > min_edge:
+            edge_ratio = yes_edge / min_edge
             our_prob_win = model_prob
-            bet_size, kelly_info = calculate_kelly_bet(
-                bankroll, our_prob_win, kalshi_prob, "YES", city_key
-            )
+            bet_size, kelly_info = calculate_kelly_bet(bankroll, our_prob_win, kalshi_prob)
             
             if bet_size >= MIN_BET_SIZE:
                 qualifying_bets.append({
@@ -798,7 +774,7 @@ def analyze_city(city_key, bankroll):
                     "our_prob_win": our_prob_win,
                     "edge": yes_edge,
                     "edge_ratio": edge_ratio,
-                    "min_edge": min_edge_yes,
+                    "min_edge": min_edge,
                     "bet_size": bet_size,
                     "kelly_info": kelly_info,
                     "price_bucket": get_price_bucket(kalshi_prob),
@@ -806,34 +782,25 @@ def analyze_city(city_key, bankroll):
                     "is_forecast_bin": is_forecast_bin,
                     "agreement_level": agreement_level,
                     "ensemble_forecast": ensemble_forecast,
-                    "city_uncertainty": city_uncertainty,
-                    "volatility": volatility,
                 })
-        else:
-            if yes_edge > 0:
-                skipped_low_edge += 1
 
-        # ============ EVALUATE NO BET ============
-        # Don't bet NO on forecast bin (that's betting against our prediction)
+        # Evaluate NO bet (don't bet NO on forecast bin)
         if not is_forecast_bin:
             no_prob = 1 - model_prob
             no_market = 1 - kalshi_prob
             no_edge = no_prob - no_market
-            min_edge_no = get_min_edge(no_market, "NO", agreement_level, city_key)
+            no_min_edge = get_min_edge(no_market, agreement_level)
             
-            if no_edge > min_edge_no:
-                edge_ratio = no_edge / min_edge_no
+            # Skip NO range bets in sweet spot (historically lose money)
+            no_bucket = get_price_bucket(no_market)
+            skip_no_range = (contract_type == "range" and no_bucket == "sweet_spot")
+            
+            if no_edge > no_min_edge and not skip_no_range:
+                edge_ratio = no_edge / no_min_edge
                 our_prob_win = no_prob
-                bet_size, kelly_info = calculate_kelly_bet(
-                    bankroll, our_prob_win, no_market, "NO", city_key
-                )
+                bet_size, kelly_info = calculate_kelly_bet(bankroll, our_prob_win, no_market)
                 
                 if bet_size >= MIN_BET_SIZE:
-                    # Additional warning for high-priced NOs
-                    risk_warning = None
-                    if no_market >= 0.65:
-                        risk_warning = "⚠️ HIGH-PRICE NO: Reduced position due to unfavorable risk/reward"
-                    
                     qualifying_bets.append({
                         "city": city["name"],
                         "city_key": city_key,
@@ -844,24 +811,18 @@ def analyze_city(city_key, bankroll):
                         "our_prob_win": our_prob_win,
                         "edge": no_edge,
                         "edge_ratio": edge_ratio,
-                        "min_edge": min_edge_no,
+                        "min_edge": no_min_edge,
                         "bet_size": bet_size,
                         "kelly_info": kelly_info,
-                        "price_bucket": get_price_bucket(no_market),
+                        "price_bucket": no_bucket,
                         "contract_type": contract_type,
                         "is_forecast_bin": False,
                         "agreement_level": agreement_level,
                         "ensemble_forecast": ensemble_forecast,
-                        "city_uncertainty": city_uncertainty,
-                        "volatility": volatility,
-                        "risk_warning": risk_warning,
                     })
-            else:
-                if no_edge > 0:
-                    skipped_low_edge += 1
 
     print(f"\n  Found {len(qualifying_bets)} qualifying bets")
-    print(f"  Filtered: {skipped_cheap} cheap, {skipped_expensive} expensive, {skipped_low_edge} low edge")
+    print(f"  Filtered out: {skipped_cheap} cheap, {skipped_expensive} expensive")
 
     return qualifying_bets, city_summary
 
@@ -869,43 +830,31 @@ def analyze_city(city_key, bankroll):
 # ============ SMART BET SELECTION ============
 
 def smart_select_bets(all_bets):
-    """Select the best bets, prioritizing low-volatility cities and YES bets."""
+    """
+    Select the top 6 bets by edge ratio.
+
+    Simple selection: rank all bets by edge ratio and return the top 6.
+    """
     if not all_bets:
         return []
 
-    # Score each bet (higher is better)
-    for bet in all_bets:
-        score = bet["edge_ratio"]
-        
-        # Bonus for low-volatility cities (Miami, Austin, LA)
-        if bet.get("volatility") == "low":
-            score *= 1.2
-        elif bet.get("volatility") == "medium":
-            score *= 1.1
-        # No bonus for high volatility
-        
-        # Bonus for YES bets (better risk/reward historically)
-        if bet["side"] == "YES":
-            score *= 1.15
-        
-        # Penalty for high-priced NOs
-        if bet["side"] == "NO" and bet["bet_price"] >= 0.65:
-            score *= 0.8
-        
-        bet["selection_score"] = score
+    # Sort all bets by edge ratio (best first)
+    sorted_bets = sorted(all_bets, key=lambda x: -x["edge_ratio"])
 
-    # Sort by selection score
-    sorted_bets = sorted(all_bets, key=lambda x: -x["selection_score"])
-
-    # Take top bets
+    # Take top 6 (or fewer if not enough bets)
     selected_bets = sorted_bets[:MAX_TOTAL_BETS_PER_DAY]
+
+    # Mark selection reason based on rank
+    for i, bet in enumerate(selected_bets):
+        bet["selection_reason"] = f"top_{i+1}_by_edge"
 
     return selected_bets
 
 
 def print_recommendations(selected_bets, all_bets, city_summaries, bankroll):
-    """Print the final betting recommendations."""
-    
+    """Print the final betting recommendations in a clear format."""
+
+    # Match the same logic used in analyze_city
     now = datetime.now()
     if now.hour < 6:
         target_date = now.date().strftime("%A, %B %d, %Y")
@@ -927,74 +876,69 @@ def print_recommendations(selected_bets, all_bets, city_summaries, bankroll):
         print("\n💡 Sitting out is a valid strategy!")
         return
     
+    # Analyze what we're recommending
     cities_with_bets = set(b["city"] for b in selected_bets)
     num_cities = len(cities_with_bets)
     
+    super_confident_count = sum(1 for b in selected_bets if b.get("selection_reason") == "super_confident_stack")
+    
+    # Print the recommendation header
     if num_cities > 1:
         print(f"\n✅ Found bets in {num_cities} DIFFERENT CITIES (uncorrelated):")
+        print("   → Safe to bet on all of these - different weather = independent outcomes!")
+    elif len(selected_bets) > 1:
+        city_name = list(cities_with_bets)[0]
+        print(f"\n🔥 Found {len(selected_bets)} bets in {city_name} - SUPER CONFIDENT:")
+        print(f"   → Stacking same-city bets because edge ratio ≥ {SAME_CITY_MULTI_BET_THRESHOLD}x!")
     else:
         city_name = list(cities_with_bets)[0]
-        print(f"\n⭐ Found {len(selected_bets)} bet(s) in {city_name}:")
+        print(f"\n⭐ Found 1 great bet in {city_name}:")
+        print("   → This is your best opportunity today.")
     
     print()
     
+    # Print each bet
     total_wager = 0
     total_potential = 0
-    total_fees = 0
 
     for i, bet in enumerate(selected_bets, 1):
-        # Confidence indicator
+        # Confidence indicator based on edge ratio
         if bet["edge_ratio"] >= SUPER_CONFIDENT_EDGE_RATIO:
             confidence = "🔥 SUPER CONFIDENT"
-        elif bet["edge_ratio"] >= 2.0:
+        elif bet["edge_ratio"] >= SAME_CITY_MULTI_BET_THRESHOLD:
             confidence = "✓ High confidence"
         else:
             confidence = "⭐ Good opportunity"
 
-        # Volatility warning
-        vol_warning = ""
-        if bet.get("volatility") == "high":
-            vol_warning = " ⚠️ VOLATILE"
+        # Show rank
+        rank_label = f"(#{i} by edge)"
 
-        bucket_emoji = "🎯" if bet["price_bucket"] in ["low", "sweet_spot"] else "📊"
+        bucket_emoji = "🎯" if bet["price_bucket"] == "sweet_spot" else "📊"
         forecast_marker = "📍" if bet.get("is_forecast_bin") else ""
 
         odds = bet["kelly_info"].get("odds_net", 0)
         potential_profit = bet["bet_size"] * odds
-        est_fee = bet["kelly_info"].get("estimated_fee", 0)
 
-        print(f"   ┌─ BET #{i}: {bet['city']}{vol_warning}")
+        print(f"   ┌─ BET #{i}: {bet['city']} {rank_label}")
         print(f"   │  {confidence}")
         print(f"   │  Contract: {bet['subtitle']} {forecast_marker}")
         print(f"   │  Side: {bet['side']} at {bet['bet_price']*100:.0f}¢ {bucket_emoji}")
         print(f"   │  Your probability: {bet['our_prob_win']*100:.1f}%")
-        print(f"   │  Edge: {bet['edge']*100:+.1f}% (need {bet['min_edge']*100:.0f}%, have {bet['edge_ratio']:.1f}x)")
+        print(f"   │  Edge: {bet['edge']*100:+.1f}% ({bet['edge_ratio']:.1f}x minimum)")
         print(f"   │  Kelly: {bet['kelly_info'].get('fractional_kelly_pct', 0):.1f}% of bankroll")
-        
-        # Show position adjustment reason if any
-        position_reason = bet["kelly_info"].get("position_reason", "")
-        if "reduction" in position_reason:
-            print(f"   │  🛡️ Position reduced: {position_reason}")
-        
+        print(f"   │  Fee: ~{bet['kelly_info'].get('fee_rate', 0):.1f}% (${bet['kelly_info'].get('fee', 0):.2f})")
         print(f"   │")
-        print(f"   │  💰 BET: ${bet['bet_size']:.2f} (est. fee: ${est_fee:.2f})")
+        print(f"   │  💰 BET: ${bet['bet_size']:.2f}")
         print(f"   │  📈 Potential profit: ${potential_profit:.2f}")
-        
-        # Risk warning for high-priced NOs
-        if bet.get("risk_warning"):
-            print(f"   │  {bet['risk_warning']}")
-        
         print(f"   └{'─'*50}")
         print()
 
         total_wager += bet["bet_size"]
         total_potential += potential_profit
-        total_fees += est_fee
 
     # Summary
     print(f"   {'='*55}")
     print(f"   TOTAL WAGER: ${total_wager:.2f} ({100*total_wager/bankroll:.1f}% of bankroll)")
-    print(f"   ESTIMATED FEES: ${total_fees:.2f}")
     print(f"   POTENTIAL PROFIT: ${total_potential:.2f}")
     print(f"   {'='*55}")
 
@@ -1003,40 +947,36 @@ def print_recommendations(selected_bets, all_bets, city_summaries, bankroll):
     for summary in city_summaries:
         if summary:
             agreement_emoji = "✅" if summary["agreement_level"] == "high" else "⚠️" if summary["agreement_level"] == "medium" else "❌"
-            vol_marker = "🔥" if summary.get("volatility") == "high" else ""
-            print(f"   {summary['city']}: {summary['ensemble_forecast']:.1f}°F → Bin {summary['forecast_bin'][0]}-{summary['forecast_bin'][1]}° {agreement_emoji} σ={summary['uncertainty']}°F {vol_marker}")
+            uncertainty = summary.get("uncertainty", CALIBRATED_FORECAST_STD)
+            print(f"   {summary['city']}: {summary['ensemble_forecast']:.1f}°F → Bin {summary['forecast_bin'][0]}-{summary['forecast_bin'][1]}° {agreement_emoji} {summary['agreement_level'].upper()} (σ={uncertainty}°F)")
 
     # Show what we didn't bet on
     not_selected = [b for b in all_bets if b not in selected_bets]
     if not_selected:
         print(f"\n📋 Also considered but not selected: {len(not_selected)} other opportunities")
-        
-        # Show why some weren't selected
-        high_price_nos = [b for b in not_selected if b["side"] == "NO" and b["bet_price"] >= 0.65]
-        if high_price_nos:
-            print(f"   • {len(high_price_nos)} high-priced NO bets (reduced priority)")
-        
-        volatile_city = [b for b in not_selected if b.get("volatility") == "high"]
-        if volatile_city:
-            print(f"   • {len(volatile_city)} bets in volatile cities (reduced priority)")
+        print("   (Beyond top 6 by edge ratio)")
 
 
 # ============ ARGUMENT PARSING ============
 
 def parse_arguments():
-    """Parse command-line arguments."""
-    parser = argparse.ArgumentParser(description="Kalshi Weather Betting Model v15")
+    """Parse command-line arguments for Flask integration."""
+    parser = argparse.ArgumentParser(description="Kalshi Weather Betting Model v9.3.1")
 
     parser.add_argument("--kelly", type=float, default=KELLY_FRACTION,
                         help=f"Kelly fraction (default: {KELLY_FRACTION})")
+    parser.add_argument("--maxbet", type=float, default=MAX_BET_FRACTION,
+                        help=f"Max bet fraction of bankroll (default: {MAX_BET_FRACTION})")
     parser.add_argument("--bankroll", type=float, default=STARTING_BANKROLL,
                         help=f"Starting bankroll (default: ${STARTING_BANKROLL})")
     parser.add_argument("--cities", type=str, default="all",
                         help="Comma-separated city list or 'all' (default: all)")
-    parser.add_argument("--conservative", action="store_true",
-                        help="Use extra-conservative settings (skip Chi/NYC, lower Kelly)")
-    parser.add_argument("--aggressive", action="store_true",
-                        help="Use less conservative settings (higher Kelly, lower edge req)")
+    parser.add_argument("--today", action="store_true",
+                        help="Analyze today's weather")
+    parser.add_argument("--tomorrow", action="store_true",
+                        help="Analyze tomorrow's weather")
+    parser.add_argument("--date", type=str, default=None,
+                        help="Specific date to analyze (YYYY-MM-DD)")
 
     return parser.parse_args()
 
@@ -1044,38 +984,42 @@ def parse_arguments():
 # ============ MAIN ============
 
 def main():
-    global KELLY_FRACTION, STARTING_BANKROLL, selected_cities
+    global KELLY_FRACTION, MAX_BET_FRACTION, STARTING_BANKROLL, selected_cities
 
+    # Parse command-line arguments
     args = parse_arguments()
 
+    # Apply arguments to config
     KELLY_FRACTION = args.kelly
+    MAX_BET_FRACTION = args.maxbet
     STARTING_BANKROLL = args.bankroll
 
     # Handle city filter
     if args.cities and args.cities.lower() != "all":
+        # Support both single city and comma-separated list
         city_input = args.cities.lower().strip()
         if "," in city_input:
             selected_cities = [c.strip() for c in city_input.split(",")]
         else:
             selected_cities = [city_input]
+        # Validate cities exist
         valid_cities = []
         for city in selected_cities:
             if city in cities:
                 valid_cities.append(city)
             else:
                 print(f"⚠️ Unknown city '{city}', skipping...")
-        selected_cities = valid_cities if valid_cities else list(cities.keys())
+        selected_cities = valid_cities if valid_cities else ["austin", "miami"]
 
-    # Conservative mode: skip volatile cities
-    if args.conservative:
-        print("🛡️ CONSERVATIVE MODE: Skipping Chicago and NYC")
-        selected_cities = [c for c in selected_cities if c not in ['chicago', 'nyc']]
-        KELLY_FRACTION = 0.30
-    
-    # Aggressive mode
-    if args.aggressive:
-        print("⚡ AGGRESSIVE MODE: Higher Kelly, standard edge requirements")
-        KELLY_FRACTION = 0.60
+    # TODO: Date handling (--today, --tomorrow, --date) would require
+    # modifying the analyze_city function to accept a target date.
+    # For now, the script uses its default date logic.
+    if args.today:
+        print("📅 Mode: Analyzing TODAY's weather")
+    elif args.tomorrow:
+        print("📅 Mode: Analyzing TOMORROW's weather")
+    elif args.date:
+        print(f"📅 Mode: Analyzing weather for {args.date}")
 
     print_header()
 
@@ -1083,22 +1027,21 @@ def main():
     all_bets = []
     city_summaries = []
 
+    # Analyze each city
     for city_key in selected_cities:
         city_bets, city_summary = analyze_city(city_key, bankroll)
         all_bets.extend(city_bets)
         city_summaries.append(city_summary)
 
+    # Smart bet selection across all cities
     selected_bets = smart_select_bets(all_bets)
 
+    # Print recommendations
     print_recommendations(selected_bets, all_bets, city_summaries, bankroll)
 
     print(f"\n{'='*70}")
-    print("ANALYSIS COMPLETE (v15 - Defensive Rebuild)")
+    print("ANALYSIS COMPLETE (v9.3.1-AUSTIN-MIAMI)")
     print(f"{'='*70}")
-    print("\n💡 TIPS:")
-    print("   --conservative    Skip Chi/NYC, lower Kelly (safest)")
-    print("   --aggressive      Higher Kelly (more risk)")
-    print("   --cities miami,austin   Only analyze specific cities")
 
 
 if __name__ == "__main__":
