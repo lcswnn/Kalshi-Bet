@@ -434,7 +434,8 @@ def fetch_hrrr_forecast_fixed(lat, lon, target_date, utc_offset):
 
 def get_bin_for_temp(temp):
     """
-    Get the Kalshi bin that contains this temperature.
+    Get the assumed Kalshi bin that contains this temperature.
+    NOTE: This is a fallback - prefer find_actual_kalshi_bucket() which uses real market data.
 
     NOAA stations round temperatures: 0.5 and above rounds UP.
     So we first round the forecast, then find the bin.
@@ -460,6 +461,43 @@ def get_bin_for_temp(temp):
         lower = temp_rounded - 1
 
     return (lower, lower + 1)
+
+
+def find_actual_kalshi_bucket(temp, markets):
+    """
+    Find the actual Kalshi bucket that contains this temperature based on real market data.
+
+    Args:
+        temp: The ensemble forecast temperature
+        markets: List of market dicts from Kalshi API
+
+    Returns:
+        Tuple (low, high) of the bucket containing the temperature, or None if not found.
+    """
+    # NOAA rounding: 0.5 and above rounds up
+    temp_rounded = int(np.round(temp))
+
+    # Parse all range contracts to find available buckets
+    available_buckets = []
+    for market in markets:
+        subtitle = market.get("subtitle", "")
+        if "to" in subtitle:
+            numbers = re.findall(r'-?\d+', subtitle)
+            if len(numbers) >= 2:
+                low = int(numbers[0])
+                high = int(numbers[1])
+                available_buckets.append((low, high))
+
+    if not available_buckets:
+        return None
+
+    # Find which bucket contains the rounded temperature
+    for low, high in available_buckets:
+        if low <= temp_rounded <= high:
+            return (low, high)
+
+    # Temperature is outside all buckets - return None
+    return None
 
 
 # ============ PROBABILITY MODELS ============
@@ -635,10 +673,10 @@ def analyze_city(city_key, bankroll):
     city_uncertainty = CITY_UNCERTAINTY.get(city_key, CALIBRATED_FORECAST_STD)
     print(f"     Uncertainty (σ): {city_uncertainty}°F")
 
-    forecast_bin = get_bin_for_temp(ensemble_forecast)
-    print(f"     Primary bin: {forecast_bin[0]}°-{forecast_bin[1]}°F")
+    # forecast_bin will be set after fetching markets to use actual Kalshi buckets
+    forecast_bin = None
 
-    # Store city summary
+    # Store city summary (forecast_bin will be updated after fetching markets)
     city_summary = {
         "city": city["name"],
         "ensemble_forecast": ensemble_forecast,
@@ -693,6 +731,19 @@ def analyze_city(city_key, bankroll):
     except Exception as e:
         print(f"     ❌ API error: {e}")
         return qualifying_bets, city_summary
+
+    # ============ FIND ACTUAL KALSHI BUCKET ============
+    # Use real market data to find which bucket the forecast falls into
+    forecast_bin = find_actual_kalshi_bucket(ensemble_forecast, markets)
+    if forecast_bin:
+        print(f"\n  🎯 Actual Kalshi bucket for {ensemble_forecast:.1f}°F: {forecast_bin[0]}°-{forecast_bin[1]}°F")
+    else:
+        # Fallback to calculated bin if no matching market found
+        forecast_bin = get_bin_for_temp(ensemble_forecast)
+        print(f"\n  ⚠️ No matching Kalshi bucket found, using calculated: {forecast_bin[0]}°-{forecast_bin[1]}°F")
+
+    # Update city_summary with actual forecast_bin
+    city_summary["forecast_bin"] = forecast_bin
 
     # ============ ANALYZE CONTRACTS ============
     print(f"\n  {'='*60}")
