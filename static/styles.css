@@ -442,11 +442,65 @@ h3 {
 }
 
 .edge-section,
-.sizing-section {
+.sizing-section,
+.kelly-selection-section {
   margin: 25px 0;
   padding: 20px;
   background-color: rgba(9, 194, 133, 0.08);
   border-radius: 0.8rem;
+}
+
+/* Kelly Criterion Selector */
+.kelly-selector {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 15px;
+  flex-wrap: wrap;
+}
+
+.kelly-selector label {
+  font-size: 1rem;
+  color: var(--black);
+}
+
+.kelly-dropdown {
+  padding: 10px 15px;
+  font-size: 1rem;
+  border-radius: 0.6rem;
+  border: 2px solid var(--green);
+  background-color: var(--white);
+  color: var(--black);
+  font-family: "Inter", sans-serif;
+  cursor: pointer;
+  min-width: 140px;
+  transition: box-shadow 0.2s ease;
+}
+
+.kelly-dropdown:hover {
+  box-shadow: 0 2px 8px rgba(9, 194, 133, 0.3);
+}
+
+.kelly-dropdown:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(9, 194, 133, 0.3);
+}
+
+.kelly-custom-input {
+  padding: 10px 15px;
+  font-size: 1rem;
+  border-radius: 0.6rem;
+  border: 2px solid var(--green);
+  background-color: var(--white);
+  color: var(--black);
+  font-family: "Inter", sans-serif;
+  width: 80px;
+  text-align: center;
+}
+
+.kelly-custom-input:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(9, 194, 133, 0.3);
 }
 
 .subsection-title {

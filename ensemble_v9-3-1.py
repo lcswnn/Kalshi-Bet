@@ -1,24 +1,27 @@
 """
-KALSHI WEATHER BETTING MODEL v9.3.1-AUSTIN-MIAMI
-================================================
-FOCUSED VERSION: Only Austin + Miami (best performing cities)
+KALSHI WEATHER BETTING MODEL v9.3.1
+===================================
+Supports Austin + Miami (best performers) or All Cities mode.
 
 v9.3.1 CHANGE: Fixed Kalshi fee calculation
 - OLD: Flat 4% fee assumption (WRONG)
 - NEW: Actual Kalshi formula: fee = round_up(0.07 × C × P × (1-P))
   This is per-contract and varies by price:
   - At 20¢: ~5.6% effective fee
-  - At 50¢: ~3.5% effective fee  
+  - At 50¢: ~3.5% effective fee
   - At 80¢: ~1.4% effective fee
 
 Based on performance analysis:
 - Miami: +$64 profit, 67% win rate - BEST CITY
 - Austin: +$30 profit, 77% win rate - SECOND BEST
+- Chicago/NYC: Available in "All Cities" mode
 
 Features:
 1. CITY-SPECIFIC UNCERTAINTY:
    - Miami: σ=2.5°F (stable subtropical weather)
    - Austin: σ=2.8°F (moderate continental)
+   - Chicago: σ=3.2°F (Great Lakes effect)
+   - NYC: σ=3.0°F (coastal variability)
 2. SMART BET SELECTION with edge-based ranking
 3. KELLY CRITERION: Half Kelly sizing with bankroll tracking
 4. CORRECT FEE CALCULATION: Uses actual Kalshi fee formula
@@ -84,7 +87,7 @@ def calculate_kalshi_fee(num_contracts, price_per_contract):
 STARTING_BANKROLL = 70        # Your bankroll
 KELLY_FRACTION = 0.50         # Half Kelly (balanced risk/reward)
 MIN_BET_SIZE = 0.50           # Don't bet less than 50¢
-MAX_BET_FRACTION = 0.20       # Never bet more than 20% of bankroll
+MAX_BET_FRACTION = 1.00       # Never bet more than 20% of bankroll
 
 # ============ ENSEMBLE CONFIGURATION ============
 ENSEMBLE_AGREEMENT_THRESHOLD = 3.0  # °F - models should agree within this
@@ -92,12 +95,15 @@ CONFIDENCE_BOOST_THRESHOLD = 2.0    # °F - boost confidence if within this
 CALIBRATED_FORECAST_STD = 2.8       # °F - fallback if city not in CITY_UNCERTAINTY
 
 # ============ CITY-SPECIFIC UNCERTAINTY ============
-# Based on actual performance data - FOCUSED ON BEST PERFORMERS:
+# Based on actual performance data:
 # - Miami: +$64 profit (67% WR) → stable subtropical, lower uncertainty
 # - Austin: +$30 profit (77% WR) → moderate continental volatility
+# - Chicago/NYC: Higher volatility, more variable weather
 CITY_UNCERTAINTY = {
     "miami": 2.5,      # Stable subtropical → lower uncertainty
     "austin": 2.8,     # Continental, moderate volatility
+    "chicago": 3.2,    # Great Lakes effect, higher volatility
+    "nyc": 3.0,        # Coastal, moderate-high volatility
 }
 
 # Edge requirements by price bucket (INCREASED TO ACCOUNT FOR ~4% FEE DRAG)
@@ -198,7 +204,7 @@ def calculate_kelly_bet(bankroll, our_prob, bet_price, kelly_fraction=KELLY_FRAC
 
 
 # ============ CITY CONFIGURATION ============
-# FOCUSED: Only Austin and Miami (best performers)
+# Austin + Miami are best performers, Chicago + NYC available for "All Cities"
 cities = {
     "miami": {
         "name": "Miami",
@@ -217,6 +223,24 @@ cities = {
         "kalshi_series": "KXHIGHAUS",
         "timezone": "America/Chicago",
         "utc_offset": -6
+    },
+    "chicago": {
+        "name": "Chicago",
+        "csv_file": "weather_data_chicago.csv",
+        "lat": 41.85,
+        "lon": -87.65,
+        "kalshi_series": "KXHIGHCHI",
+        "timezone": "America/Chicago",
+        "utc_offset": -6
+    },
+    "nyc": {
+        "name": "New York",
+        "csv_file": "weather_data_nyc.csv",
+        "lat": 40.78,
+        "lon": -73.97,
+        "kalshi_series": "KXHIGHNYC",
+        "timezone": "America/New_York",
+        "utc_offset": -5
     }
 }
 
@@ -230,10 +254,11 @@ selected_cities = ["austin", "miami"]
 # ============ HEADER ============
 def print_header():
     print("=" * 70)
-    print("KALSHI WEATHER BETTING MODEL v9.3.1-AUSTIN-MIAMI")
+    print("KALSHI WEATHER BETTING MODEL v9.3.1")
     print("(Smart Bet Selection + Kelly Criterion + CORRECT FEE CALCULATION)")
     print("=" * 70)
-    print(f"\nAnalyzing: Austin, Miami (best performing cities)")
+    city_names = [cities[c]["name"] for c in selected_cities]
+    print(f"\nAnalyzing: {', '.join(city_names)}")
     print(f"Agreement Threshold: ±{ENSEMBLE_AGREEMENT_THRESHOLD}°F")
     print(f"Price Filter: {MIN_CONTRACT_PRICE*100:.0f}¢ - {MAX_CONTRACT_PRICE*100:.0f}¢")
     print(f"Sweet Spot: {SWEET_SPOT_LOW*100:.0f}¢ - {SWEET_SPOT_HIGH*100:.0f}¢")
@@ -1046,7 +1071,10 @@ def main():
     STARTING_BANKROLL = args.bankroll
 
     # Handle city filter
-    if args.cities and args.cities.lower() != "all":
+    if args.cities and args.cities.lower() == "all":
+        # All cities mode - include all 4 cities
+        selected_cities = list(cities.keys())
+    elif args.cities:
         # Support both single city and comma-separated list
         city_input = args.cities.lower().strip()
         if "," in city_input:

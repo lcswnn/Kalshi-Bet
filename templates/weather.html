@@ -23,33 +23,21 @@
   <div class="content-container">
     <div class="settings-container">
       <div class="setting-group">
-        <label class="inter-medium" for="kellyFraction">Kelly Fraction:</label>
-        <input type="number" id="kellyFraction" value="0.50" min="0.1" max="1.0" step="0.05">
-      </div>
-      <div class="setting-group">
-        <label class="inter-medium" for="maxBetFraction">Max Bet Fraction:</label>
-        <input type="number" id="maxBetFraction" value="0.20" min="0.05" max="0.50" step="0.05">
-      </div>
-      <div class="setting-group">
-        <label class="inter-medium" for="startingBankroll">Starting Bankroll ($):</label>
+        <label class="inter-medium" for="startingBankroll">Bankroll ($):</label>
         <input type="number" id="startingBankroll" value="40" min="1" step="1">
       </div>
       <div class="setting-group">
-        <label class="inter-medium" for="targetDate">Target Date:</label>
+        <label class="inter-medium" for="targetDate">Date:</label>
         <select id="targetDate">
-          <option value="auto">Auto (based on time)</option>
           <option value="today">Today</option>
           <option value="tomorrow">Tomorrow</option>
-          <option value="custom">Custom Date</option>
         </select>
-        <input type="date" id="customDate" style="display: none;">
       </div>
       <div class="setting-group">
-        <label class="inter-medium" for="cityFilter">City:</label>
+        <label class="inter-medium" for="cityFilter">Cities:</label>
         <select id="cityFilter">
+          <option value="austin,miami">Austin + Miami</option>
           <option value="all">All Cities</option>
-          <option value="austin">Austin</option>
-          <option value="miami">Miami</option>
         </select>
       </div>
     </div>
@@ -79,19 +67,9 @@
 
 
   <script>
-    // Show/hide custom date picker based on selection
-    document.getElementById("targetDate").addEventListener("change", function() {
-      const customDateInput = document.getElementById("customDate");
-      if (this.value === "custom") {
-        customDateInput.style.display = "block";
-        // Set default to tomorrow
-        const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        customDateInput.value = tomorrow.toISOString().split('T')[0];
-      } else {
-        customDateInput.style.display = "none";
-      }
-    });
+    // Store bankroll and bet data globally for Kelly calculations
+    let globalBankroll = 40;
+    let globalBetsData = [];
 
     function toggleRawOutput() {
       const rawBox = document.getElementById("rawOutputBox");
@@ -405,11 +383,26 @@
 
       // Display bets
       if (data.bets.length > 0) {
+        // Store bets data globally for Kelly calculations
+        globalBetsData = data.bets;
+
         betsSection.innerHTML += '<h2 class="inter-semibold section-title">💰 Recommended Bets</h2>';
-        
-        data.bets.forEach(bet => {
+
+        data.bets.forEach((bet, index) => {
+          // Calculate full Kelly values for this bet
+          const yourProb = parseFloat(bet.edge.yourProb) / 100;
+          const marketProb = parseFloat(bet.edge.marketProb) / 100;
+          const odds = (1 - marketProb) / marketProb; // Decimal odds minus 1
+          const fullKelly = yourProb - ((1 - yourProb) / odds);
+          const fullKellyPercent = Math.max(0, fullKelly * 100);
+
+          // Store calculated values in bet object
+          bet.fullKellyPercent = fullKellyPercent;
+          bet.yourProbDecimal = yourProb;
+          bet.marketProbDecimal = marketProb;
+
           const betHtml = `
-            <div class="bet-card">
+            <div class="bet-card" id="bet-card-${index}">
               <div class="bet-header">
                 <span class="inter-semibold bet-number">BET #${bet.number}</span>
                 <span class="inter-medium bet-city">${bet.city}</span>
@@ -448,27 +441,37 @@
                 </div>
               ` : ''}
 
-              ${bet.sizing.amount ? `
-                <div class="sizing-section">
-                  <p class="inter-semibold subsection-title">💵 Position Sizing</p>
-                  <div class="sizing-stats">
-                    <div class="stat-item">
-                      <span class="inter-medium stat-label">Kelly %</span>
-                      <span class="inter-semibold stat-value">${bet.sizing.kelly}%</span>
-                    </div>
-                    <div class="stat-item highlight">
-                      <span class="inter-medium stat-label">Bet Amount</span>
-                      <span class="inter-semibold stat-value">$${bet.sizing.amount}</span>
-                    </div>
-                    ${bet.sizing.profit ? `
-                      <div class="stat-item success">
-                        <span class="inter-medium stat-label">Potential Profit</span>
-                        <span class="inter-semibold stat-value">$${bet.sizing.profit} (${bet.sizing.roi}% ROI)</span>
-                      </div>
-                    ` : ''}
+              <div class="kelly-selection-section">
+                <p class="inter-semibold subsection-title">💵 Position Sizing</p>
+                <div class="kelly-selector">
+                  <label class="inter-medium" for="kelly-select-${index}">Kelly Criterion:</label>
+                  <select id="kelly-select-${index}" class="kelly-dropdown" onchange="updateBetSizing(${index})">
+                    <option value="0.25">1/4 Kelly</option>
+                    <option value="0.5" selected>1/2 Kelly</option>
+                    <option value="0.75">3/4 Kelly</option>
+                    <option value="1.0">Full Kelly</option>
+                    <option value="custom">Custom</option>
+                  </select>
+                  <input type="number" id="kelly-custom-${index}" class="kelly-custom-input"
+                         value="0.5" min="0.1" max="2.0" step="0.05"
+                         style="display: none;"
+                         onchange="updateBetSizing(${index})">
+                </div>
+                <div class="sizing-stats" id="sizing-stats-${index}">
+                  <div class="stat-item">
+                    <span class="inter-medium stat-label">Full Kelly %</span>
+                    <span class="inter-semibold stat-value">${fullKellyPercent.toFixed(1)}%</span>
+                  </div>
+                  <div class="stat-item highlight">
+                    <span class="inter-medium stat-label">Bet Amount</span>
+                    <span class="inter-semibold stat-value" id="bet-amount-${index}">$0.00</span>
+                  </div>
+                  <div class="stat-item success">
+                    <span class="inter-medium stat-label">If You Win</span>
+                    <span class="inter-semibold stat-value" id="bet-profit-${index}">$0.00 (0% ROI)</span>
                   </div>
                 </div>
-              ` : ''}
+              </div>
 
               <div class="model-info">
                 ${bet.agreement ? `<p class="inter-medium">Agreement: ${bet.agreement}</p>` : ''}
@@ -476,6 +479,11 @@
             </div>
           `;
           betsSection.innerHTML += betHtml;
+        });
+
+        // Initialize all bet sizings with default 1/2 Kelly
+        data.bets.forEach((bet, index) => {
+          updateBetSizing(index);
         });
 
         // Add summary
@@ -523,20 +531,61 @@
       }
     }
 
+    function updateBetSizing(betIndex) {
+      const bet = globalBetsData[betIndex];
+      if (!bet) return;
+
+      const selectEl = document.getElementById(`kelly-select-${betIndex}`);
+      const customInput = document.getElementById(`kelly-custom-${betIndex}`);
+      const betAmountEl = document.getElementById(`bet-amount-${betIndex}`);
+      const betProfitEl = document.getElementById(`bet-profit-${betIndex}`);
+
+      // Show/hide custom input
+      if (selectEl.value === 'custom') {
+        customInput.style.display = 'inline-block';
+      } else {
+        customInput.style.display = 'none';
+      }
+
+      // Get Kelly fraction
+      let kellyFraction;
+      if (selectEl.value === 'custom') {
+        kellyFraction = parseFloat(customInput.value) || 0.5;
+      } else {
+        kellyFraction = parseFloat(selectEl.value);
+      }
+
+      // Calculate bet amount using Kelly criterion
+      // Kelly % = (p * b - q) / b where p = win prob, q = lose prob, b = odds
+      // We already have fullKellyPercent calculated, so we just multiply by fraction
+      const adjustedKellyPercent = bet.fullKellyPercent * kellyFraction;
+      const betAmount = (adjustedKellyPercent / 100) * globalBankroll;
+
+      // Calculate potential profit if we win
+      // If we bet $X at market price of P%, and we win, we get $X / P - $X profit
+      // Or: profit = betAmount * (1 - marketProb) / marketProb
+      const marketProb = bet.marketProbDecimal;
+      const potentialProfit = betAmount * (1 - marketProb) / marketProb;
+
+      // Calculate ROI
+      const roi = betAmount > 0 ? (potentialProfit / betAmount) * 100 : 0;
+
+      // Update display
+      betAmountEl.textContent = `$${betAmount.toFixed(2)}`;
+      betProfitEl.textContent = `$${potentialProfit.toFixed(2)} (${roi.toFixed(0)}% ROI)`;
+    }
+
     function runModel() {
       // Get settings values
-      const kellyFraction = document.getElementById("kellyFraction").value;
-      const maxBetFraction = document.getElementById("maxBetFraction").value;
       const startingBankroll = document.getElementById("startingBankroll").value;
       const targetDate = document.getElementById("targetDate").value;
-      const customDate = document.getElementById("customDate").value;
       const cityFilter = document.getElementById("cityFilter").value;
 
-      // Build URL with parameters
-      let url = `/run-model?kelly=${kellyFraction}&maxbet=${maxBetFraction}&bankroll=${startingBankroll}&dateOption=${targetDate}&city=${cityFilter}`;
-      if (targetDate === "custom" && customDate) {
-        url += `&customDate=${customDate}`;
-      }
+      // Store bankroll globally for Kelly calculations
+      globalBankroll = parseFloat(startingBankroll);
+
+      // Build URL with parameters (use full Kelly for initial calculation, user adjusts per-bet)
+      let url = `/run-model?kelly=1.0&maxbet=1.0&bankroll=${startingBankroll}&dateOption=${targetDate}&city=${cityFilter}`;
 
       // Show loader, hide results
       document.getElementById("loader").style.display = "block";
