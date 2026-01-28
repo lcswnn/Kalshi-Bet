@@ -273,7 +273,7 @@ def print_header():
     print(f"   • Same city: Only stack if edge ratio ≥ {SAME_CITY_MULTI_BET_THRESHOLD}x")
     print(f"   • Max {MAX_BETS_PER_CITY} bets/city, {MAX_TOTAL_BETS_PER_DAY} total/day")
     print(f"\n💰 BANKROLL: ${STARTING_BANKROLL:.2f} | {KELLY_FRACTION:.0%} Kelly | Max Bet: {MAX_BET_FRACTION:.0%}")
-    print("Data Sources: HRRR (45%) + NWS (30%) + Open-Meteo (25%)")
+    print("Data Sources: NWS (45%) + HRRR (35%) + Open-Meteo (20%)")
 
 
 # ============ DATA FUNCTIONS ============
@@ -661,16 +661,18 @@ def analyze_city(city_key, bankroll):
         return qualifying_bets, None
 
     # Calculate ensemble with fixed weights based on what's available
+    # UPDATED: NWS weighted higher since Kalshi settles on NWS station data
     if len(forecasts) == 3:
-        # All three: HRRR 45%, NWS 30%, Open-Meteo 25%
-        ensemble_forecast = (hrrr_forecast * 0.45) + (nws_forecast * 0.30) + (open_meteo_forecast * 0.25)
+        # All three: NWS 45%, HRRR 35%, Open-Meteo 20%
+        ensemble_forecast = (hrrr_forecast * 0.35) + (nws_forecast * 0.45) + (open_meteo_forecast * 0.20)
     elif len(forecasts) == 2:
         if hrrr_forecast and open_meteo_forecast:
             ensemble_forecast = (hrrr_forecast * 0.6) + (open_meteo_forecast * 0.4)
         elif hrrr_forecast and nws_forecast:
-            ensemble_forecast = (hrrr_forecast * 0.55) + (nws_forecast * 0.45)
+            # NWS gets more weight when paired with HRRR
+            ensemble_forecast = (hrrr_forecast * 0.45) + (nws_forecast * 0.55)
         else:  # open_meteo and nws
-            ensemble_forecast = (nws_forecast * 0.55) + (open_meteo_forecast * 0.45)
+            ensemble_forecast = (nws_forecast * 0.60) + (open_meteo_forecast * 0.40)
     else:
         # Single forecast
         ensemble_forecast = forecasts[0][1]
@@ -1119,7 +1121,7 @@ def main():
     print_recommendations(selected_bets, all_bets, city_summaries, bankroll)
 
     print(f"\n{'='*70}")
-    print("ANALYSIS COMPLETE (v9.3.1-AUSTIN-MIAMI)")
+    print("ANALYSIS COMPLETE (v9.3.1-NWS-WEIGHTED)")
     print(f"{'='*70}")
 
 
