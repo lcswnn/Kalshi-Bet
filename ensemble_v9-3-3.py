@@ -1,30 +1,37 @@
 """
-KALSHI WEATHER BETTING MODEL v9.3.1
+KALSHI WEATHER BETTING MODEL v9.3.3
 ===================================
-Supports Austin + Miami (best performers) or All Cities mode.
+CALIBRATED VERSION based on 26 resolved bets from v9.3.x
+
+v9.3.3 CHANGES: Calibration based on actual betting results
+- Data showed 20% overconfidence (predicting 82%, achieving 62%)
+- 90%+ confidence bets won only 57% of the time!
+- Key fixes:
+  1. Increased base σ by 1.8x (Miami 2.5→4.5, Austin 2.8→5.0, etc.)
+  2. Reduced SPREAD_DIVISOR from 2.0 to 1.5 (more uncertainty from disagreement)
+  3. Capped maximum probability at 85% (no more 99% confidence)
+  4. Increased minimum edge requirement to 20%
+
+v9.3.2 CHANGE: Dynamic uncertainty based on model disagreement
+- Uncertainty = sqrt(city_variance + model_spread_variance)
 
 v9.3.1 CHANGE: Fixed Kalshi fee calculation
-- OLD: Flat 4% fee assumption (WRONG)
-- NEW: Actual Kalshi formula: fee = round_up(0.07 × C × P × (1-P))
-  This is per-contract and varies by price:
-  - At 20¢: ~5.6% effective fee
-  - At 50¢: ~3.5% effective fee
-  - At 80¢: ~1.4% effective fee
+- Actual Kalshi formula: fee = round_up(0.07 × C × P × (1-P))
 
 Based on performance analysis:
-- Miami: +$64 profit, 67% win rate - BEST CITY
-- Austin: +$30 profit, 77% win rate - SECOND BEST
-- Chicago/NYC: Available in "All Cities" mode
+- Miami: Best city historically
+- Austin: Second best
+- NYC: Struggled in v9.3.x (33% WR)
+- Chicago: Moderate performance
 
 Features:
-1. CITY-SPECIFIC UNCERTAINTY:
-   - Miami: σ=2.5°F (stable subtropical weather)
-   - Austin: σ=2.8°F (moderate continental)
-   - Chicago: σ=3.2°F (Great Lakes effect)
-   - NYC: σ=3.0°F (coastal variability)
-2. SMART BET SELECTION with edge-based ranking
-3. KELLY CRITERION: Half Kelly sizing with bankroll tracking
-4. CORRECT FEE CALCULATION: Uses actual Kalshi fee formula
+1. CALIBRATED UNCERTAINTY:
+   - Base σ values increased 1.8x from v9.3.2
+   - More conservative spread contribution
+   - Maximum 85% probability cap
+2. NWS-weighted ensemble (50% NWS, 30% HRRR, 20% Open-Meteo)
+3. KELLY CRITERION: Half Kelly sizing with fees
+4. Higher edge requirements (20% minimum)
 """
 
 import pandas as pd
@@ -92,24 +99,36 @@ MAX_BET_FRACTION = 1.00       # Never bet more than 20% of bankroll
 # ============ ENSEMBLE CONFIGURATION ============
 ENSEMBLE_AGREEMENT_THRESHOLD = 3.0  # °F - models should agree within this
 CONFIDENCE_BOOST_THRESHOLD = 2.0    # °F - boost confidence if within this
-CALIBRATED_FORECAST_STD = 2.8       # °F - fallback if city not in CITY_UNCERTAINTY
+CALIBRATED_FORECAST_STD = 2.8       # °F - fallback if city not in CITY_BASE_UNCERTAINTY
 
-# ============ CITY-SPECIFIC UNCERTAINTY ============
-# Based on actual performance data:
-# - Miami: +$64 profit (67% WR) → stable subtropical, lower uncertainty
-# - Austin: +$30 profit (77% WR) → moderate continental volatility
-# - Chicago/NYC: Higher volatility, more variable weather
-CITY_UNCERTAINTY = {
-    "miami": 2.5,      # Stable subtropical → lower uncertainty
-    "austin": 2.8,     # Continental, moderate volatility
-    "chicago": 3.2,    # Great Lakes effect, higher volatility
-    "nyc": 3.0,        # Coastal, moderate-high volatility
+# ============ CITY-SPECIFIC BASE UNCERTAINTY ============
+# CALIBRATED based on 26 resolved v9.3.x bets
+# Previous values were too small, causing ~20% overconfidence
+# Multiplied by 1.8x to match actual observed variance
+CITY_BASE_UNCERTAINTY = {
+    "miami": 4.5,      # Was 2.5 - calibrated up
+    "austin": 5.0,     # Was 2.8 - calibrated up
+    "chicago": 5.8,    # Was 3.2 - calibrated up
+    "nyc": 5.4,        # Was 3.0 - calibrated up (NYC had worst performance)
 }
 
-# Edge requirements by price bucket (INCREASED TO ACCOUNT FOR ~4% FEE DRAG)
+# Minimum uncertainty floor - never go below this even with perfect agreement
+MIN_UNCERTAINTY = 4.0  # Was 2.0 - increased for safety
+
+# How much of the model spread contributes to uncertainty
+# REDUCED from 2.0 to 1.5 - model disagreement should add MORE uncertainty
+# spread_contribution = model_spread / SPREAD_DIVISOR
+SPREAD_DIVISOR = 1.5  # Was 2.0 - now more conservative
+
+# Maximum probability cap - NEVER report higher than this
+# Data showed 90%+ predictions only won 57% of the time
+MAX_PROBABILITY = 0.85  # New in v9.3.3
+
+# Edge requirements by price bucket - INCREASED based on calibration
+# Previous 16% was not enough buffer for model overconfidence
 BASE_EDGE_REQUIREMENTS = {
-    "sweet_spot": 0.16,    # 16% edge for 15-50¢ contracts (was 12%, +4% for fees)
-    "high_price": 0.16,    # 16% edge for 50-90¢ contracts (was 12%, +4% for fees)
+    "sweet_spot": 0.20,    # Was 0.16 - increased to 20% for 15-50¢ contracts
+    "high_price": 0.22,    # Was 0.16 - increased to 22% for 50-90¢ contracts (less room for error)
 }
 
 def get_min_edge(price, agreement_level='high'):
@@ -262,18 +281,20 @@ def print_header():
     print(f"Agreement Threshold: ±{ENSEMBLE_AGREEMENT_THRESHOLD}°F")
     print(f"Price Filter: {MIN_CONTRACT_PRICE*100:.0f}¢ - {MAX_CONTRACT_PRICE*100:.0f}¢")
     print(f"Sweet Spot: {SWEET_SPOT_LOW*100:.0f}¢ - {SWEET_SPOT_HIGH*100:.0f}¢")
-    print(f"\n💰 KALSHI FEE (CORRECTED):")
-    print(f"   Formula: fee = round_up(0.07 × contracts × price × (1-price))")
-    print(f"   At 20¢: ~5.6% | At 50¢: ~3.5% | At 80¢: ~1.4%")
-    print(f"\n🌡️ CITY UNCERTAINTY:")
-    for city_key, sigma in CITY_UNCERTAINTY.items():
-        print(f"   • {city_key.upper()}: σ={sigma}°F")
+    print(f"\n📊 CALIBRATION (v9.3.3):")
+    print(f"   Based on 26 resolved v9.3.x bets (was 20% overconfident)")
+    print(f"   Max probability cap: {MAX_PROBABILITY*100:.0f}%")
+    print(f"   Min edge required: {BASE_EDGE_REQUIREMENTS['sweet_spot']*100:.0f}%")
+    print(f"\n🌡️ CALIBRATED CITY UNCERTAINTY (1.8x from v9.3.2):")
+    for city_key, sigma in CITY_BASE_UNCERTAINTY.items():
+        print(f"   • {city_key.upper()}: σ_base={sigma}°F")
+    print(f"   📐 Dynamic σ = sqrt(σ_base² + (spread/{SPREAD_DIVISOR})²)")
     print(f"\n🎯 SMART BET SELECTION:")
     print(f"   • Different cities: Bet freely (uncorrelated)")
     print(f"   • Same city: Only stack if edge ratio ≥ {SAME_CITY_MULTI_BET_THRESHOLD}x")
     print(f"   • Max {MAX_BETS_PER_CITY} bets/city, {MAX_TOTAL_BETS_PER_DAY} total/day")
     print(f"\n💰 BANKROLL: ${STARTING_BANKROLL:.2f} | {KELLY_FRACTION:.0%} Kelly | Max Bet: {MAX_BET_FRACTION:.0%}")
-    print("Data Sources: NWS (45%) + HRRR (35%) + Open-Meteo (20%)")
+    print("Data Sources: NWS (50%) + HRRR (30%) + Open-Meteo (20%)")
 
 
 # ============ DATA FUNCTIONS ============
@@ -528,44 +549,91 @@ def find_actual_kalshi_bucket(temp, markets):
 # ============ PROBABILITY MODELS ============
 
 def calibrated_probability(contract_low, contract_high, forecast, uncertainty_std, agreement_level='high'):
-    """Calibrated probability model using Gaussian distribution."""
-    if agreement_level == 'high':
-        adj_std = uncertainty_std * 0.9
-    elif agreement_level == 'medium':
-        adj_std = uncertainty_std * 1.0
-    else:
-        adj_std = uncertainty_std * 1.3
+    """
+    Calibrated probability model using Gaussian distribution.
     
-    prob = stats.norm.cdf(contract_high + 0.5, forecast, adj_std) - \
-           stats.norm.cdf(contract_low - 0.5, forecast, adj_std)
+    v9.3.3: Now caps at MAX_PROBABILITY (85%) based on calibration data
+    showing that 90%+ predictions only won 57% of the time.
+    """
+    prob = stats.norm.cdf(contract_high + 0.5, forecast, uncertainty_std) - \
+           stats.norm.cdf(contract_low - 0.5, forecast, uncertainty_std)
     
-    return max(min(prob, 0.99), 0.01)
+    # Cap at MAX_PROBABILITY - we're never as certain as the math suggests
+    return max(min(prob, MAX_PROBABILITY), 0.01)
 
 
 def calibrated_below_probability(threshold, forecast, uncertainty_std, agreement_level='high'):
-    """Calibrated probability for 'X or below' contracts."""
-    if agreement_level == 'high':
-        adj_std = uncertainty_std * 0.9
-    elif agreement_level == 'medium':
-        adj_std = uncertainty_std * 1.0
-    else:
-        adj_std = uncertainty_std * 1.3
+    """
+    Calibrated probability for 'X or below' contracts.
     
-    prob = stats.norm.cdf(threshold + 0.5, forecast, adj_std)
-    return max(min(prob, 0.99), 0.01)
+    v9.3.3: Capped at MAX_PROBABILITY (85%)
+    """
+    prob = stats.norm.cdf(threshold + 0.5, forecast, uncertainty_std)
+    return max(min(prob, MAX_PROBABILITY), 0.01)
 
 
 def calibrated_above_probability(threshold, forecast, uncertainty_std, agreement_level='high'):
-    """Calibrated probability for 'X or above' contracts."""
-    if agreement_level == 'high':
-        adj_std = uncertainty_std * 0.9
-    elif agreement_level == 'medium':
-        adj_std = uncertainty_std * 1.0
-    else:
-        adj_std = uncertainty_std * 1.3
+    """
+    Calibrated probability for 'X or above' contracts.
     
-    prob = 1 - stats.norm.cdf(threshold - 0.5, forecast, adj_std)
-    return max(min(prob, 0.99), 0.01)
+    v9.3.3: Capped at MAX_PROBABILITY (85%)
+    """
+    prob = 1 - stats.norm.cdf(threshold - 0.5, forecast, uncertainty_std)
+    return max(min(prob, MAX_PROBABILITY), 0.01)
+
+
+def calculate_dynamic_uncertainty(city_key, model_spread, num_models):
+    """
+    Calculate dynamic uncertainty that incorporates both:
+    1. Base city uncertainty (inherent weather volatility)
+    2. Model disagreement (when forecasts differ significantly)
+    
+    Formula: σ_effective = sqrt(σ_base² + (spread/2)²)
+    
+    This ensures:
+    - When models agree (spread ≈ 0): uncertainty ≈ base city σ
+    - When models disagree (spread = 16°F): uncertainty jumps significantly
+    
+    Example with Miami (base σ = 2.5°F):
+    - Models agree within 2°F:  σ = sqrt(2.5² + 1²) = 2.7°F
+    - Models spread of 8°F:     σ = sqrt(2.5² + 4²) = 4.7°F  
+    - Models spread of 16°F:    σ = sqrt(2.5² + 8²) = 8.4°F
+    
+    Args:
+        city_key: City identifier for base uncertainty lookup
+        model_spread: max(forecasts) - min(forecasts) in °F
+        num_models: Number of models that provided forecasts
+    
+    Returns:
+        effective_uncertainty: The σ to use for probability calculations
+        components: Dict with breakdown of uncertainty sources
+    """
+    # Get base uncertainty for this city
+    base_sigma = CITY_BASE_UNCERTAINTY.get(city_key, CALIBRATED_FORECAST_STD)
+    
+    # Calculate spread contribution
+    # Divide by SPREAD_DIVISOR to convert spread to standard deviation estimate
+    spread_sigma = model_spread / SPREAD_DIVISOR
+    
+    # Combine using root-sum-squares (assumes independent error sources)
+    effective_sigma = np.sqrt(base_sigma**2 + spread_sigma**2)
+    
+    # Apply floor
+    effective_sigma = max(effective_sigma, MIN_UNCERTAINTY)
+    
+    # If only one model, add extra uncertainty since we can't measure disagreement
+    if num_models == 1:
+        effective_sigma *= 1.3  # 30% penalty for single-model forecasts
+    
+    components = {
+        "base_sigma": base_sigma,
+        "spread_sigma": spread_sigma,
+        "model_spread": model_spread,
+        "num_models": num_models,
+        "effective_sigma": effective_sigma,
+    }
+    
+    return effective_sigma, components
 
 
 # ============ CITY ANALYSIS ============
@@ -661,18 +729,16 @@ def analyze_city(city_key, bankroll):
         return qualifying_bets, None
 
     # Calculate ensemble with fixed weights based on what's available
-    # UPDATED: NWS weighted higher since Kalshi settles on NWS station data
     if len(forecasts) == 3:
-        # All three: NWS 50%, HRRR 32%, Open-Meteo 18%
-        ensemble_forecast = (hrrr_forecast * 0.32) + (nws_forecast * 0.50) + (open_meteo_forecast * 0.18)
+        # All three: HRRR 30%, NWS 50%, Open-Meteo 20%
+        ensemble_forecast = (hrrr_forecast * 0.30) + (nws_forecast * 0.50) + (open_meteo_forecast * 0.20)
     elif len(forecasts) == 2:
         if hrrr_forecast and open_meteo_forecast:
             ensemble_forecast = (hrrr_forecast * 0.6) + (open_meteo_forecast * 0.4)
         elif hrrr_forecast and nws_forecast:
-            # NWS gets more weight when paired with HRRR
-            ensemble_forecast = (hrrr_forecast * 0.45) + (nws_forecast * 0.55)
+            ensemble_forecast = (hrrr_forecast * 0.55) + (nws_forecast * 0.45)
         else:  # open_meteo and nws
-            ensemble_forecast = (nws_forecast * 0.60) + (open_meteo_forecast * 0.40)
+            ensemble_forecast = (nws_forecast * 0.55) + (open_meteo_forecast * 0.45)
     else:
         # Single forecast
         ensemble_forecast = forecasts[0][1]
@@ -696,9 +762,17 @@ def analyze_city(city_key, bankroll):
 
     print(f"\n  🎯 ENSEMBLE FORECAST: {ensemble_forecast:.1f}°F")
 
-    # Get city-specific uncertainty
-    city_uncertainty = CITY_UNCERTAINTY.get(city_key, CALIBRATED_FORECAST_STD)
-    print(f"     Uncertainty (σ): {city_uncertainty}°F")
+    # Calculate dynamic uncertainty based on city AND model disagreement
+    city_uncertainty, uncertainty_components = calculate_dynamic_uncertainty(
+        city_key, model_diff, len(forecasts)
+    )
+    
+    print(f"\n  📐 UNCERTAINTY CALCULATION:")
+    print(f"     Base σ ({city['name']}): {uncertainty_components['base_sigma']:.1f}°F")
+    print(f"     Model spread: {uncertainty_components['model_spread']:.1f}°F → adds {uncertainty_components['spread_sigma']:.1f}°F")
+    print(f"     Effective σ: {uncertainty_components['effective_sigma']:.1f}°F")
+    if len(forecasts) == 1:
+        print(f"     ⚠️ Single model penalty applied (×1.3)")
 
     # forecast_bin will be set after fetching markets to use actual Kalshi buckets
     forecast_bin = None
@@ -1121,7 +1195,7 @@ def main():
     print_recommendations(selected_bets, all_bets, city_summaries, bankroll)
 
     print(f"\n{'='*70}")
-    print("ANALYSIS COMPLETE (v9.3.1-NWS-WEIGHTED)")
+    print("ANALYSIS COMPLETE (v9.3.3-CALIBRATED)")
     print(f"{'='*70}")
 
 

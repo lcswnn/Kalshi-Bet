@@ -59,8 +59,8 @@ def run_model():
     custom_date = request.args.get("customDate", "")
     city_filter = request.args.get("city", "all")
 
-    # Path to ensemble_v9-3-1.py
-    script_path = os.path.join(os.path.dirname(__file__), "ensemble_v9-3-1.py")
+    # Path to ensemble_v9-3-3.py
+    script_path = os.path.join(os.path.dirname(__file__), "ensemble_v9-3-3.py")
 
     # Build command with date arguments
     cmd = [sys.executable, script_path, "--kelly", kelly_fraction, "--maxbet", max_bet_fraction, "--bankroll", starting_bankroll]
