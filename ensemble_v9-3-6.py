@@ -70,7 +70,7 @@ SWEET_SPOT_LOW = 0.15       # Preferred range lower bound
 SWEET_SPOT_HIGH = 0.50      # Preferred range upper bound
 
 # EDGE GUARDRAILS
-MIN_EDGE_REQUIREMENT = 0.12    # Lowered to 8% (10% was too aggressive/rare)
+MIN_EDGE_REQUIREMENT = 0.12    # Minimum edge to consider a bet
 MAX_EDGE_WARNING = 0.25        # Warn if edge > 25% (likely data error or station bias)
 SUSPICIOUS_PROB_CAP = 0.92     # Cap internal confidence even lower for safety
 MAX_PROBABILITY = 0.85         # General cap
