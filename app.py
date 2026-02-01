@@ -49,6 +49,10 @@ def weather():
 def sports():
     return render_template("sports.html")
 
+@app.route('/weather-bins')
+def weather_bins():
+    return render_template("weather_bins.html")
+
 @app.route("/run-model", methods=["GET"])
 def run_model():
     # Get parameters from query string
@@ -142,6 +146,65 @@ def run_sports_model():
             "success": False,
             "output": "",
             "error": "Model execution timed out after 60 seconds."
+        })
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "output": "",
+            "error": f"Error running model: {str(e)}"
+        })
+
+@app.route("/run-weather-bins-model", methods=["GET"])
+def run_weather_bins_model():
+    # Get parameters from query string
+    starting_bankroll = request.args.get("bankroll", "100")
+    date_option = request.args.get("dateOption", "auto")
+    custom_date = request.args.get("customDate", "")
+    city_filter = request.args.get("city", "all")
+
+    # Path to ensemble_v10-2.py
+    script_path = os.path.join(os.path.dirname(__file__), "ensemble_v10-2.py")
+
+    # Build command with date arguments
+    cmd = [sys.executable, script_path, "--bankroll", starting_bankroll]
+
+    if date_option == "today":
+        cmd.append("--today")
+    elif date_option == "tomorrow":
+        cmd.append("--tomorrow")
+    elif date_option == "custom" and custom_date:
+        cmd.extend(["--date", custom_date])
+    # "auto" uses the script's default behavior (no flag needed)
+
+    # Add city filter if not "all"
+    if city_filter and city_filter != "all":
+        cmd.extend(["--cities", city_filter])
+
+    # Calculate the prediction date to return in the response
+    prediction_date = get_prediction_date(date_option, custom_date)
+
+    # Run the script and capture output with extended timeout (5 minutes for all cities)
+    try:
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=300  # 5 minute timeout for data fetching across multiple cities
+        )
+
+        # Return both raw output and parsed data
+        return jsonify({
+            "success": True,
+            "output": result.stdout,
+            "error": result.stderr,
+            "raw_output": result.stdout,
+            "prediction_date": prediction_date
+        })
+    except subprocess.TimeoutExpired:
+        return jsonify({
+            "success": False,
+            "output": "",
+            "error": "Model execution timed out after 5 minutes. Weather data may be slow or unavailable. Try running with fewer cities or wait a few minutes and retry."
         })
     except Exception as e:
         return jsonify({

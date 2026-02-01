@@ -56,7 +56,7 @@ ENSEMBLE_WEIGHTS = {
 # POSITIVE value = Station is WARMER than model (e.g., Heat Island).
 # NEGATIVE value = Station is COOLER than model (e.g., near water/park).
 STATION_BIAS = {
-    "miami": -1.3,       # TODO: Monitor and adjust (e.g., +1.2 if MIA consistently hotter)
+    "miami": -0.3,       # TODO: Monitor and adjust (e.g., +1.2 if MIA consistently hotter)
     "austin": 0.3,      # TODO: Monitor and adjust
     "chicago": 1.5,     # Example: Midway is often warmer than the grid
     "nyc": -0.5,        # Example: Central Park can be cooler than concrete jungle
@@ -91,7 +91,7 @@ CALIBRATION_FACTORS = {
 }
 
 # Set to 1.0 to disable calibration (use raw model probabilities)
-CALIBRATION_ENABLED = False
+CALIBRATION_ENABLED = True
 
 # ============ PRICE & EDGE CONFIGURATION ============
 MIN_CONTRACT_PRICE = 0.15   # Never bet on contracts below 15¢

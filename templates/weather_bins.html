@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="static/styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
+  <title>Kalshi Bets - Weather Bins v1.3</title>
+</head>
+<body>
+  <nav class="navbar">
+    <a href="/weather" class="nav-link inter-medium">weather</a>
+    <a href="/weather-bins" class="nav-link active inter-medium">weather bins</a>
+    <a href="/sports" class="nav-link inter-medium">sports</a>
+  </nav>
+
+  <div class="titles-container">
+    <h1 class="inter-semibold"><span class="title-kalshi">Kalshi</span> <span class="title-weather-bets">Weather Bins</span></h1>
+    <h3 class="inter-medium">Bin-Based Model v1.3 (ECMWF + ICON + NWS + HRRR)</h3>
+  </div>
+
+  <div class="content-container">
+    <div class="settings-container">
+      <div class="setting-group">
+        <label class="inter-medium" for="startingBankroll">Bankroll ($):</label>
+        <input type="number" id="startingBankroll" value="100" min="1" step="1">
+      </div>
+      <div class="setting-group">
+        <label class="inter-medium" for="targetDate">Date:</label>
+        <select id="targetDate">
+          <option value="auto" selected>Auto</option>
+          <option value="today">Today</option>
+          <option value="tomorrow">Tomorrow</option>
+        </select>
+      </div>
+      <div class="setting-group">
+        <label class="inter-medium" for="cityFilter">Cities:</label>
+        <select id="cityFilter">
+          <option value="austin,miami">Austin + Miami</option>
+          <option value="all">All Cities</option>
+        </select>
+      </div>
+    </div>
+    <button class="inter-medium button" onclick="runModel()">Generate Picks</button>
+  </div>
+  <div id="loader" class="loader" style="display: none;"></div>
+
+  <!-- Results Display Area -->
+  <div id="resultsContainer" class="results-container" style="display: none;">
+    <!-- Prediction Date Header -->
+    <div id="predictionDateHeader" class="prediction-date-header">
+      <h2 class="inter-semibold" id="predictionDateText"></h2>
+    </div>
+
+    <!-- City Forecasts Section -->
+    <div id="forecastsSection" class="forecasts-section"></div>
+
+    <!-- Betting Recommendations Section -->
+    <div id="betsSection" class="bets-section"></div>
+  </div>
+
+  <!-- Raw output toggle (for debugging) -->
+  <div class="raw-output-container" style="display: none;">
+    <button class="inter-medium toggle-raw-btn" onclick="toggleRawOutput()">Show Raw Output</button>
+    <textarea id="rawOutputBox" style="display: none;"></textarea>
+  </div>
+
+
+  <script>
+    // Store bankroll and bet data globally for Kelly calculations
+    let globalBankroll = 100;
+    let globalBetsData = [];
+
+    function toggleRawOutput() {
+      const rawBox = document.getElementById("rawOutputBox");
+      const btn = document.querySelector(".toggle-raw-btn");
+      if (rawBox.style.display === "none") {
+        rawBox.style.display = "block";
+        btn.textContent = "Hide Raw Output";
+      } else {
+        rawBox.style.display = "none";
+        btn.textContent = "Show Raw Output";
+      }
+    }
+
+    function parseModelOutput(text) {
+      const lines = text.split('\n');
+      const data = {
+        forecasts: [],
+        bets: [],
+        summary: {},
+        warnings: []
+      };
+
+      let currentSection = null;
+      let currentCity = null;
+      let currentBet = null;
+      let parsingBins = false;
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+
+        // Detect sections
+        if (line.includes('KALSHI BIN-BASED PREDICTION MODEL')) {
+          currentSection = 'header';
+        } else if (line.match(/📍\s*(\w+)\s*(?:✅|⚠️)/)) {
+          // City header like "📍 MIAMI ✅ (conf: 1.15x)"
+          currentSection = 'forecasts';
+          if (currentCity) data.forecasts.push(currentCity);
+
+          const cityMatch = line.match(/📍\s*(\w+)\s*(✅|⚠️)\s*\(conf:\s*([\d.]+)x\)/);
+          if (cityMatch) {
+            currentCity = {
+              name: cityMatch[1],
+              confidenceIcon: cityMatch[2],
+              confidenceMultiplier: cityMatch[3],
+              forecasts: [],
+              latentForecast: '',
+              uncertainty: '',
+              modelSpread: '',
+              entropy: '',
+              entropyThreshold: '',
+              entropyStatus: '',
+              confidenceGap: '',
+              bins: [],
+              warnings: []
+            };
+          }
+          parsingBins = false;
+        } else if (line.includes('BETTING RECOMMENDATIONS')) {
+          currentSection = 'bets';
+          if (currentCity) {
+            data.forecasts.push(currentCity);
+            currentCity = null;
+          }
+          parsingBins = false;
+        } else if (line.includes('ANALYSIS COMPLETE')) {
+          currentSection = 'complete';
+        }
+
+        // Parse city data
+        if (currentSection === 'forecasts' && currentCity) {
+          // Parse forecast sources: "ECMWF 75.0°F → 73.7°F ⭐"
+          const forecastMatch = line.match(/^\s*(ECMWF|ICON|NWS|HRRR)\s+[\d.]+°F\s*→\s*([\d.]+)°F\s*(⭐)?/);
+          if (forecastMatch) {
+            currentCity.forecasts.push({
+              name: forecastMatch[1],
+              adjustedTemp: forecastMatch[2],
+              isOfficial: forecastMatch[3] === '⭐'
+            });
+          }
+
+          // Latent forecast: "🎯 LATENT FORECAST: 73.5°F"
+          if (line.includes('LATENT FORECAST:')) {
+            const match = line.match(/LATENT FORECAST:\s*([\d.]+)°F/);
+            if (match) currentCity.latentForecast = match[1] + '°F';
+          }
+
+          // Uncertainty: "Uncertainty: 2.5°F | Model Spread: 1.2°F"
+          if (line.includes('Uncertainty:') && line.includes('Model Spread:')) {
+            const uncMatch = line.match(/Uncertainty:\s*([\d.]+)°F/);
+            const spreadMatch = line.match(/Model Spread:\s*([\d.]+)°F/);
+            if (uncMatch) currentCity.uncertainty = '±' + uncMatch[1] + '°F';
+            if (spreadMatch) currentCity.modelSpread = spreadMatch[1] + '°F';
+          }
+
+          // Entropy: "Entropy: 1.45 (threshold: 1.8) ✅"
+          if (line.includes('Entropy:') && line.includes('threshold:')) {
+            const entropyMatch = line.match(/Entropy:\s*([\d.]+)\s*\(threshold:\s*([\d.]+)\)\s*(✅|⚠️\s*HIGH)?/);
+            if (entropyMatch) {
+              currentCity.entropy = entropyMatch[1];
+              currentCity.entropyThreshold = entropyMatch[2];
+              currentCity.entropyStatus = entropyMatch[3] || '✅';
+            }
+          }
+
+          // Confidence Gap: "Confidence Gap: 12.5%"
+          if (line.includes('Confidence Gap:')) {
+            const match = line.match(/Confidence Gap:\s*([\d.]+)%/);
+            if (match) currentCity.confidenceGap = match[1] + '%';
+          }
+
+          // Bin distribution header
+          if (line.includes('BIN DISTRIBUTION')) {
+            parsingBins = true;
+          }
+
+          // Parse bins: "1    75°-76°F         28.5%  32.1%  36.9%  32.0%   3%  +4.2% ◀TOP"
+          if (parsingBins && line.match(/^\s*\d+\s+[\d°\-≤≥]+/)) {
+            const binMatch = line.match(/^\s*(\d+)\s+([\d°\-≤≥]+F)\s+([\d.]+)%\s+([\d.]+)%\s+([\d.]+)%\s+([\d.]+)%\s+(\d+)%\s*([⚠️]?)\s*([+-][\d.]+)%\s*(◀TOP|💰)?/);
+            if (binMatch) {
+              currentCity.bins.push({
+                rank: binMatch[1],
+                label: binMatch[2],
+                rawProb: binMatch[3],
+                normProb: binMatch[4],
+                calProb: binMatch[5],
+                marketProb: binMatch[6],
+                spread: binMatch[7],
+                spreadWarning: binMatch[8] === '⚠️',
+                edge: binMatch[9],
+                marker: binMatch[10] || ''
+              });
+            }
+          }
+
+          // Warnings
+          if (line.includes('⚠️') && !line.includes('Entropy')) {
+            currentCity.warnings.push(line.trim());
+          }
+        }
+
+        // Parse bets
+        if (currentSection === 'bets') {
+          // Bankroll line: "💵 Bankroll: $100.00"
+          if (line.includes('Bankroll:')) {
+            const match = line.match(/Bankroll:\s*\$([\d.]+)/);
+            if (match) data.summary.bankroll = match[1];
+          }
+
+          // Total wagered: "📊 Total Wagered: $25.00 (25.0%)"
+          if (line.includes('Total Wagered:')) {
+            const match = line.match(/Total Wagered:\s*\$([\d.]+)\s*\(([\d.]+)%\)/);
+            if (match) {
+              data.summary.totalWager = match[1];
+              data.summary.wagerPercent = match[2];
+            }
+          }
+
+          // Total potential: "🎯 Total Potential: $45.00"
+          if (line.includes('Total Potential:')) {
+            const match = line.match(/Total Potential:\s*\$([\d.]+)/);
+            if (match) data.summary.totalProfit = match[1];
+          }
+
+          // Bet header: "┌─ BET #1: Miami 🔴" or "┌─ BET #1: Miami 🟢"
+          if (line.includes('BET #') && line.includes('┌─')) {
+            if (currentBet) data.bets.push(currentBet);
+            const betMatch = line.match(/BET #(\d+):\s*(\w+)\s*(🔴|🟢)?/);
+            if (betMatch) {
+              currentBet = {
+                number: betMatch[1],
+                city: betMatch[2],
+                sideEmoji: betMatch[3] || '',
+                side: betMatch[3] === '🔴' ? 'NO' : 'YES',
+                contract: '',
+                rank: '',
+                modelProb: '',
+                marketProb: '',
+                rawEdge: '',
+                adjustedEdge: '',
+                spreadPenalty: '',
+                adjustments: [],
+                betSize: '',
+                potentialProfit: ''
+              };
+            }
+          }
+
+          // Parse bet details
+          if (currentBet) {
+            // Contract: "│  Contract: 75°-76°F"
+            if (line.includes('Contract:')) {
+              const match = line.match(/Contract:\s*(.+)/);
+              if (match) currentBet.contract = match[1].trim();
+            }
+
+            // Side: "│  Side: NO (rank #5)"
+            if (line.includes('Side:') && line.includes('rank')) {
+              const match = line.match(/Side:\s*(\w+)\s*\(rank #(\d+)\)/);
+              if (match) {
+                currentBet.side = match[1];
+                currentBet.rank = match[2];
+              }
+            }
+
+            // Model/Market: "│  Model: 84.2% | Market: 68.0%"
+            if (line.includes('Model:') && line.includes('Market:')) {
+              const match = line.match(/Model:\s*([\d.]+)%\s*\|\s*Market:\s*([\d.]+)%/);
+              if (match) {
+                currentBet.modelProb = match[1];
+                currentBet.marketProb = match[2];
+              }
+            }
+
+            // Raw/Adjusted Edge: "│  Raw Edge: +16.2% → Adjusted: +19.5%"
+            if (line.includes('Raw Edge:') && line.includes('Adjusted:')) {
+              const match = line.match(/Raw Edge:\s*([+-][\d.]+)%\s*→\s*Adjusted:\s*([+-][\d.]+)%/);
+              if (match) {
+                currentBet.rawEdge = match[1];
+                currentBet.adjustedEdge = match[2];
+              }
+            }
+
+            // Spread Penalty: "│  Spread Penalty: -1.5%"
+            if (line.includes('Spread Penalty:')) {
+              const match = line.match(/Spread Penalty:\s*-?([\d.]+)%/);
+              if (match) currentBet.spreadPenalty = match[1];
+            }
+
+            // Adjustments: "│  Adjustments: bin_type: 1.10x, no_boost: 1.20x"
+            if (line.includes('Adjustments:')) {
+              const match = line.match(/Adjustments:\s*(.+)/);
+              if (match) currentBet.adjustments = match[1].split(',').map(a => a.trim());
+            }
+
+            // Bet size: "│  💵 BET: $8.50 → Potential: $12.50"
+            if (line.includes('💵 BET:')) {
+              const match = line.match(/BET:\s*\$([\d.]+)\s*→\s*Potential:\s*\$([\d.]+)/);
+              if (match) {
+                currentBet.betSize = match[1];
+                currentBet.potentialProfit = match[2];
+              }
+            }
+          }
+        }
+
+        // Capture warnings
+        if (line.includes('🛑')) {
+          data.warnings.push(line.trim());
+        }
+      }
+
+      // Push last items
+      if (currentCity) data.forecasts.push(currentCity);
+      if (currentBet) data.bets.push(currentBet);
+
+      // Calculate total bets
+      data.summary.totalBets = data.bets.length.toString();
+
+      return data;
+    }
+
+    function displayResults(data) {
+      const forecastsSection = document.getElementById('forecastsSection');
+      const betsSection = document.getElementById('betsSection');
+
+      // Clear previous results
+      forecastsSection.innerHTML = '';
+      betsSection.innerHTML = '';
+
+      // Display forecasts
+      if (data.forecasts.length > 0) {
+        forecastsSection.innerHTML += '<h2 class="inter-semibold section-title">📊 Bin Distribution Analysis</h2>';
+        data.forecasts.forEach(city => {
+          const cityHtml = `
+            <div class="forecast-card">
+              <h3 class="inter-semibold city-name">${city.name} ${city.confidenceIcon} <span class="conf-badge">(${city.confidenceMultiplier}x conf)</span></h3>
+
+              ${city.forecasts.length > 0 ? `
+                <div class="models-section">
+                  <p class="inter-medium subsection-label">Model Forecasts (bias-adjusted)</p>
+                  ${city.forecasts.map(f => `
+                    <div class="model-item inter-medium">
+                      <span class="model-name">${f.name}${f.isOfficial ? ' ⭐' : ''}</span>
+                      <span class="model-temp">${f.adjustedTemp}°F</span>
+                    </div>
+                  `).join('')}
+                </div>
+              ` : ''}
+
+              <div class="final-forecast">
+                <p class="inter-semibold forecast-value">🎯 Latent Forecast: ${city.latentForecast}</p>
+                ${city.uncertainty ? `<p class="inter-medium spread-info">${city.uncertainty} uncertainty</p>` : ''}
+                ${city.modelSpread ? `<p class="inter-medium spread-info">${city.modelSpread} model spread</p>` : ''}
+              </div>
+
+              <div class="distribution-metrics">
+                <p class="inter-medium subsection-label">Distribution Metrics</p>
+                <div class="metrics-grid">
+                  <div class="metric-item">
+                    <span class="metric-label">Entropy</span>
+                    <span class="metric-value">${city.entropy} ${city.entropyStatus}</span>
+                  </div>
+                  <div class="metric-item">
+                    <span class="metric-label">Threshold</span>
+                    <span class="metric-value">${city.entropyThreshold}</span>
+                  </div>
+                  <div class="metric-item">
+                    <span class="metric-label">Confidence Gap</span>
+                    <span class="metric-value">${city.confidenceGap}</span>
+                  </div>
+                </div>
+              </div>
+
+              ${city.bins.length > 0 ? `
+                <div class="bins-section">
+                  <p class="inter-medium subsection-label">Top Bins</p>
+                  <div class="bins-table">
+                    <div class="bins-header inter-medium">
+                      <span class="bin-rank">Rank</span>
+                      <span class="bin-label">Bin</span>
+                      <span class="bin-cal">Calibrated</span>
+                      <span class="bin-mkt">Market</span>
+                      <span class="bin-edge">Edge</span>
+                    </div>
+                    ${city.bins.slice(0, 5).map(bin => `
+                      <div class="bins-row inter-medium ${bin.marker ? 'bin-highlight' : ''}">
+                        <span class="bin-rank">#${bin.rank}</span>
+                        <span class="bin-label">${bin.label}</span>
+                        <span class="bin-cal">${bin.calProb}%</span>
+                        <span class="bin-mkt">${bin.marketProb}%</span>
+                        <span class="bin-edge ${parseFloat(bin.edge) > 0 ? 'positive' : 'negative'}">${bin.edge}% ${bin.marker}</span>
+                      </div>
+                    `).join('')}
+                  </div>
+                </div>
+              ` : ''}
+
+              ${city.warnings.length > 0 ? `
+                <div class="city-warnings">
+                  ${city.warnings.map(w => `<p class="inter-medium">${w}</p>`).join('')}
+                </div>
+              ` : ''}
+            </div>
+          `;
+          forecastsSection.innerHTML += cityHtml;
+        });
+      }
+
+      // Display bets
+      if (data.bets.length > 0) {
+        globalBetsData = data.bets;
+
+        betsSection.innerHTML += '<h2 class="inter-semibold section-title">💰 Recommended Bets</h2>';
+
+        data.bets.forEach((bet, index) => {
+          // Calculate Kelly values
+          const modelProb = parseFloat(bet.modelProb) / 100;
+          const marketProb = parseFloat(bet.marketProb) / 100;
+          const odds = (1 - marketProb) / marketProb;
+          const fullKelly = modelProb - ((1 - modelProb) / odds);
+          const fullKellyPercent = Math.max(0, fullKelly * 100);
+
+          // Store calculated values
+          bet.fullKellyPercent = fullKellyPercent;
+          bet.modelProbDecimal = modelProb;
+          bet.marketProbDecimal = marketProb;
+
+          const sideClass = bet.side === 'NO' ? 'side-no' : 'side-yes';
+          const betHtml = `
+            <div class="bet-card" id="bet-card-${index}">
+              <div class="bet-header">
+                <span class="inter-semibold bet-number">BET #${bet.number}</span>
+                <span class="inter-medium bet-city">${bet.city}</span>
+                <span class="inter-medium side-badge ${sideClass}">${bet.sideEmoji} ${bet.side}</span>
+              </div>
+
+              <div class="bet-details">
+                <div class="detail-row">
+                  <span class="inter-medium label">Contract:</span>
+                  <span class="inter-medium value">${bet.contract}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="inter-medium label">Bin Rank:</span>
+                  <span class="inter-medium value">#${bet.rank}</span>
+                </div>
+              </div>
+
+              <div class="edge-section">
+                <p class="inter-semibold subsection-title">📊 The Edge</p>
+                <div class="edge-stats">
+                  <div class="stat-item">
+                    <span class="inter-medium stat-label">Model Prob</span>
+                    <span class="inter-semibold stat-value">${bet.modelProb}%</span>
+                  </div>
+                  <div class="stat-item">
+                    <span class="inter-medium stat-label">Market Prob</span>
+                    <span class="inter-semibold stat-value">${bet.marketProb}%</span>
+                  </div>
+                  <div class="stat-item highlight">
+                    <span class="inter-medium stat-label">Adjusted Edge</span>
+                    <span class="inter-semibold stat-value">${bet.adjustedEdge}%</span>
+                  </div>
+                </div>
+                ${bet.spreadPenalty ? `<p class="inter-medium edge-ratio">Spread penalty: -${bet.spreadPenalty}%</p>` : ''}
+                ${bet.adjustments.length > 0 ? `<p class="inter-medium edge-ratio">Adjustments: ${bet.adjustments.join(', ')}</p>` : ''}
+              </div>
+
+              <div class="kelly-selection-section">
+                <p class="inter-semibold subsection-title">💵 Position Sizing</p>
+                <div class="kelly-selector">
+                  <label class="inter-medium" for="kelly-select-${index}">Kelly Criterion:</label>
+                  <select id="kelly-select-${index}" class="kelly-dropdown" onchange="updateBetSizing(${index})">
+                    <option value="0.25">1/4 Kelly</option>
+                    <option value="0.3" selected>30% Kelly (Model Default)</option>
+                    <option value="0.5">1/2 Kelly</option>
+                    <option value="0.75">3/4 Kelly</option>
+                    <option value="1.0">Full Kelly</option>
+                    <option value="custom">Custom</option>
+                  </select>
+                  <input type="number" id="kelly-custom-${index}" class="kelly-custom-input"
+                         value="0.3" min="0.1" max="2.0" step="0.05"
+                         style="display: none;"
+                         onchange="updateBetSizing(${index})">
+                </div>
+                <div class="sizing-stats" id="sizing-stats-${index}">
+                  <div class="stat-item">
+                    <span class="inter-medium stat-label">Full Kelly %</span>
+                    <span class="inter-semibold stat-value">${fullKellyPercent.toFixed(1)}%</span>
+                  </div>
+                  <div class="stat-item highlight">
+                    <span class="inter-medium stat-label">Bet Amount</span>
+                    <span class="inter-semibold stat-value" id="bet-amount-${index}">$0.00</span>
+                  </div>
+                  <div class="stat-item success">
+                    <span class="inter-medium stat-label">If You Win</span>
+                    <span class="inter-semibold stat-value" id="bet-profit-${index}">$0.00 (0% ROI)</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          `;
+          betsSection.innerHTML += betHtml;
+        });
+
+        // Initialize all bet sizings with default 30% Kelly
+        data.bets.forEach((bet, index) => {
+          updateBetSizing(index);
+        });
+
+        // Add summary
+        if (data.summary.totalBets && parseInt(data.summary.totalBets) > 0) {
+          const summaryHtml = `
+            <div class="portfolio-summary">
+              <h3 class="inter-semibold">📊 Portfolio Summary</h3>
+              <div class="summary-grid">
+                <div class="summary-item">
+                  <span class="inter-medium">Total Bets</span>
+                  <span class="inter-semibold">${data.summary.totalBets}</span>
+                </div>
+                ${data.summary.totalWager ? `
+                  <div class="summary-item">
+                    <span class="inter-medium">Total Wager</span>
+                    <span class="inter-semibold">$${data.summary.totalWager} (${data.summary.wagerPercent}%)</span>
+                  </div>
+                ` : ''}
+                ${data.summary.totalProfit ? `
+                  <div class="summary-item">
+                    <span class="inter-medium">Potential Profit</span>
+                    <span class="inter-semibold success">$${data.summary.totalProfit}</span>
+                  </div>
+                ` : ''}
+              </div>
+            </div>
+          `;
+          betsSection.innerHTML += summaryHtml;
+        }
+      } else {
+        betsSection.innerHTML += `
+          <div class="no-bets-message">
+            <h3 class="inter-semibold">🛑 No Bets Recommended Today</h3>
+            <p class="inter-medium">No qualifying bin opportunities found. This could mean:</p>
+            <ul class="inter-medium">
+              <li>High entropy (too much uncertainty in bin probabilities)</li>
+              <li>No bins with sufficient edge after calibration</li>
+              <li>Wide bid-ask spreads filtering out opportunities</li>
+              <li>Market is efficiently priced</li>
+            </ul>
+            <p class="inter-medium">💡 Sitting out is a valid strategy!</p>
+          </div>
+        `;
+      }
+    }
+
+    function updateBetSizing(betIndex) {
+      const bet = globalBetsData[betIndex];
+      if (!bet) return;
+
+      const selectEl = document.getElementById(`kelly-select-${betIndex}`);
+      const customInput = document.getElementById(`kelly-custom-${betIndex}`);
+      const betAmountEl = document.getElementById(`bet-amount-${betIndex}`);
+      const betProfitEl = document.getElementById(`bet-profit-${betIndex}`);
+
+      // Show/hide custom input
+      if (selectEl.value === 'custom') {
+        customInput.style.display = 'inline-block';
+      } else {
+        customInput.style.display = 'none';
+      }
+
+      // Get Kelly fraction
+      let kellyFraction;
+      if (selectEl.value === 'custom') {
+        kellyFraction = parseFloat(customInput.value) || 0.3;
+      } else {
+        kellyFraction = parseFloat(selectEl.value);
+      }
+
+      // Calculate bet amount using Kelly criterion
+      const adjustedKellyPercent = bet.fullKellyPercent * kellyFraction;
+      const betAmount = (adjustedKellyPercent / 100) * globalBankroll;
+
+      // Calculate potential profit if we win
+      const marketProb = bet.marketProbDecimal;
+      const potentialProfit = betAmount * (1 - marketProb) / marketProb;
+
+      // Calculate ROI
+      const roi = betAmount > 0 ? (potentialProfit / betAmount) * 100 : 0;
+
+      // Update display
+      betAmountEl.textContent = `$${betAmount.toFixed(2)}`;
+      betProfitEl.textContent = `$${potentialProfit.toFixed(2)} (${roi.toFixed(0)}% ROI)`;
+    }
+
+    function runModel() {
+      // Get settings values
+      const startingBankroll = document.getElementById("startingBankroll").value;
+      const targetDate = document.getElementById("targetDate").value;
+      const cityFilter = document.getElementById("cityFilter").value;
+
+      // Store bankroll globally for Kelly calculations
+      globalBankroll = parseFloat(startingBankroll);
+
+      // Build URL with parameters
+      let url = `/run-weather-bins-model?bankroll=${startingBankroll}&dateOption=${targetDate}&city=${cityFilter}`;
+
+      // Show loader, hide results
+      document.getElementById("loader").style.display = "block";
+      document.getElementById("resultsContainer").style.display = "none";
+
+      // Increase fetch timeout to 5 minutes (matches backend timeout)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minute timeout
+
+      fetch(url, { signal: controller.signal })
+        .then(response => response.json())
+        .then(data => {
+          clearTimeout(timeoutId);
+          document.getElementById("loader").style.display = "none";
+
+          // Store raw output
+          document.getElementById("rawOutputBox").value = data.output || data.error || "";
+
+          if (data.success !== false && data.output) {
+            // Display prediction date
+            if (data.prediction_date) {
+              document.getElementById("predictionDateText").textContent =
+                "Predictions for " + data.prediction_date;
+            }
+
+            // Parse and display results
+            const parsedData = parseModelOutput(data.output);
+            displayResults(parsedData);
+            document.getElementById("resultsContainer").style.display = "block";
+          } else {
+            // Show error
+            document.getElementById("resultsContainer").innerHTML = `
+              <div class="error-message">
+                <h3 class="inter-semibold">❌ Error</h3>
+                <p class="inter-medium">${data.error || "Unknown error occurred"}</p>
+              </div>
+            `;
+            document.getElementById("resultsContainer").style.display = "block";
+          }
+        })
+        .catch(err => {
+          clearTimeout(timeoutId);
+          document.getElementById("loader").style.display = "none";
+
+          let errorMsg = "Unknown error occurred";
+          if (err.name === 'AbortError') {
+            errorMsg = `Request timed out after 5 minutes.
+
+This usually means:
+• Weather APIs are taking too long to respond
+• Network issues accessing weather APIs
+
+Try:
+• Running with a single city filter
+• Refreshing and trying again`;
+          } else {
+            errorMsg = err.toString();
+          }
+
+          document.getElementById("resultsContainer").innerHTML = `
+            <div class="error-message">
+              <h3 class="inter-semibold">❌ Error</h3>
+              <pre class="inter-medium">${errorMsg}</pre>
+            </div>
+          `;
+          document.getElementById("resultsContainer").style.display = "block";
+        });
+    }
+  </script>
+
+  <style>
+    /* Additional styles for weather bins specific elements */
+    .conf-badge {
+      font-size: 0.8em;
+      opacity: 0.7;
+    }
+
+    .distribution-metrics {
+      margin: 1rem 0;
+      padding: 0.75rem;
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 0.5rem;
+    }
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.75rem;
+      margin-top: 0.5rem;
+    }
+
+    .metric-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.25rem;
+    }
+
+    .metric-label {
+      font-size: 0.75rem;
+      opacity: 0.7;
+    }
+
+    .metric-value {
+      font-weight: 600;
+    }
+
+    .bins-section {
+      margin: 1rem 0;
+    }
+
+    .bins-table {
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 0.5rem;
+      overflow: hidden;
+    }
+
+    .bins-header, .bins-row {
+      display: grid;
+      grid-template-columns: 50px 100px 80px 80px 100px;
+      gap: 0.5rem;
+      padding: 0.5rem 0.75rem;
+      align-items: center;
+    }
+
+    .bins-header {
+      background: rgba(255, 255, 255, 0.05);
+      font-size: 0.75rem;
+      opacity: 0.7;
+    }
+
+    .bins-row {
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      font-size: 0.85rem;
+    }
+
+    .bins-row.bin-highlight {
+      background: rgba(9, 194, 133, 0.1);
+    }
+
+    .bin-edge.positive {
+      color: #09C285;
+    }
+
+    .bin-edge.negative {
+      color: #ff6b6b;
+    }
+
+    .side-badge {
+      padding: 0.25rem 0.75rem;
+      border-radius: 1rem;
+      font-size: 0.85rem;
+    }
+
+    .side-badge.side-no {
+      background: rgba(255, 107, 107, 0.2);
+      color: #ff6b6b;
+    }
+
+    .side-badge.side-yes {
+      background: rgba(9, 194, 133, 0.2);
+      color: #09C285;
+    }
+
+    @media (max-width: 600px) {
+      .bins-header, .bins-row {
+        grid-template-columns: 40px 80px 60px 60px 80px;
+        font-size: 0.75rem;
+      }
+
+      .metrics-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+  </style>
+
+</body>
+</html>
