@@ -1,16 +1,26 @@
 """
-KALSHI WEATHER BETTING MODEL v9.3.6 (FULL PRODUCTION VERSION)
-=============================================================
-MERGE: v9.3.5 Infrastructure + v9.3.6 Mathematical Improvements
+KALSHI WEATHER BETTING MODEL v9.3.8 (CALIBRATED PRODUCTION VERSION)
+====================================================================
+Based on v9.3.6 + CALIBRATION FACTORS from backtesting
 
-v9.3.6 CHANGES:
-- NEW: Station Bias Correction (Grid-to-Station offset)
-- NEW: Skewed Normal Distribution (handles hard temp ceilings/floors)
-- NEW: Configurable Model Weights (no more hardcoded magic numbers)
-- NEW: "Too Good To Be True" Guardrails (flags suspicious edges >25%)
-- RESTORED: Full NWS, HRRR, and Kalshi API connectivity from v9.3.5
+v9.3.8 CHANGES:
+- NEW: City-specific CALIBRATION FACTORS to fix overconfidence
+- Backtesting showed model was 15-25% overconfident on NO bets
+- Miami ideal factor: 0.81 (model 88% → calibrated 71% → actual 71%)
+- Austin ideal factor: 0.76 (model 89% → calibrated 68% → actual 68%)
 
-CRITICAL: YOU MUST CALIBRATE 'STATION_BIAS' FOR THIS TO WORK OPTIMALLY.
+HOW CALIBRATION WORKS:
+- Raw model calculates P(YES) for a bin
+- For NO bets: raw_no_prob = 1 - P(YES)
+- Calibrated: calibrated_no_prob = raw_no_prob × CALIBRATION_FACTOR
+- This reduces overconfidence to match actual win rates
+
+KEPT FROM v9.3.6:
+- Station Bias Correction
+- Skewed Normal Distribution
+- Configurable Model Weights
+- "Too Good To Be True" Guardrails
+- Full NWS, HRRR, and Kalshi API connectivity
 """
 
 import pandas as pd
@@ -62,6 +72,26 @@ CITY_SKEW_PARAMS = {
     "chicago": -1.0,    # Lake effect can create ceilings
     "nyc": -1.0,
 }
+
+# ============ 4. CALIBRATION FACTORS (NEW in v9.3.8) ============
+# These factors correct for model overconfidence on NO bets.
+# Derived from backtesting: actual_win_rate / raw_model_prediction
+#
+# Example: Miami raw model says 88% NO, actual win rate is 71%
+#          Factor = 71/88 = 0.81
+#          Calibrated = 88% × 0.81 = 71% ✓
+#
+# Higher factor = more confident (closer to raw model)
+# Lower factor = more conservative (bigger reduction)
+CALIBRATION_FACTORS = {
+    "miami": 0.82,      # Most predictable - ocean moderates temps
+    "austin": 0.72,     # More volatile - continental climate
+    "chicago": 0.72,    # Lake effect surprises - similar to Austin
+    "nyc": 0.68,        # Worst performer - coastal + urban effects
+}
+
+# Set to 1.0 to disable calibration (use raw model probabilities)
+CALIBRATION_ENABLED = True
 
 # ============ PRICE & EDGE CONFIGURATION ============
 MIN_CONTRACT_PRICE = 0.15   # Never bet on contracts below 15¢
@@ -151,14 +181,15 @@ selected_cities = ["austin", "miami"]
 # ============ HEADER ============
 def print_header():
     print("=" * 70)
-    print("KALSHI WEATHER BETTING MODEL v9.3.6")
-    print("(Station Bias + Skewed Dist + Configurable Weights)")
+    print("KALSHI WEATHER BETTING MODEL v9.3.8 (CALIBRATED)")
+    print("(Station Bias + Skewed Dist + Calibration Factors)")
     print("=" * 70)
     city_names = [cities[c]["name"] for c in selected_cities]
     print(f"\nAnalyzing: {', '.join(city_names)}")
     print(f"Weights: {ENSEMBLE_WEIGHTS}")
     print(f"Station Bias: {STATION_BIAS}")
-    print(f"Skew Params: {CITY_SKEW_PARAMS}")
+    print(f"Calibration Factors: {CALIBRATION_FACTORS}")
+    print(f"Calibration Enabled: {CALIBRATION_ENABLED}")
 
 # ============ CALCULATIONS ============
 
@@ -253,17 +284,32 @@ def calibrated_above_probability(threshold, forecast, uncertainty_std, city_key,
     prob = 1 - skewnorm.cdf(threshold - 0.5, skew_param, loc=forecast, scale=uncertainty_std)
     return max(min(prob, 0.99), 0.01)
 
-def apply_probability_cap(prob, market_prob, side='YES'):
+def apply_probability_cap(prob, market_prob, side='YES', city_key=None):
+    """
+    Apply probability caps and calibration factors.
+    
+    v9.3.8: Added calibration factor for NO bets to correct overconfidence.
+    """
     if side == 'YES':
         capped_prob = min(prob, MAX_PROBABILITY)
         if market_prob > MAX_PROBABILITY:
             return capped_prob, True
         return capped_prob, False
     else:
+        # NO bet logic with calibration
         if prob > 0.80:
             return 1 - prob, True
+        
         capped_yes_prob = min(prob, MAX_PROBABILITY)
-        return 1 - capped_yes_prob, False
+        raw_no_prob = 1 - capped_yes_prob
+        
+        # Apply calibration factor for NO bets (v9.3.8)
+        if CALIBRATION_ENABLED and city_key:
+            cal_factor = CALIBRATION_FACTORS.get(city_key, 0.78)  # Default to conservative
+            calibrated_no_prob = raw_no_prob * cal_factor
+            return calibrated_no_prob, False
+        
+        return raw_no_prob, False
 
 def calculate_dynamic_uncertainty(city_key, model_spread, num_models):
     base_sigma = CITY_BASE_UNCERTAINTY.get(city_key, 2.8)
@@ -514,6 +560,17 @@ def analyze_city(city_key, bankroll, target_date_override=None):
     
     print(f"   📉 Uncertainty (σ): {uncertainty:.2f}°F (Base: {unc_components['base_sigma']}, Spread: {model_spread:.1f})")
     print(f"   〰️  Skew Param (α): {skew} ({'Normal' if skew==0 else 'Skewed'})")
+    
+    # Model agreement confidence indicator
+    if model_spread <= 1.5:
+        agreement_str = "🟢 HIGH (models tightly agree)"
+    elif model_spread <= 3.0:
+        agreement_str = "🟡 MEDIUM (some disagreement)"
+    elif model_spread <= 5.0:
+        agreement_str = "🟠 LOW (models disagree)"
+    else:
+        agreement_str = "🔴 VERY LOW (large spread - be cautious!)"
+    print(f"   🤝 Model Agreement: {agreement_str}")
 
     # 5. Fetch Markets (RESTORED)
     print(f"\n  💰 Fetching Kalshi market data...")
@@ -535,12 +592,26 @@ def analyze_city(city_key, bankroll, target_date_override=None):
         # Find bucket
         forecast_bin = find_actual_kalshi_bucket(final_forecast, markets)
         if not forecast_bin: forecast_bin = get_bin_for_temp(final_forecast)
+        
+        # Calculate confidence that actual temp lands in forecast bin
+        forecast_bin_prob = calibrated_probability(
+            forecast_bin[0], forecast_bin[1], 
+            final_forecast, uncertainty, city_key
+        )
+        
         print(f"     🎯 Target Bin: {forecast_bin[0]}°-{forecast_bin[1]}°F")
+        print(f"     📊 Bin Confidence: {forecast_bin_prob*100:.1f}% (raw model)")
+        
+        # Also show calibrated NO probability for context
+        cal_factor = CALIBRATION_FACTORS.get(city_key, 0.78) if CALIBRATION_ENABLED else 1.0
+        calibrated_no_prob = (1 - forecast_bin_prob) * cal_factor
+        print(f"     🔄 NO Bet Confidence: {calibrated_no_prob*100:.1f}% (calibrated)")
         
         city_summary = {
             "city": city["name"],
             "ensemble_forecast": final_forecast,
             "forecast_bin": forecast_bin,
+            "forecast_bin_confidence": forecast_bin_prob,
             "agreement_level": agreement_level,
             "uncertainty": uncertainty
         }
@@ -576,7 +647,7 @@ def analyze_city(city_key, bankroll, target_date_override=None):
             else: continue
             
             # Evaluate YES
-            capped_yes, skip_yes = apply_probability_cap(model_prob, kalshi_prob, 'YES')
+            capped_yes, skip_yes = apply_probability_cap(model_prob, kalshi_prob, 'YES', city_key)
             yes_edge = capped_yes - kalshi_prob
             
             is_suspicious = yes_edge > MAX_EDGE_WARNING
@@ -595,9 +666,9 @@ def analyze_city(city_key, bankroll, target_date_override=None):
                         "edge_ratio": yes_edge / MIN_EDGE_REQUIREMENT
                     })
                     
-            # Evaluate NO (Simplified)
+            # Evaluate NO (with calibration in v9.3.8)
             if not is_forecast_bin:
-                capped_no, skip_no = apply_probability_cap(model_prob, kalshi_prob, 'NO')
+                capped_no, skip_no = apply_probability_cap(model_prob, kalshi_prob, 'NO', city_key)
                 no_market = 1 - kalshi_prob
                 no_edge = capped_no - no_market
                 
@@ -643,7 +714,7 @@ def smart_select_bets(all_bets):
 
 def print_recommendations(selected_bets, city_summaries, bankroll):
     print(f"\n{'='*70}")
-    print("🎯 BETTING RECOMMENDATIONS (v9.3.6)")
+    print("🎯 BETTING RECOMMENDATIONS (v9.3.8 CALIBRATED)")
     print(f"{'='*70}")
     
     if not selected_bets:
@@ -659,7 +730,7 @@ def print_recommendations(selected_bets, city_summaries, bankroll):
 
 # ============ ARGUMENT PARSING ============
 def parse_arguments():
-    parser = argparse.ArgumentParser(description="Kalshi Weather Betting Model v9.3.6")
+    parser = argparse.ArgumentParser(description="Kalshi Weather Betting Model v9.3.8 (Calibrated)")
     parser.add_argument("--kelly", type=float, default=KELLY_FRACTION,
                         help=f"Kelly fraction (default: {KELLY_FRACTION})")
     parser.add_argument("--maxbet", type=float, default=MAX_BET_FRACTION,
