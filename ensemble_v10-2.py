@@ -837,7 +837,7 @@ def select_trades(city_key: str, distribution: BinDistribution,
                     continue
                 
                 bet_size = calculate_kelly_bet(
-                    adjusted_edge, bin_info.calibrated_prob, bin_info.market_prob,
+                    bin_info.calibrated_prob - bin_info.market_prob, bin_info.calibrated_prob, bin_info.market_prob,
                     bankroll, remaining_city_budget
                 )
                 
@@ -880,7 +880,7 @@ def select_trades(city_key: str, distribution: BinDistribution,
                     continue
                 
                 bet_size = calculate_kelly_bet(
-                    adjusted_no_edge, no_calibrated_prob, no_market_prob,
+                    no_calibrated_prob - no_market_prob, no_calibrated_prob, no_market_prob,
                     bankroll, remaining_city_budget
                 )
                 
