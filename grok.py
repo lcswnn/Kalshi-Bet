@@ -223,12 +223,22 @@ def backtest_city(city_key, start_date, end_date):
             current_date += timedelta(days=1)
             continue
         
-        # Find the actual bin
-        actual_bin_low = int(np.floor(actual_temp)) if int(np.floor(actual_temp)) % 2 == 0 else int(np.floor(actual_temp)) - 1
+        # Fix: Align bin determination and outcome check with probability bounds
+        # First, determine bin based on floor, snapping to even-low 2F bins
+        actual_floor = np.floor(actual_temp)
+        if actual_floor % 2 == 0:
+            actual_bin_low = int(actual_floor)
+        else:
+            actual_bin_low = int(actual_floor) - 1
         actual_bin = (actual_bin_low, actual_bin_low + 1)
         
-        # Model's forecast bin
-        forecast_bin = (int(np.floor(final_forecast)), int(np.floor(final_forecast)) + 1) if int(np.floor(final_forecast)) % 2 == 0 else (int(np.floor(final_forecast)) - 1, int(np.floor(final_forecast)))
+        # Model's forecast bin (similarly)
+        forecast_floor = np.floor(final_forecast)
+        if forecast_floor % 2 == 0:
+            forecast_bin_low = int(forecast_floor)
+        else:
+            forecast_bin_low = int(forecast_floor) - 1
+        forecast_bin = (forecast_bin_low, forecast_bin_low + 1)
         
         # Calc model prob for actual bin
         model_prob = calibrated_probability(actual_bin[0], actual_bin[1], final_forecast, std, city_key)
@@ -239,7 +249,9 @@ def backtest_city(city_key, start_date, end_date):
         if bin_market:
             outcome = 1 if bin_market["result"] == "yes" else 0
         else:
-            outcome = 1 if actual_bin[0] <= actual_temp <= actual_bin[1] else 0  # Approx with actual
+            # Fixed approx: Align with prob bounds (low - 0.5 <= temp < high + 0.5)
+            # This matches the CDF integration from low-0.5 to high+0.5
+            outcome = 1 if (actual_bin[0] - 0.5) <= actual_temp < (actual_bin[1] + 0.5) else 0
         
         results.append({
             "date": date_str,

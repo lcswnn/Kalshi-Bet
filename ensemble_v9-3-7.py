@@ -1,9 +1,9 @@
 """
-KALSHI WEATHER BETTING MODEL v9.3.8 (CALIBRATED PRODUCTION VERSION)
+KALSHI WEATHER BETTING MODEL v9.3.7 (CALIBRATED PRODUCTION VERSION)
 ====================================================================
 Based on v9.3.6 + CALIBRATION FACTORS from backtesting
 
-v9.3.8 CHANGES:
+v9.3.7 CHANGES:
 - NEW: City-specific CALIBRATION FACTORS to fix overconfidence
 - Backtesting showed model was 15-25% overconfident on NO bets
 - Miami ideal factor: 0.81 (model 88% → calibrated 71% → actual 71%)
@@ -56,8 +56,8 @@ ENSEMBLE_WEIGHTS = {
 # POSITIVE value = Station is WARMER than model (e.g., Heat Island).
 # NEGATIVE value = Station is COOLER than model (e.g., near water/park).
 STATION_BIAS = {
-    "miami": 0.5,       # TODO: Monitor and adjust (e.g., +1.2 if MIA consistently hotter)
-    "austin": 0.5,      # TODO: Monitor and adjust
+    "miami": -1.3,       # TODO: Monitor and adjust (e.g., +1.2 if MIA consistently hotter)
+    "austin": 0.3,      # TODO: Monitor and adjust
     "chicago": 1.5,     # Example: Midway is often warmer than the grid
     "nyc": -0.5,        # Example: Central Park can be cooler than concrete jungle
 }
@@ -73,7 +73,7 @@ CITY_SKEW_PARAMS = {
     "nyc": -1.0,
 }
 
-# ============ 4. CALIBRATION FACTORS (NEW in v9.3.8) ============
+# ============ 4. CALIBRATION FACTORS (NEW in v9.3.7) ============
 # These factors correct for model overconfidence on NO bets.
 # Derived from backtesting: actual_win_rate / raw_model_prediction
 #
@@ -91,7 +91,7 @@ CALIBRATION_FACTORS = {
 }
 
 # Set to 1.0 to disable calibration (use raw model probabilities)
-CALIBRATION_ENABLED = True
+CALIBRATION_ENABLED = False
 
 # ============ PRICE & EDGE CONFIGURATION ============
 MIN_CONTRACT_PRICE = 0.15   # Never bet on contracts below 15¢
@@ -103,7 +103,7 @@ SWEET_SPOT_HIGH = 0.50      # Preferred range upper bound
 MIN_EDGE_REQUIREMENT = 0.20    # Minimum edge to consider a bet
 MAX_EDGE_WARNING = 0.25        # Warn if edge > 25% (likely data error or station bias)
 SUSPICIOUS_PROB_CAP = 0.92     # Cap internal confidence even lower for safety
-MAX_PROBABILITY = 0.85         # General cap
+MAX_PROBABILITY = 0.90         # General cap
 
 # ============ BETTING CONFIGURATION ============
 SAME_CITY_MULTI_BET_THRESHOLD = 2.0   # Need 2x the minimum edge to stack same-city bets
@@ -128,8 +128,8 @@ SPREAD_UNCERTAINTY_DIVISOR = 1.5   # Divisor for converting spread to sigma
 
 # Base Uncertainty (Calibrated)
 CITY_BASE_UNCERTAINTY = {
-    "miami": 6.0,
-    "austin": 7.0,
+    "miami": 3.0,
+    "austin": 3.5,
     "chicago": 8.0,
     "nyc": 10.0,
 }
@@ -181,7 +181,7 @@ selected_cities = ["austin", "miami"]
 # ============ HEADER ============
 def print_header():
     print("=" * 70)
-    print("KALSHI WEATHER BETTING MODEL v9.3.8 (CALIBRATED)")
+    print("KALSHI WEATHER BETTING MODEL v9.3.7 (CALIBRATED)")
     print("(Station Bias + Skewed Dist + Calibration Factors)")
     print("=" * 70)
     city_names = [cities[c]["name"] for c in selected_cities]
@@ -288,7 +288,7 @@ def apply_probability_cap(prob, market_prob, side='YES', city_key=None):
     """
     Apply probability caps and calibration factors.
     
-    v9.3.8: Added calibration factor for NO bets to correct overconfidence.
+    v9.3.7: Added calibration factor for NO bets to correct overconfidence.
     """
     if side == 'YES':
         capped_prob = min(prob, MAX_PROBABILITY)
@@ -303,7 +303,7 @@ def apply_probability_cap(prob, market_prob, side='YES', city_key=None):
         capped_yes_prob = min(prob, MAX_PROBABILITY)
         raw_no_prob = 1 - capped_yes_prob
         
-        # Apply calibration factor for NO bets (v9.3.8)
+        # Apply calibration factor for NO bets (v9.3.7)
         if CALIBRATION_ENABLED and city_key:
             cal_factor = CALIBRATION_FACTORS.get(city_key, 0.78)  # Default to conservative
             calibrated_no_prob = raw_no_prob * cal_factor
@@ -666,7 +666,7 @@ def analyze_city(city_key, bankroll, target_date_override=None):
                         "edge_ratio": yes_edge / MIN_EDGE_REQUIREMENT
                     })
                     
-            # Evaluate NO (with calibration in v9.3.8)
+            # Evaluate NO (with calibration in v9.3.7)
             if not is_forecast_bin:
                 capped_no, skip_no = apply_probability_cap(model_prob, kalshi_prob, 'NO', city_key)
                 no_market = 1 - kalshi_prob
@@ -714,7 +714,7 @@ def smart_select_bets(all_bets):
 
 def print_recommendations(selected_bets, city_summaries, bankroll):
     print(f"\n{'='*70}")
-    print("🎯 BETTING RECOMMENDATIONS (v9.3.8 CALIBRATED)")
+    print("🎯 BETTING RECOMMENDATIONS (v9.3.7 CALIBRATED)")
     print(f"{'='*70}")
     
     if not selected_bets:
@@ -730,7 +730,7 @@ def print_recommendations(selected_bets, city_summaries, bankroll):
 
 # ============ ARGUMENT PARSING ============
 def parse_arguments():
-    parser = argparse.ArgumentParser(description="Kalshi Weather Betting Model v9.3.8 (Calibrated)")
+    parser = argparse.ArgumentParser(description="Kalshi Weather Betting Model v9.3.7 (Calibrated)")
     parser.add_argument("--kelly", type=float, default=KELLY_FRACTION,
                         help=f"Kelly fraction (default: {KELLY_FRACTION})")
     parser.add_argument("--maxbet", type=float, default=MAX_BET_FRACTION,
