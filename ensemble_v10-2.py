@@ -66,7 +66,7 @@ MODEL_WEIGHTS = {
 
 # Station Bias
 STATION_BIAS = {
-    "miami": -1.3,
+    "miami": -0.2,
     "austin": 0.3,
     "chicago": 1.5,
     "nyc": -0.5,
@@ -76,14 +76,14 @@ STATION_BIAS = {
 CITY_CONFIDENCE_MULTIPLIER = {
     "miami": 1.15,      # Best performer
     "austin": 1.00,
-    "chicago": 0.95,
-    "nyc": 0.75,        # Worst performer
+    "chicago": 0.85,
+    "nyc": 0.50,        # Worst performer
 }
 
 # City base uncertainty
 CITY_BASE_UNCERTAINTY = {
-    "miami": 2.5,
-    "austin": 3.0,
+    "miami": 2.0,
+    "austin": 2.0,
     "chicago": 4.0,
     "nyc": 5.0,
 }
@@ -115,11 +115,11 @@ MIN_EDGE_YES_BET = 0.15
 MIN_CONFIDENCE_GAP = 0.08
 
 # Price Filters
-MIN_CONTRACT_PRICE = 0.10
-MAX_CONTRACT_PRICE = 0.90
+MIN_CONTRACT_PRICE = 0.27
+MAX_CONTRACT_PRICE = 0.80
 
 # Kelly Criterion
-KELLY_FRACTION = 0.30
+KELLY_FRACTION = 0.20
 MIN_BET_SIZE = 1.00
 MAX_BET_FRACTION = 0.10
 STARTING_BANKROLL = 100.0
@@ -130,14 +130,14 @@ MAX_TOTAL_BETS = 5
 MAX_BETS_PER_CITY = 2
 
 # YES/NO preferences (from backtest)
-NO_BET_PREFERENCE_MULTIPLIER = 1.20
-YES_BET_PENALTY_MULTIPLIER = 0.80
+NO_BET_PREFERENCE_MULTIPLIER = 1.35
+YES_BET_PENALTY_MULTIPLIER = 0.60
 
 # Bin type multipliers (from backtest)
 BIN_TYPE_MULTIPLIER = {
-    "range": 1.10,
-    "below": 0.60,
-    "above": 0.50,
+    "range": 1.15,
+    "below": 0.25,
+    "above": 0.20,
 }
 
 # T-distribution DF
