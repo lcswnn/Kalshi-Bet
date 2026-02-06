@@ -83,7 +83,7 @@ CITY_CONFIDENCE_MULTIPLIER = {
 # City base uncertainty
 CITY_BASE_UNCERTAINTY = {
     "miami": 2.0,
-    "austin": 2.0,
+    "austin": 2.1,
     "chicago": 4.0,
     "nyc": 5.0,
 }
