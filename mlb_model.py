@@ -1036,6 +1036,13 @@ if __name__ == "__main__":
     print("Platt scaling + single-side bets + 5% edge threshold")
     print("=" * 60)
 
+    # Compute and save Elo features for use by live predictor
+    raw_path = os.path.join(DATA_DIR, "all_games_raw.csv")
+    elo_df = compute_elo_features(raw_path)
+    elo_out_path = os.path.join(DATA_DIR, "elo_features.csv")
+    elo_df.to_csv(elo_out_path, index=False)
+    print(f"Saved Elo features: {elo_out_path}")
+
     df, feature_cols = prepare_features()
 
     # Show NaN rates for top features

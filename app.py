@@ -117,14 +117,14 @@ def run_model():
 @app.route("/run-sports-model", methods=["GET"])
 def run_sports_model():
     # Get parameters from query string
-    kelly_fraction = request.args.get("kelly", "0.50")
     starting_bankroll = request.args.get("bankroll", "100")
+    min_edge = request.args.get("minEdge", "5.0")
 
-    # Path to sports_betting_model.py
-    script_path = os.path.join(os.path.dirname(__file__), "sports_betting_model.py")
+    # Path to kalshi_mlb_predictor.py
+    script_path = os.path.join(os.path.dirname(__file__), "kalshi_mlb_predictor.py")
 
-    # Build command
-    cmd = [sys.executable, script_path, "--kelly", kelly_fraction, "--bankroll", starting_bankroll]
+    # Use kelly=1.0 and --json so frontend handles per-bet Kelly sizing
+    cmd = [sys.executable, script_path, "--kelly", "1.0", "--bankroll", starting_bankroll, "--min-edge", min_edge, "--json"]
 
     # Run the script and capture output with timeout
     try:
@@ -134,23 +134,32 @@ def run_sports_model():
             text=True,
             timeout=60  # 1 minute timeout
         )
-        
-        # Return the printed output (stdout)
-        return jsonify({
-            "success": True,
-            "output": result.stdout,
-            "error": result.stderr
-        })
+
+        # Parse JSON output from the script
+        import json as json_mod
+        try:
+            data = json_mod.loads(result.stdout)
+            return jsonify({
+                "success": True,
+                "data": data,
+                "error": result.stderr
+            })
+        except json_mod.JSONDecodeError:
+            return jsonify({
+                "success": False,
+                "data": None,
+                "error": result.stderr or "Failed to parse model output"
+            })
     except subprocess.TimeoutExpired:
         return jsonify({
             "success": False,
-            "output": "",
+            "data": None,
             "error": "Model execution timed out after 60 seconds."
         })
     except Exception as e:
         return jsonify({
             "success": False,
-            "output": "",
+            "data": None,
             "error": f"Error running model: {str(e)}"
         })
 

@@ -17,19 +17,19 @@
   </nav>
 
   <div class="titles-container">
-    <h1 class="inter-semibold"><span class="title-kalshi">Kalshi</span> <span class="title-sports-bets">Sports Bets</span></h1>
-    <h3 class="inter-medium">With Elo Rating System</h3>
+    <h1 class="inter-semibold"><span class="title-kalshi">Kalshi</span> <span class="title-sports-bets">MLB Predictions</span></h1>
+    <h3 class="inter-medium">Live betting edges with Elo + Ensemble ML</h3>
   </div>
 
   <div class="content-container">
     <div class="settings-container">
       <div class="setting-group">
-        <label class="inter-medium" for="kellyFraction">Kelly Fraction:</label>
-        <input type="number" id="kellyFraction" value="0.50" min="0.1" max="1.0" step="0.05">
+        <label class="inter-medium" for="startingBankroll">Bankroll ($):</label>
+        <input type="number" id="startingBankroll" value="100" min="1" step="1">
       </div>
       <div class="setting-group">
-        <label class="inter-medium" for="startingBankroll">Starting Bankroll ($):</label>
-        <input type="number" id="startingBankroll" value="100" min="1" step="1">
+        <label class="inter-medium" for="minEdge">Minimum Edge (%):</label>
+        <input type="number" id="minEdge" value="5.0" min="1" max="20" step="0.5">
       </div>
     </div>
     <button class="inter-medium button" onclick="runModel()">Generate Picks</button>
@@ -40,161 +40,41 @@
   <div id="resultsContainer" class="results-container" style="display: none;">
     <!-- Elo Rankings Section -->
     <div id="rankingsSection" class="rankings-section"></div>
-    
+
+    <!-- All Matchups Section -->
+    <div id="matchupsSection"></div>
+
     <!-- Betting Recommendations Section -->
     <div id="betsSection" class="bets-section"></div>
   </div>
 
-  <!-- Raw output toggle (for debugging) -->
-  <div class="raw-output-container" style="display: none;">
-    <button class="inter-medium toggle-raw-btn" onclick="toggleRawOutput()">Show Raw Output</button>
-    <textarea id="rawOutputBox" style="display: none;"></textarea>
-  </div>
-
   <script>
-    function toggleRawOutput() {
-      const rawBox = document.getElementById("rawOutputBox");
-      const btn = document.querySelector(".toggle-raw-btn");
-      if (rawBox.style.display === "none") {
-        rawBox.style.display = "block";
-        btn.textContent = "Hide Raw Output";
-      } else {
-        rawBox.style.display = "none";
-        btn.textContent = "Show Raw Output";
+    // Global state for Kelly recalculation
+    let globalBankroll = 100;
+    let globalBetsData = [];
+
+    function formatCloseTime(isoTime) {
+      try {
+        const dt = new Date(isoTime);
+        return dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'America/New_York' }) + ' ET';
+      } catch {
+        return 'Unknown';
       }
     }
 
-    function parseSportsOutput(text) {
-      const lines = text.split('\n');
-      const data = {
-        rankings: [],
-        bets: [],
-        summary: {}
-      };
-
-      let currentSection = null;
-      let currentBet = null;
-
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-
-        // Detect sections
-        if (line.includes('TOP') && line.includes('TEAMS BY ELO RATING')) {
-          currentSection = 'rankings';
-        } else if (line.includes('FOUND') && line.includes('BETTING OPPORTUNITIES')) {
-          currentSection = 'bets';
-          const match = line.match(/FOUND (\d+) BETTING/);
-          if (match) data.summary.totalBets = match[1];
-        } else if (line.includes('NO BETTING OPPORTUNITIES')) {
-          currentSection = 'no_bets';
-        }
-
-        // Parse rankings
-        if (currentSection === 'rankings' && line.match(/^\s*\d+\./)) {
-          const match = line.match(/(\d+)\.\s+(.+?)\s+\|\s+Rating:\s+([\d.]+)\s+\|\s+Games:\s+(\d+)\s*(.*)/);
-          if (match) {
-            data.rankings.push({
-              rank: match[1],
-              team: match[2].trim(),
-              rating: match[3],
-              games: match[4],
-              streak: match[5].trim()
-            });
-          }
-        }
-
-        // Parse bets
-        if (currentSection === 'bets' && line.match(/BET #(\d+):/)) {
-          if (currentBet) data.bets.push(currentBet);
-          const titleMatch = line.match(/BET #(\d+):\s*(.+)/);
-          currentBet = {
-            number: titleMatch[1],
-            title: titleMatch[2].trim(),
-            betOn: '',
-            opponent: '',
-            eloTeam: '',
-            eloOpponent: '',
-            modelProb: '',
-            marketPrice: '',
-            edge: '',
-            betSize: '',
-            profit: '',
-            ev: '',
-            ticker: '',
-            gameTime: '',
-            homeAway: ''
-          };
-        } else if (currentBet) {
-          if (line.includes('BET ON:')) {
-            const match = line.match(/BET ON:\s*(.+?)\s*(🏠|✈️)/);
-            if (match) {
-              currentBet.betOn = match[1].trim();
-              currentBet.homeAway = match[2] === '🏠' ? 'Home' : 'Away';
-            }
-          } else if (line.includes('OPPONENT:')) {
-            currentBet.opponent = line.match(/OPPONENT:\s*(.+)/)[1].trim();
-          } else if (line.includes('Elo:')) {
-            const match = line.match(/Elo:\s*([\d.]+)\s*.*?vs\s*([\d.]+)/);
-            if (match) {
-              currentBet.eloTeam = match[1];
-              currentBet.eloOpponent = match[2];
-            }
-          } else if (line.includes('Model probability:')) {
-            currentBet.modelProb = line.match(/Model probability:\s*([\d.]+)%/)[1];
-          } else if (line.includes('Market price:')) {
-            const match = line.match(/Market price:\s*([\d.]+)¢.*?implies\s*([\d.]+)%/);
-            if (match) {
-              currentBet.marketPrice = match[1];
-              currentBet.marketImplied = match[2];
-            }
-          } else if (line.includes('Edge:')) {
-            currentBet.edge = line.match(/Edge:\s*([+-]?[\d.]+)%/)[1];
-          } else if (line.includes('BET:')) {
-            currentBet.betSize = line.match(/BET:\s*\$?([\d.]+)/)[1];
-          } else if (line.includes('Potential profit:')) {
-            currentBet.profit = line.match(/Potential profit:\s*\$?([\d.]+)/)[1];
-          } else if (line.includes('Expected value:')) {
-            currentBet.ev = line.match(/Expected value:\s*\$?([\d.]+)/)[1];
-          } else if (line.includes('Ticker:')) {
-            currentBet.ticker = line.match(/Ticker:\s*(.+)/)[1].trim();
-          } else if (line.includes('Game time:')) {
-            currentBet.gameTime = line.match(/Game time:\s*(.+)/)[1].trim();
-          }
-        }
-
-        // Parse summary
-        if (line.includes('TOTAL WAGER:')) {
-          const match = line.match(/TOTAL WAGER:\s*\$?([\d.]+)\s*\(([\d.]+)%/);
-          if (match) {
-            data.summary.totalWager = match[1];
-            data.summary.wagerPercent = match[2];
-          }
-        } else if (line.includes('POTENTIAL PROFIT:')) {
-          data.summary.totalProfit = line.match(/POTENTIAL PROFIT:\s*\$?([\d.]+)/)[1];
-        } else if (line.includes('EXPECTED VALUE:') && !currentBet) {
-          data.summary.expectedValue = line.match(/EXPECTED VALUE:\s*\$?([\d.]+)/)[1];
-        }
-      }
-
-      // Push last bet
-      if (currentBet) data.bets.push(currentBet);
-
-      return data;
-    }
-
-    function displaySportsResults(data) {
+    function displayResults(data) {
       const rankingsSection = document.getElementById('rankingsSection');
+      const matchupsSection = document.getElementById('matchupsSection');
       const betsSection = document.getElementById('betsSection');
-      
-      // Clear previous results
+
       rankingsSection.innerHTML = '';
+      matchupsSection.innerHTML = '';
       betsSection.innerHTML = '';
 
-      // Display Elo Rankings
-      if (data.rankings.length > 0) {
-        rankingsSection.innerHTML += '<h2 class="inter-semibold section-title">📊 Elo Rankings</h2>';
-        
-        const rankingsHtml = `
+      // ── Elo Rankings ──
+      if (data.rankings && data.rankings.length > 0) {
+        rankingsSection.innerHTML = `
+          <h2 class="inter-semibold section-title">Elo Rankings</h2>
           <div class="rankings-card">
             <div class="rankings-table">
               ${data.rankings.map(team => `
@@ -202,86 +82,158 @@
                   <span class="inter-semibold rank-number">${team.rank}</span>
                   <span class="inter-semibold team-name">${team.team}</span>
                   <span class="inter-medium elo-rating">${team.rating}</span>
-                  <span class="inter-medium games-count">${team.games} games</span>
-                  ${team.streak ? `<span class="inter-medium streak">${team.streak}</span>` : ''}
                 </div>
               `).join('')}
             </div>
           </div>
         `;
-        rankingsSection.innerHTML += rankingsHtml;
       }
 
-      // Display Bets
-      if (data.bets.length > 0) {
-        betsSection.innerHTML += '<h2 class="inter-semibold section-title">🏀 Recommended Bets</h2>';
-        
-        data.bets.forEach(bet => {
-          const homeAwayBadge = bet.homeAway === 'Home' ? '🏠 Home' : '✈️ Away';
-          const edgeValue = parseFloat(bet.edge);
-          const confidenceLevel = edgeValue >= 10 ? '🔥 HIGH CONFIDENCE' : edgeValue >= 5 ? '✅ CONFIDENT' : '📊 STANDARD';
-          
+      // ── All Matchups ──
+      if (data.predictions && data.predictions.length > 0) {
+        matchupsSection.innerHTML = `
+          <h2 class="inter-semibold section-title">Today's Matchups</h2>
+          <div class="matchups-grid">
+            ${data.predictions.map(p => {
+              const homeEdge = p.home_edge;
+              const awayEdge = p.away_edge;
+              const bestEdge = Math.max(homeEdge, awayEdge);
+              const edgeClass = bestEdge >= 5 ? 'edge-good' : bestEdge >= 0 ? 'edge-neutral' : 'edge-bad';
+              return `
+                <div class="matchup-card">
+                  <div class="matchup-teams">
+                    <div class="matchup-team home">
+                      <span class="inter-semibold">${p.home_abbr}</span>
+                      <span class="inter-medium matchup-elo">${p.home_elo}</span>
+                    </div>
+                    <span class="inter-medium matchup-vs">vs</span>
+                    <div class="matchup-team away">
+                      <span class="inter-semibold">${p.away_abbr}</span>
+                      <span class="inter-medium matchup-elo">${p.away_elo}</span>
+                    </div>
+                  </div>
+                  <div class="matchup-details">
+                    <div class="matchup-prob">
+                      <span class="inter-medium">Model</span>
+                      <span class="inter-semibold">${p.model_prob_home.toFixed(1)}%</span>
+                    </div>
+                    <div class="matchup-market">
+                      <span class="inter-medium">Market</span>
+                      <span class="inter-semibold">${p.yes_price}&#162;</span>
+                    </div>
+                    <div class="matchup-edge ${edgeClass}">
+                      <span class="inter-medium">Edge</span>
+                      <span class="inter-semibold">${bestEdge >= 0 ? '+' : ''}${bestEdge.toFixed(1)}%</span>
+                    </div>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        `;
+      }
+
+      // ── Betting Recommendations with per-bet Kelly ──
+      if (data.bets && data.bets.length > 0) {
+        globalBetsData = data.bets;
+
+        betsSection.innerHTML = `<h2 class="inter-semibold section-title">Recommended Bets</h2>`;
+
+        data.bets.forEach((bet, index) => {
+          // Calculate full Kelly for this bet
+          const winProb = bet.model_prob / 100;
+          const marketProb = bet.market_price / 100;
+          const odds = (1 - marketProb) / marketProb;
+          const fullKelly = winProb - ((1 - winProb) / odds);
+          const fullKellyPercent = Math.max(0, fullKelly * 100);
+
+          // Store for recalculation
+          bet.fullKellyPercent = fullKellyPercent;
+          bet.winProbDecimal = winProb;
+          bet.marketProbDecimal = marketProb;
+
+          const edgeValue = bet.edge;
+          const confidenceLabel = edgeValue >= 10 ? 'HIGH CONFIDENCE' : edgeValue >= 5 ? 'CONFIDENT' : 'STANDARD';
+
           const betHtml = `
-            <div class="bet-card sports-bet-card">
+            <div class="bet-card sports-bet-card" id="bet-card-${index}">
               <div class="bet-header">
-                <span class="inter-semibold bet-number">BET #${bet.number}</span>
-                <span class="inter-medium matchup">${bet.title}</span>
-                <span class="inter-medium confidence-badge">${confidenceLevel}</span>
+                <span class="inter-semibold bet-number">BET #${index + 1}</span>
+                <span class="inter-medium matchup">${bet.bet_on} vs ${bet.opponent}</span>
+                <span class="inter-medium confidence-badge">${confidenceLabel}</span>
               </div>
 
               <div class="sports-matchup">
                 <div class="team-section betting-on">
-                  <p class="inter-medium label">🎰 Betting On</p>
-                  <p class="inter-semibold team">${bet.betOn}</p>
-                  <p class="inter-medium home-away">${homeAwayBadge}</p>
-                  <p class="inter-medium elo">Elo: ${bet.eloTeam}</p>
+                  <p class="inter-medium label">Betting On</p>
+                  <p class="inter-semibold team">${bet.bet_on} (${bet.bet_abbr})</p>
+                  <p class="inter-medium home-away">${bet.home_away === 'Home' ? 'Home' : 'Away'}</p>
+                  <p class="inter-medium elo">Elo: ${bet.elo_team}</p>
                 </div>
                 <div class="vs-divider inter-semibold">VS</div>
                 <div class="team-section opponent">
-                  <p class="inter-medium label">🆚 Opponent</p>
-                  <p class="inter-semibold team">${bet.opponent}</p>
-                  <p class="inter-medium elo">Elo: ${bet.eloOpponent}</p>
+                  <p class="inter-medium label">Opponent</p>
+                  <p class="inter-semibold team">${bet.opponent} (${bet.opponent_abbr})</p>
+                  <p class="inter-medium elo">Elo: ${bet.elo_opponent}</p>
                 </div>
               </div>
 
               <div class="edge-section">
-                <p class="inter-semibold subsection-title">📊 The Edge</p>
+                <p class="inter-semibold subsection-title">The Edge</p>
                 <div class="edge-stats">
                   <div class="stat-item">
                     <span class="inter-medium stat-label">Model Probability</span>
-                    <span class="inter-semibold stat-value">${bet.modelProb}%</span>
+                    <span class="inter-semibold stat-value">${bet.model_prob.toFixed(1)}%</span>
                   </div>
                   <div class="stat-item">
                     <span class="inter-medium stat-label">Market Price</span>
-                    <span class="inter-semibold stat-value">${bet.marketPrice}¢</span>
+                    <span class="inter-semibold stat-value">${bet.market_price}&#162; (${bet.market_implied}%)</span>
                   </div>
                   <div class="stat-item highlight">
                     <span class="inter-medium stat-label">Edge</span>
-                    <span class="inter-semibold stat-value">${bet.edge}%</span>
+                    <span class="inter-semibold stat-value">+${bet.edge.toFixed(1)}%</span>
                   </div>
                 </div>
               </div>
 
-              <div class="sizing-section">
-                <p class="inter-semibold subsection-title">💵 Position Sizing</p>
-                <div class="sizing-stats">
+              <div class="kelly-selection-section">
+                <p class="inter-semibold subsection-title">Position Sizing</p>
+                <div class="kelly-selector">
+                  <label class="inter-medium" for="kelly-select-${index}">Kelly Criterion:</label>
+                  <select id="kelly-select-${index}" class="kelly-dropdown" onchange="updateBetSizing(${index})">
+                    <option value="0.25">1/4 Kelly</option>
+                    <option value="0.5" selected>1/2 Kelly</option>
+                    <option value="0.75">3/4 Kelly</option>
+                    <option value="1.0">Full Kelly</option>
+                    <option value="custom">Custom</option>
+                  </select>
+                  <input type="number" id="kelly-custom-${index}" class="kelly-custom-input"
+                         value="0.5" min="0.1" max="2.0" step="0.05"
+                         style="display: none;"
+                         onchange="updateBetSizing(${index})">
+                </div>
+                <div class="sizing-stats" id="sizing-stats-${index}">
+                  <div class="stat-item">
+                    <span class="inter-medium stat-label">Full Kelly %</span>
+                    <span class="inter-semibold stat-value">${fullKellyPercent.toFixed(1)}%</span>
+                  </div>
                   <div class="stat-item highlight">
                     <span class="inter-medium stat-label">Bet Amount</span>
-                    <span class="inter-semibold stat-value">$${bet.betSize}</span>
+                    <span class="inter-semibold stat-value" id="bet-amount-${index}">$0.00</span>
                   </div>
                   <div class="stat-item success">
-                    <span class="inter-medium stat-label">Potential Profit</span>
-                    <span class="inter-semibold stat-value">$${bet.profit}</span>
+                    <span class="inter-medium stat-label">If You Win</span>
+                    <span class="inter-semibold stat-value" id="bet-profit-${index}">$0.00 (0% ROI)</span>
                   </div>
                   <div class="stat-item">
                     <span class="inter-medium stat-label">Expected Value</span>
-                    <span class="inter-semibold stat-value">$${bet.ev}</span>
+                    <span class="inter-semibold stat-value" id="bet-ev-${index}">$0.00</span>
                   </div>
                 </div>
               </div>
 
               <div class="game-info">
-                ${bet.gameTime ? `<p class="inter-medium">🕒 ${bet.gameTime}</p>` : ''}
+                ${bet.close_time ? `<p class="inter-medium">Game: ${formatCloseTime(bet.close_time)}</p>` : ''}
                 <p class="inter-medium ticker">Ticker: ${bet.ticker}</p>
               </div>
             </div>
@@ -289,39 +241,45 @@
           betsSection.innerHTML += betHtml;
         });
 
-        // Add summary
-        if (data.summary.totalBets) {
-          const summaryHtml = `
-            <div class="portfolio-summary">
-              <h3 class="inter-semibold">📊 Portfolio Summary</h3>
-              <div class="summary-grid">
-                <div class="summary-item">
-                  <span class="inter-medium">Total Bets</span>
-                  <span class="inter-semibold">${data.summary.totalBets}</span>
-                </div>
-                <div class="summary-item">
-                  <span class="inter-medium">Total Wager</span>
-                  <span class="inter-semibold">$${data.summary.totalWager} (${data.summary.wagerPercent}%)</span>
-                </div>
-                <div class="summary-item">
-                  <span class="inter-medium">Potential Profit</span>
-                  <span class="inter-semibold success">$${data.summary.totalProfit}</span>
-                </div>
-                <div class="summary-item">
-                  <span class="inter-medium">Expected Value</span>
-                  <span class="inter-semibold success">$${data.summary.expectedValue}</span>
-                </div>
+        // Initialize all bet sizings with default 1/2 Kelly
+        data.bets.forEach((_, index) => {
+          updateBetSizing(index);
+        });
+
+        // Add dynamic portfolio summary
+        betsSection.innerHTML += `
+          <div class="portfolio-summary" id="portfolioSummary">
+            <h3 class="inter-semibold">Portfolio Summary</h3>
+            <div class="summary-grid">
+              <div class="summary-item">
+                <span class="inter-medium">Total Bets</span>
+                <span class="inter-semibold" id="summaryTotalBets">${data.bets.length}</span>
+              </div>
+              <div class="summary-item">
+                <span class="inter-medium">Total Wager</span>
+                <span class="inter-semibold" id="summaryTotalWager">$0.00</span>
+              </div>
+              <div class="summary-item">
+                <span class="inter-medium">Potential Profit</span>
+                <span class="inter-semibold success" id="summaryTotalProfit">$0.00</span>
+              </div>
+              <div class="summary-item">
+                <span class="inter-medium">Expected Value</span>
+                <span class="inter-semibold success" id="summaryTotalEV">$0.00</span>
               </div>
             </div>
-          `;
-          betsSection.innerHTML += summaryHtml;
-        }
+          </div>
+        `;
+
+        // Update summary after all bets initialized
+        updatePortfolioSummary();
+
       } else {
-        betsSection.innerHTML += `
+        betsSection.innerHTML = `
           <div class="no-bets-message">
-            <h3 class="inter-semibold">❌ No Betting Opportunities Found</h3>
+            <h3 class="inter-semibold">No Betting Opportunities Found</h3>
             <p class="inter-medium">The model found no edges meeting minimum requirements.</p>
-            <p class="inter-medium">💡 This could mean:</p>
+            <p class="inter-medium">This could mean:</p>
             <ul class="inter-medium">
               <li>No games available on Kalshi today</li>
               <li>Market prices are too efficient</li>
@@ -332,42 +290,123 @@
       }
     }
 
+    function updateBetSizing(betIndex) {
+      const bet = globalBetsData[betIndex];
+      if (!bet) return;
+
+      const selectEl = document.getElementById(`kelly-select-${betIndex}`);
+      const customInput = document.getElementById(`kelly-custom-${betIndex}`);
+      const betAmountEl = document.getElementById(`bet-amount-${betIndex}`);
+      const betProfitEl = document.getElementById(`bet-profit-${betIndex}`);
+      const betEvEl = document.getElementById(`bet-ev-${betIndex}`);
+
+      // Show/hide custom input
+      if (selectEl.value === 'custom') {
+        customInput.style.display = 'inline-block';
+      } else {
+        customInput.style.display = 'none';
+      }
+
+      // Get Kelly fraction
+      let kellyFraction;
+      if (selectEl.value === 'custom') {
+        kellyFraction = parseFloat(customInput.value) || 0.5;
+      } else {
+        kellyFraction = parseFloat(selectEl.value);
+      }
+
+      // Calculate bet amount
+      const adjustedKellyPercent = bet.fullKellyPercent * kellyFraction;
+      const betAmount = Math.min((adjustedKellyPercent / 100) * globalBankroll, globalBankroll * 0.20);
+
+      // Calculate potential profit and EV
+      const marketProb = bet.marketProbDecimal;
+      const potentialProfit = betAmount * (1 - marketProb) / marketProb;
+      const roi = betAmount > 0 ? (potentialProfit / betAmount) * 100 : 0;
+      const ev = betAmount * bet.edge / 100;
+
+      // Store for summary
+      bet._currentBetAmount = betAmount;
+      bet._currentProfit = potentialProfit;
+      bet._currentEV = ev;
+
+      // Update display
+      betAmountEl.textContent = `$${betAmount.toFixed(2)}`;
+      betProfitEl.textContent = `$${potentialProfit.toFixed(2)} (${roi.toFixed(0)}% ROI)`;
+      betEvEl.textContent = `$${ev.toFixed(2)}`;
+
+      // Update portfolio summary
+      updatePortfolioSummary();
+    }
+
+    function updatePortfolioSummary() {
+      const totalWagerEl = document.getElementById('summaryTotalWager');
+      const totalProfitEl = document.getElementById('summaryTotalProfit');
+      const totalEVEl = document.getElementById('summaryTotalEV');
+
+      if (!totalWagerEl) return;
+
+      let totalWager = 0;
+      let totalProfit = 0;
+      let totalEV = 0;
+
+      globalBetsData.forEach(bet => {
+        totalWager += bet._currentBetAmount || 0;
+        totalProfit += bet._currentProfit || 0;
+        totalEV += bet._currentEV || 0;
+      });
+
+      const wagerPercent = globalBankroll > 0 ? (totalWager / globalBankroll * 100).toFixed(1) : 0;
+
+      totalWagerEl.textContent = `$${totalWager.toFixed(2)} (${wagerPercent}%)`;
+      totalProfitEl.textContent = `$${totalProfit.toFixed(2)}`;
+      totalEVEl.textContent = `$${totalEV.toFixed(2)}`;
+    }
+
     function runModel() {
-      // Get settings values
-      const kellyFraction = document.getElementById("kellyFraction").value;
       const startingBankroll = document.getElementById("startingBankroll").value;
+      const minEdge = document.getElementById("minEdge").value;
 
-      // Build URL
-      let url = `/run-sports-model?kelly=${kellyFraction}&bankroll=${startingBankroll}`;
+      globalBankroll = parseFloat(startingBankroll);
 
-      // Show loader, hide results
+      let url = `/run-sports-model?bankroll=${startingBankroll}&minEdge=${minEdge}`;
+
       document.getElementById("loader").style.display = "block";
       document.getElementById("resultsContainer").style.display = "none";
 
-      // Increase fetch timeout
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 60000); // 1 minute timeout
+      const timeoutId = setTimeout(() => controller.abort(), 60000);
 
       fetch(url, { signal: controller.signal })
         .then(response => response.json())
-        .then(data => {
+        .then(result => {
           clearTimeout(timeoutId);
           document.getElementById("loader").style.display = "none";
 
-          // Store raw output
-          document.getElementById("rawOutputBox").value = data.output || data.error || "";
+          if (result.success && result.data) {
+            if (result.data.error === 'no_games') {
+              document.getElementById("resultsContainer").innerHTML = `
+                <div class="no-bets-message">
+                  <h3 class="inter-semibold">No MLB Games Found</h3>
+                  <p class="inter-medium">This could mean:</p>
+                  <ul class="inter-medium">
+                    <li>It's the off-season</li>
+                    <li>No games are scheduled today</li>
+                    <li>Kalshi API is unavailable</li>
+                  </ul>
+                </div>
+              `;
+              document.getElementById("resultsContainer").style.display = "block";
+              return;
+            }
 
-          if (data.success !== false && data.output) {
-            // Parse and display results
-            const parsedData = parseSportsOutput(data.output);
-            displaySportsResults(parsedData);
+            displayResults(result.data);
             document.getElementById("resultsContainer").style.display = "block";
           } else {
-            // Show error
             document.getElementById("resultsContainer").innerHTML = `
               <div class="error-message">
-                <h3 class="inter-semibold">❌ Error</h3>
-                <p class="inter-medium">${data.error || "Unknown error occurred"}</p>
+                <h3 class="inter-semibold">Error</h3>
+                <p class="inter-medium">${result.error || "Unknown error occurred"}</p>
               </div>
             `;
             document.getElementById("resultsContainer").style.display = "block";
@@ -376,19 +415,17 @@
         .catch(err => {
           clearTimeout(timeoutId);
           document.getElementById("loader").style.display = "none";
-          
+
           let errorMsg = "Unknown error occurred";
           if (err.name === 'AbortError') {
-            errorMsg = `Request timed out after 1 minute.
-
-Try refreshing and running again.`;
+            errorMsg = "Request timed out after 1 minute. Try refreshing and running again.";
           } else {
             errorMsg = err.toString();
           }
 
           document.getElementById("resultsContainer").innerHTML = `
             <div class="error-message">
-              <h3 class="inter-semibold">❌ Error</h3>
+              <h3 class="inter-semibold">Error</h3>
               <pre class="inter-medium">${errorMsg}</pre>
             </div>
           `;
