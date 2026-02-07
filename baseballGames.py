@@ -33,7 +33,7 @@ TEAMS = [
 
 # If you already have raw data and just want to re-run feature engineering,
 # set this to True and place mlb_raw_games.csv in the same directory.
-SKIP_COLLECTION = True
+SKIP_COLLECTION = False
 
 
 # ── Step 1: Collect Raw Game Logs ──────────────────────────────────────────
@@ -114,7 +114,8 @@ def clean_raw(raw: pd.DataFrame) -> pd.DataFrame:
             df["season_wins"] = pd.to_numeric(split[0], errors="coerce")
             df["season_losses"] = pd.to_numeric(split[1], errors="coerce")
 
-    # Parse streak into numeric
+    # Parse streak into numeric — NOTE: BB-Ref streak includes current game,
+    # so we shift it by 1 to avoid leakage (pre-game streak only)
     if "streak" in df.columns:
         def parse_streak(s):
             s = str(s).strip()
@@ -122,7 +123,7 @@ def clean_raw(raw: pd.DataFrame) -> pd.DataFrame:
                 return int(s)
             except ValueError:
                 return 0
-        df["streak_num"] = df["streak"].apply(parse_streak)
+        df["streak_num_raw"] = df["streak"].apply(parse_streak)
 
     # Day/Night binary
     if "day_night" in df.columns:
@@ -131,6 +132,28 @@ def clean_raw(raw: pd.DataFrame) -> pd.DataFrame:
     # Extra innings flag
     if "innings" in df.columns:
         df["extra_innings"] = (df["innings"] > 9).astype(int)
+
+    # Parse date_str into proper YYYY-MM-DD game_date
+    # Format: "Thursday, Mar 28" or "Saturday, Apr 20 (1)" (doubleheader)
+    import re
+    def parse_game_date(date_str, season):
+        """Parse Baseball Reference date string into YYYY-MM-DD."""
+        if pd.isna(date_str):
+            return None
+        s = str(date_str).strip()
+        # Remove doubleheader suffix like " (1)" or " (2)"
+        s = re.sub(r'\s*\(\d+\)\s*$', '', s)
+        # Remove day-of-week prefix: "Thursday, Mar 28" -> "Mar 28"
+        if ',' in s:
+            s = s.split(',', 1)[1].strip()
+        try:
+            parsed = pd.to_datetime(f"{s} {int(season)}", format="%b %d %Y")
+            return parsed.strftime("%Y-%m-%d")
+        except Exception:
+            return None
+
+    if "date_str" in df.columns and "Season" in df.columns:
+        df["game_date"] = df.apply(lambda r: parse_game_date(r["date_str"], r["Season"]), axis=1)
 
     # Drop postponed / non-game rows
     df = df.dropna(subset=["win"])
@@ -183,6 +206,11 @@ def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
     # Season progress
     df["season_progress"] = df["game_num"] / 162.0
 
+    # Streak: shift by 1 so we only see pre-game streak (no leakage)
+    if "streak_num_raw" in df.columns:
+        df["streak_num"] = grp["streak_num_raw"].transform(lambda s: s.shift(1))
+        df["streak_num"] = df["streak_num"].fillna(0)
+
     # Rolling extra innings rate (fatigue proxy)
     if "extra_innings" in df.columns:
         df["extra_inn_rate_L10"] = grp["extra_innings"].transform(
@@ -211,7 +239,7 @@ NAME_TO_ABBR = {
     "Los Angeles Angels": "LAA", "Los Angeles Dodgers": "LAD",
     "Miami Marlins": "MIA", "Milwaukee Brewers": "MIL",
     "Minnesota Twins": "MIN", "New York Mets": "NYM",
-    "New York Yankees": "NYY", "Oakland Athletics": "OAK",
+    "New York Yankees": "NYY", "Oakland Athletics": "OAK", "Athletics": "OAK", "ATH": "OAK",
     "Philadelphia Phillies": "PHI", "Pittsburgh Pirates": "PIT",
     "San Diego Padres": "SDP", "San Francisco Giants": "SFG",
     "Seattle Mariners": "SEA", "St. Louis Cardinals": "STL",
@@ -284,6 +312,7 @@ def build_matchup_dataset(df: pd.DataFrame) -> pd.DataFrame:
             "away_runs": row["runs_allowed"],
             "game_num": gn,
             "date_str": row.get("date_str", ""),
+            "game_date": row.get("game_date", ""),
             "is_night": row.get("is_night", np.nan),
         }
 

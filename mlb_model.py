@@ -218,9 +218,20 @@ def compute_elo_features(raw_path="mlb_raw_games.csv"):
         season = int(row["Season"])
         gn = int(row["game_num"])
 
-        # Pre-game pitcher Elo (using decision pitchers as proxy)
+        # Decision pitchers from box score
         win_pitcher = row.get("Win", None)
         loss_pitcher = row.get("Loss", None)
+        home_won = row["win"] == 1
+
+        # Map to home/away sides (decision pitcher as proxy for starter)
+        # If home won: Win pitcher was on home team, Loss on away
+        # If home lost: Win pitcher was on away team, Loss on home
+        if home_won:
+            home_pitcher = win_pitcher
+            away_pitcher = loss_pitcher
+        else:
+            home_pitcher = loss_pitcher
+            away_pitcher = win_pitcher
 
         # Team Elo update
         home_elo_pre, away_elo_pre, exp_home = team_elo.update(
@@ -229,10 +240,10 @@ def compute_elo_features(raw_path="mlb_raw_games.csv"):
         )
 
         # Pitcher Elo (pre-game snapshots, then update)
-        wp_elo = pitcher_elo.get_rating(win_pitcher)
-        lp_elo = pitcher_elo.get_rating(loss_pitcher)
-        wp_conf = pitcher_elo.get_confidence(win_pitcher)
-        lp_conf = pitcher_elo.get_confidence(loss_pitcher)
+        home_p_elo = pitcher_elo.get_rating(home_pitcher)
+        away_p_elo = pitcher_elo.get_rating(away_pitcher)
+        home_p_conf = pitcher_elo.get_confidence(home_pitcher)
+        away_p_conf = pitcher_elo.get_confidence(away_pitcher)
 
         # Update pitcher Elo after recording pre-game state
         pitcher_elo.update(win_pitcher, loss_pitcher, season)
@@ -246,10 +257,12 @@ def compute_elo_features(raw_path="mlb_raw_games.csv"):
             "away_elo": away_elo_pre,
             "elo_prob_home": exp_home,
             "elo_diff": home_elo_pre - away_elo_pre,
-            "win_pitcher_elo": wp_elo,
-            "loss_pitcher_elo": lp_elo,
-            "win_pitcher_conf": wp_conf,
-            "loss_pitcher_conf": lp_conf,
+            "home_pitcher_elo": home_p_elo,
+            "away_pitcher_elo": away_p_elo,
+            "home_pitcher_conf": home_p_conf,
+            "away_pitcher_conf": away_p_conf,
+            "home_pitcher": str(home_pitcher).strip() if pd.notna(home_pitcher) else "",
+            "away_pitcher": str(away_pitcher).strip() if pd.notna(away_pitcher) else "",
         })
 
     elo_df = pd.DataFrame(records)
@@ -311,8 +324,9 @@ def load_pitcher_stats(pitcher_stats_path="mlb_pitcher_stats.csv"):
 def merge_pitcher_features(df, raw_path="mlb_raw_games.csv",
                            pitcher_stats_path="mlb_pitcher_stats.csv"):
     """
-    For each matchup row, find the winning/losing pitcher from raw data
-    and attach their season-level stats.
+    For each matchup row, find the HOME and AWAY decision pitchers from raw data
+    and attach their season-level stats. Uses home/away framing, not win/loss,
+    to avoid data leakage.
     """
     pitcher_lookup = load_pitcher_stats(pitcher_stats_path)
     if pitcher_lookup is None:
@@ -322,45 +336,53 @@ def merge_pitcher_features(df, raw_path="mlb_raw_games.csv",
     print("  Building pitcher-game mapping...")
     raw = pd.read_csv(raw_path)
     raw["is_home"] = raw["Home_Away"].apply(lambda x: 0 if str(x).strip() == "@" else 1)
+    raw["win"] = raw["W/L"].apply(
+        lambda x: 1 if str(x).startswith("W") else (0 if str(x).startswith("L") else np.nan)
+    )
     raw["game_num"] = raw.groupby(["Team", "Season"]).cumcount() + 1
 
     home_games = raw[raw["is_home"] == 1].copy()
 
-    # Map (home_team, season, game_num) -> (win_pitcher, loss_pitcher)
+    # Map (home_team, season, game_num) -> (home_pitcher, away_pitcher)
     pitcher_map = {}
     for _, row in home_games.iterrows():
         key = (row["Team"], int(row["Season"]), int(row["game_num"]))
-        pitcher_map[key] = {
-            "win_pitcher": str(row.get("Win", "")).strip(),
-            "loss_pitcher": str(row.get("Loss", "")).strip(),
-        }
+        wp = str(row.get("Win", "")).strip()
+        lp = str(row.get("Loss", "")).strip()
+        home_won = row.get("win", 0) == 1
+
+        # Map decision pitchers to home/away sides
+        if home_won:
+            pitcher_map[key] = {"home_pitcher": wp, "away_pitcher": lp}
+        else:
+            pitcher_map[key] = {"home_pitcher": lp, "away_pitcher": wp}
 
     # For each matchup, lookup pitcher season stats
     stat_cols = ["ERA", "FIP", "WAR", "WHIP", "K/9", "BB/9", "HR/9", "IP", "xFIP"]
-    new_cols = {f"wp_{c.replace('/', '_')}": [] for c in stat_cols}
-    new_cols.update({f"lp_{c.replace('/', '_')}": [] for c in stat_cols})
+    new_cols = {f"hp_{c.replace('/', '_')}": [] for c in stat_cols}
+    new_cols.update({f"ap_{c.replace('/', '_')}": [] for c in stat_cols})
 
     for _, row in df.iterrows():
         key = (row["home_team"], int(row["season"]), int(row["game_num"]))
         pitchers = pitcher_map.get(key, {})
 
-        wp = pitchers.get("win_pitcher", "")
-        lp = pitchers.get("loss_pitcher", "")
+        hp = pitchers.get("home_pitcher", "")
+        ap = pitchers.get("away_pitcher", "")
         season = int(row["season"])
 
         # Look up their season stats (use prior season if early in year)
-        wp_stats = pitcher_lookup.get((wp, season)) or pitcher_lookup.get((wp, season - 1)) or {}
-        lp_stats = pitcher_lookup.get((lp, season)) or pitcher_lookup.get((lp, season - 1)) or {}
+        hp_stats = pitcher_lookup.get((hp, season)) or pitcher_lookup.get((hp, season - 1)) or {}
+        ap_stats = pitcher_lookup.get((ap, season)) or pitcher_lookup.get((ap, season - 1)) or {}
 
         for c in stat_cols:
             col_safe = c.replace("/", "_")
-            new_cols[f"wp_{col_safe}"].append(wp_stats.get(c, np.nan))
-            new_cols[f"lp_{col_safe}"].append(lp_stats.get(c, np.nan))
+            new_cols[f"hp_{col_safe}"].append(hp_stats.get(c, np.nan))
+            new_cols[f"ap_{col_safe}"].append(ap_stats.get(c, np.nan))
 
     for col, vals in new_cols.items():
         df[col] = vals
 
-    found = df["wp_ERA"].notna().sum()
+    found = df["hp_ERA"].notna().sum()
     print(f"  ✓ Matched pitcher stats for {found}/{len(df)} games ({found/len(df)*100:.1f}%)")
     return df
 
@@ -408,17 +430,20 @@ def prepare_features(matchups_path="mlb_matchups_features.csv",
         if ec in df.columns:
             feature_cols.append(ec)
 
-    # Pitcher Elo
-    for pc in ["win_pitcher_elo", "loss_pitcher_elo", "win_pitcher_conf", "loss_pitcher_conf"]:
-        if pc in df.columns:
-            feature_cols.append(pc)
+    # Pitcher Elo — DISABLED: decision pitcher identity leaks game outcome
+    # The Win/Loss pitcher is determined AFTER the game, and which pitcher
+    # gets assigned to home vs away side depends on who won.
+    # To fix properly, need starting pitcher data (not available in BB-Ref schedule).
+    # for pc in ["home_pitcher_elo", "away_pitcher_elo", "home_pitcher_conf", "away_pitcher_conf"]:
+    #     if pc in df.columns:
+    #         feature_cols.append(pc)
 
-    # Pitcher season stats
-    for prefix in ["wp_", "lp_"]:
-        for stat in ["ERA", "FIP", "WAR", "WHIP", "K_9", "BB_9", "HR_9", "IP", "xFIP"]:
-            col = f"{prefix}{stat}"
-            if col in df.columns:
-                feature_cols.append(col)
+    # Pitcher season stats — DISABLED: same decision pitcher leak
+    # for prefix in ["hp_", "ap_"]:
+    #     for stat in ["ERA", "FIP", "WAR", "WHIP", "K_9", "BB_9", "HR_9", "IP", "xFIP"]:
+    #         col = f"{prefix}{stat}"
+    #         if col in df.columns:
+    #             feature_cols.append(col)
 
     # Derived differentials
     for w in [5, 10, 20]:
@@ -435,16 +460,16 @@ def prepare_features(matchups_path="mlb_matchups_features.csv",
     if "is_night" in df.columns:
         feature_cols.append("is_night")
 
-    # Pitcher stat differentials (wp is generally the better pitcher in that game)
-    if "wp_ERA" in df.columns:
-        df["delta_pitcher_ERA"] = df["lp_ERA"] - df["wp_ERA"]  # positive = WP has lower ERA (better)
-        df["delta_pitcher_FIP"] = df["lp_FIP"] - df["wp_FIP"]
-        df["delta_pitcher_WAR"] = df["wp_WAR"] - df["lp_WAR"]
-        df["pitcher_elo_diff"] = df["win_pitcher_elo"] - df["loss_pitcher_elo"]
-        feature_cols.extend([
-            "delta_pitcher_ERA", "delta_pitcher_FIP",
-            "delta_pitcher_WAR", "pitcher_elo_diff"
-        ])
+    # Pitcher stat differentials — DISABLED: decision pitcher leak
+    # if "hp_ERA" in df.columns:
+    #     df["delta_pitcher_ERA"] = df["ap_ERA"] - df["hp_ERA"]
+    #     df["delta_pitcher_FIP"] = df["ap_FIP"] - df["hp_FIP"]
+    #     df["delta_pitcher_WAR"] = df["hp_WAR"] - df["ap_WAR"]
+    #     df["pitcher_elo_diff"] = df["home_pitcher_elo"] - df["away_pitcher_elo"]
+    #     feature_cols.extend([
+    #         "delta_pitcher_ERA", "delta_pitcher_FIP",
+    #         "delta_pitcher_WAR", "pitcher_elo_diff"
+    #     ])
 
     feature_cols = [c for c in feature_cols if c in df.columns]
     df = df.dropna(subset=["home_win"])
@@ -560,63 +585,82 @@ class MLBEnsemble:
 # 7. REALISTIC BETTING SIMULATION
 # ═══════════════════════════════════════════════════════════════════════════
 
-def simulate_betting_realistic(y_true, y_prob):
-    """
-    Realistic betting simulation with:
-    - Flat unit sizing ($10 per bet)
-    - Actual MLB vig structure (~4.5% juice)
-    - Dynamic implied odds based on model prob vs market
-    - Separate Kelly bankroll for comparison (capped properly)
-    - Edge threshold of 3%
+def american_to_decimal(ml):
+    """Convert American moneyline to decimal odds (what you actually get paid)."""
+    ml = float(ml)
+    if ml > 0:
+        return 1 + ml / 100
+    elif ml < 0:
+        return 1 + 100 / abs(ml)
+    return np.nan
 
-    The "market" is simulated as: for each game, the true probability
-    is somewhere between 0.533 (home base rate) and the model's prediction.
-    We use a noisy market that's ~70% efficient (sharper than recreational,
-    less sharp than Pinnacle closing lines).
+
+def simulate_betting_realistic(y_true, y_prob, market_probs=None,
+                                home_odds_decimal=None, away_odds_decimal=None):
+    """
+    Realistic betting simulation.
+
+    When real sportsbook odds are provided (home_odds_decimal, away_odds_decimal),
+    uses those directly — they already include the real vig from the sportsbook.
+
+    When only market_probs (no-vig fair probabilities) are available,
+    applies synthetic vig to simulate sportsbook odds.
+
+    When nothing is available, falls back to simulated market.
     """
     np.random.seed(42)
+    using_real_odds = (home_odds_decimal is not None and away_odds_decimal is not None
+                       and len(home_odds_decimal) == len(y_true))
+    using_real_probs = (not using_real_odds and market_probs is not None
+                        and len(market_probs) == len(y_true))
 
-    # ── Flat unit betting ──
+    if using_real_odds:
+        real_count = np.sum(~np.isnan(home_odds_decimal) & ~np.isnan(away_odds_decimal))
+        print(f"    [Using REAL sportsbook odds (with vig) for {real_count}/{len(y_true)} games]")
+    elif using_real_probs:
+        print(f"    [Using real no-vig probs + synthetic vig for {np.sum(~np.isnan(market_probs))}/{len(y_true)} games]")
+
     flat_bankroll = 1000.0
-    flat_unit = 10.0  # $10 per bet
+    flat_unit = 10.0
     flat_history = [flat_bankroll]
     flat_bets = 0
     flat_wins = 0
     flat_profit = 0.0
 
-    # ── Kelly betting (properly capped) ──
     kelly_bankroll = 1000.0
     kelly_history = [kelly_bankroll]
     kelly_bets = 0
     kelly_wins = 0
 
-    # ── Parameters ──
-    vig = 0.045  # 4.5% total juice (typical MLB)
-    edge_threshold = 0.03  # Min 3% edge to bet
-    kelly_fraction = 0.10  # 10% Kelly (very conservative)
-    kelly_max_pct = 0.03  # Never bet more than 3% of Kelly bankroll
+    vig = 0.045  # Only used for simulated market fallback
+    edge_threshold = 0.03
+    kelly_fraction = 0.10
+    kelly_max_pct = 0.03
 
     for i in range(len(y_true)):
         model_p = y_prob[i]
         actual = y_true[i]
 
-        # Simulate a "market" probability
-        # The market is ~70% efficient: it knows more than baseline but less than truth
-        market_noise = np.random.normal(0, 0.04)
-        # Market is a blend of baseline (53.3%) and a noisy version of the "true" outcome
-        market_p = 0.533 * 0.3 + (model_p + market_noise) * 0.7
-        market_p = np.clip(market_p, 0.25, 0.85)
+        # Determine decimal odds for this game — ONLY use real sportsbook odds
+        if using_real_odds and not np.isnan(home_odds_decimal[i]) and not np.isnan(away_odds_decimal[i]):
+            home_odds = home_odds_decimal[i]
+            away_odds = away_odds_decimal[i]
+        elif using_real_probs and not np.isnan(market_probs[i]):
+            # Real no-vig probability with proportional vig applied
+            market_p = market_probs[i]
+            home_odds = 1.0 / (market_p * (1 + vig))
+            away_odds = 1.0 / ((1 - market_p) * (1 + vig))
+        else:
+            # No real odds available — skip this game entirely
+            # (simulated markets are unrealistically easy to beat)
+            flat_history.append(flat_bankroll)
+            kelly_history.append(kelly_bankroll)
+            continue
 
-        # Convert to decimal odds with vig
-        # No-vig odds: 1/market_p, with vig applied symmetrically
-        vig_factor = 1 - vig / 2
-        home_odds = (1 / market_p) * vig_factor
-        away_odds = (1 / (1 - market_p)) * vig_factor
-
-        # ── Check home bet ──
-        home_edge = model_p - (1 / home_odds)  # Model p minus implied p from odds
+        # Check home bet: model thinks home wins with prob model_p,
+        # sportsbook implied prob for home = 1/home_odds
+        home_edge = model_p - (1 / home_odds)
         if home_edge > edge_threshold:
-            # Flat bet
             flat_bets += 1
             if actual == 1:
                 flat_profit += flat_unit * (home_odds - 1)
@@ -626,7 +670,6 @@ def simulate_betting_realistic(y_true, y_prob):
                 flat_profit -= flat_unit
                 flat_bankroll -= flat_unit
 
-            # Kelly bet
             b = home_odds - 1
             q = 1 - model_p
             kelly_f = (b * model_p - q) / b * kelly_fraction
@@ -639,7 +682,7 @@ def simulate_betting_realistic(y_true, y_prob):
                 else:
                     kelly_bankroll -= kelly_stake
 
-        # ── Check away bet ──
+        # Check away bet
         away_edge = (1 - model_p) - (1 / away_odds)
         if away_edge > edge_threshold:
             flat_bets += 1
@@ -710,12 +753,31 @@ def evaluate_calibration(y_true, y_prob, n_bins=10):
 # 9. WALK-FORWARD VALIDATION
 # ═══════════════════════════════════════════════════════════════════════════
 
+def load_closing_odds():
+    """Load real closing odds if available."""
+    odds_path = "mlb_closing_odds.csv"
+    if not os.path.exists(odds_path):
+        print("  No mlb_closing_odds.csv found. Run: python mlb_collect_odds.py")
+        print("  (Will use simulated market instead)")
+        return None
+
+    odds = pd.read_csv(odds_path)
+    if "market_prob_home" not in odds.columns:
+        return None
+
+    print(f"  Loaded {len(odds)} real closing odds lines")
+    return odds
+
+
 def walk_forward_eval(df, feature_cols, test_seasons=None):
     """Train on past seasons, test on next. The only honest way to evaluate."""
 
     if test_seasons is None:
         all_seasons = sorted(df["season"].unique())
         test_seasons = all_seasons[-3:]
+
+    # Load real odds
+    odds_df = load_closing_odds()
 
     all_results = []
     all_preds = []
@@ -773,18 +835,144 @@ def walk_forward_eval(df, feature_cols, test_seasons=None):
             print(f"    P={row['avg_predicted']:.2f} -> Actual={row['avg_actual']:.2f}  "
                   f"(n={int(row['count']):4d})")
 
-        # Realistic betting sim
-        bet = simulate_betting_realistic(y_test, y_prob)
-        print(f"\n  Flat Betting ($10/bet):")
-        print(f"    Bets: {bet['flat']['bets']} | "
-              f"Win rate: {bet['flat']['win_rate']:.1f}% | "
-              f"Profit: ${bet['flat']['profit']:.2f} | "
-              f"ROI: {bet['flat']['roi_pct']:.1f}%")
+        # Try to match real closing odds for this season
+        market_probs = None
+        home_odds_real = None
+        away_odds_real = None
+        if odds_df is not None:
+            season_odds = odds_df[odds_df["season"] == test_season].copy()
+            if len(season_odds) > 0:
+                # Find sportsbook moneyline columns for realistic odds
+                # Prefer DraftKings/FanDuel, fall back to average across all books
+                book_cols_home = [c for c in season_odds.columns
+                                  if c.endswith("_home_ml") and "_open" not in c]
+                book_cols_away = [c.replace("_home_ml", "_away_ml") for c in book_cols_home]
+
+                # Compute average moneyline across sportsbooks for each game
+                if book_cols_home:
+                    # Average the decimal odds (not moneylines) across books
+                    for bc_h, bc_a in zip(book_cols_home, book_cols_away):
+                        if bc_a in season_odds.columns:
+                            season_odds[f"_dec_h_{bc_h}"] = season_odds[bc_h].apply(
+                                lambda x: american_to_decimal(x) if pd.notna(x) else np.nan
+                            )
+                            season_odds[f"_dec_a_{bc_a}"] = season_odds[bc_a].apply(
+                                lambda x: american_to_decimal(x) if pd.notna(x) else np.nan
+                            )
+
+                    dec_h_cols = [c for c in season_odds.columns if c.startswith("_dec_h_")]
+                    dec_a_cols = [c for c in season_odds.columns if c.startswith("_dec_a_")]
+
+                    if dec_h_cols and dec_a_cols:
+                        season_odds["_avg_home_dec"] = season_odds[dec_h_cols].mean(axis=1)
+                        season_odds["_avg_away_dec"] = season_odds[dec_a_cols].mean(axis=1)
+                        # Worst-case: lowest payout (min decimal odds) = highest vig book
+                        season_odds["_worst_home_dec"] = season_odds[dec_h_cols].min(axis=1)
+                        season_odds["_worst_away_dec"] = season_odds[dec_a_cols].min(axis=1)
+
+                # Normalize date columns for merge
+                if "date" in season_odds.columns:
+                    season_odds["_merge_date"] = pd.to_datetime(
+                        season_odds["date"]
+                    ).dt.strftime("%Y-%m-%d")
+
+                has_game_date = "game_date" in test_df.columns and test_df["game_date"].notna().any()
+
+                # Columns to aggregate in merge
+                agg_cols = {"market_prob_home": "mean"}
+                if "_avg_home_dec" in season_odds.columns:
+                    agg_cols["_avg_home_dec"] = "mean"
+                    agg_cols["_avg_away_dec"] = "mean"
+                    agg_cols["_worst_home_dec"] = "mean"
+                    agg_cols["_worst_away_dec"] = "mean"
+
+                if has_game_date and "_merge_date" in season_odds.columns:
+                    test_with_date = test_df.copy()
+                    test_with_date["_merge_date"] = test_with_date["game_date"].astype(str)
+
+                    odds_agg = (
+                        season_odds.groupby(["_merge_date", "home_team", "away_team"])
+                        .agg(agg_cols).reset_index()
+                    )
+                    merged = test_with_date.merge(
+                        odds_agg,
+                        on=["_merge_date", "home_team", "away_team"],
+                        how="left"
+                    )
+                    market_probs = merged["market_prob_home"].values
+                    matched = np.sum(~np.isnan(market_probs))
+                    print(f"  Matched {matched}/{len(test_df)} games with real odds (by date+teams)")
+                else:
+                    print("  ⚠ No game_date — falling back to team-only odds merge")
+                    odds_agg = (
+                        season_odds.groupby(["home_team", "away_team"])
+                        .agg(agg_cols).reset_index()
+                    )
+                    merged = test_df.merge(odds_agg, on=["home_team", "away_team"], how="left")
+                    market_probs = merged["market_prob_home"].values
+                    matched = np.sum(~np.isnan(market_probs))
+                    print(f"  Matched {matched}/{len(test_df)} games with real odds (team-only)")
+
+                # Extract real decimal odds if available
+                home_odds_worst = None
+                away_odds_worst = None
+                if "_avg_home_dec" in merged.columns:
+                    home_odds_real = merged["_avg_home_dec"].values
+                    away_odds_real = merged["_avg_away_dec"].values
+                    home_odds_worst = merged["_worst_home_dec"].values
+                    away_odds_worst = merged["_worst_away_dec"].values
+                    real_odds_count = np.sum(~np.isnan(home_odds_real))
+                    avg_vig = np.nanmean(
+                        1/home_odds_real + 1/away_odds_real - 1
+                    ) * 100
+                    worst_vig = np.nanmean(
+                        1/home_odds_worst + 1/away_odds_worst - 1
+                    ) * 100
+                    print(f"  Real sportsbook odds: {real_odds_count} games")
+                    print(f"    Avg book vig (line shopping): {avg_vig:.1f}%")
+                    print(f"    Worst book vig (single book): {worst_vig:.1f}%")
+
+                assert len(merged) == len(test_df), (
+                    f"Merge error: {len(merged)} rows from {len(test_df)} test games"
+                )
+
+        # Realistic betting sim — run both scenarios
+        # Best case: average across books (assumes perfect line shopping)
+        print(f"\n  === BEST CASE (line shopping across all books) ===")
+        bet_best = simulate_betting_realistic(y_test, y_prob, market_probs=market_probs,
+                                               home_odds_decimal=home_odds_real,
+                                               away_odds_decimal=away_odds_real)
+        print(f"  Flat Betting ($10/bet):")
+        print(f"    Bets: {bet_best['flat']['bets']} | "
+              f"Win rate: {bet_best['flat']['win_rate']:.1f}% | "
+              f"Profit: ${bet_best['flat']['profit']:.2f} | "
+              f"ROI: {bet_best['flat']['roi_pct']:.1f}%")
         print(f"  Kelly Betting (10% Kelly, 3% cap):")
-        print(f"    Bets: {bet['kelly']['bets']} | "
-              f"Win rate: {bet['kelly']['win_rate']:.1f}% | "
-              f"Final: ${bet['kelly']['bankroll']:.2f} | "
-              f"ROI: {bet['kelly']['roi_pct']:.1f}%")
+        print(f"    Bets: {bet_best['kelly']['bets']} | "
+              f"Win rate: {bet_best['kelly']['win_rate']:.1f}% | "
+              f"Final: ${bet_best['kelly']['bankroll']:.2f} | "
+              f"ROI: {bet_best['kelly']['roi_pct']:.1f}%")
+
+        # Worst case: worst book odds (assumes you're stuck at one bad book)
+        if home_odds_worst is not None:
+            print(f"\n  === WORST CASE (single worst-odds book) ===")
+            bet_worst = simulate_betting_realistic(y_test, y_prob, market_probs=market_probs,
+                                                    home_odds_decimal=home_odds_worst,
+                                                    away_odds_decimal=away_odds_worst)
+            print(f"  Flat Betting ($10/bet):")
+            print(f"    Bets: {bet_worst['flat']['bets']} | "
+                  f"Win rate: {bet_worst['flat']['win_rate']:.1f}% | "
+                  f"Profit: ${bet_worst['flat']['profit']:.2f} | "
+                  f"ROI: {bet_worst['flat']['roi_pct']:.1f}%")
+            print(f"  Kelly Betting (10% Kelly, 3% cap):")
+            print(f"    Bets: {bet_worst['kelly']['bets']} | "
+                  f"Win rate: {bet_worst['kelly']['win_rate']:.1f}% | "
+                  f"Final: ${bet_worst['kelly']['bankroll']:.2f} | "
+                  f"ROI: {bet_worst['kelly']['roi_pct']:.1f}%")
+        else:
+            bet_worst = bet_best
+
+        bet = bet_best  # Use best case for plots/summary
 
         # Feature importance
         imp = ensemble.feature_importance(top_n=15)
@@ -805,6 +993,9 @@ def walk_forward_eval(df, feature_cols, test_seasons=None):
             "kelly_roi": bet["kelly"]["roi_pct"],
             "flat_history": bet["flat"]["history"],
             "kelly_history": bet["kelly"]["history"],
+            "worst_flat_bets": bet_worst["flat"]["bets"],
+            "worst_flat_profit": bet_worst["flat"]["profit"],
+            "worst_flat_roi": bet_worst["flat"]["roi_pct"],
         })
 
         all_preds.append(pd.DataFrame({
@@ -814,6 +1005,7 @@ def walk_forward_eval(df, feature_cols, test_seasons=None):
             "home_win": y_test,
             "model_prob": y_prob,
             "date_str": test_df["date_str"].values if "date_str" in test_df.columns else "",
+            "game_date": test_df["game_date"].values if "game_date" in test_df.columns else "",
         }))
 
     return all_results, all_preds
@@ -912,13 +1104,14 @@ if __name__ == "__main__":
     print("=" * 60)
     if results:
         print(f"{'Season':>8} {'Acc':>8} {'Brier':>8} {'AUC':>8} "
-              f"{'Bets':>6} {'Profit':>10} {'ROI':>8}")
-        print("-" * 60)
+              f"{'Bets':>6} {'Profit':>10} {'ROI':>8} {'Worst ROI':>10}")
+        print("-" * 72)
         for r in results:
             print(f"{r['season']:>8} {r['accuracy']:>8.4f} {r['brier']:>8.4f} "
                   f"{r['auc']:>8.4f} {r['flat_bets']:>6} "
-                  f"${r['flat_profit']:>9.2f} {r['flat_roi']:>7.1f}%")
-        print("-" * 60)
+                  f"${r['flat_profit']:>9.2f} {r['flat_roi']:>7.1f}% "
+                  f"{r['worst_flat_roi']:>9.1f}%")
+        print("-" * 72)
 
         avg_acc = np.mean([r["accuracy"] for r in results])
         avg_brier = np.mean([r["brier"] for r in results])
@@ -926,11 +1119,15 @@ if __name__ == "__main__":
         avg_auc = np.mean([r["auc"] for r in results])
         total_profit = sum(r["flat_profit"] for r in results)
         total_bets = sum(r["flat_bets"] for r in results)
+        total_worst_profit = sum(r["worst_flat_profit"] for r in results)
+        total_worst_bets = sum(r["worst_flat_bets"] for r in results)
 
         print(f"{'AVG':>8} {avg_acc:>8.4f} {avg_brier:>8.4f} {avg_auc:>8.4f}")
-        print(f"\nTotal P/L: ${total_profit:.2f} over {total_bets} bets")
-        print(f"Overall ROI: {total_profit / max(total_bets * 10, 1) * 100:.1f}%")
-        print(f"Brier edge:  {avg_base - avg_brier:.4f} "
+        print(f"\nBest case (line shopping):  ${total_profit:.2f} over {total_bets} bets = "
+              f"{total_profit / max(total_bets * 10, 1) * 100:.1f}% ROI")
+        print(f"Worst case (single book):  ${total_worst_profit:.2f} over {total_worst_bets} bets = "
+              f"{total_worst_profit / max(total_worst_bets * 10, 1) * 100:.1f}% ROI")
+        print(f"\nBrier edge:  {avg_base - avg_brier:.4f} "
               f"({'✅ beating baseline' if avg_brier < avg_base else '⚠ below baseline'})")
 
     plot_results(results, preds)
