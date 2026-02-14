@@ -1017,3 +1017,129 @@ h3 {
     grid-template-columns: 1fr;
   }
 }
+
+/* ===== WEATHER BINS SPECIFIC STYLING ===== */
+
+.timing-note {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  color: grey;
+  opacity: 0.6;
+  text-align: center;
+}
+
+.conf-badge {
+  font-size: 0.8em;
+  opacity: 0.7;
+}
+
+.distribution-metrics {
+  margin: 1rem 0;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 0.5rem;
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.metric-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.metric-label {
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
+.metric-value {
+  font-weight: 600;
+}
+
+.bins-section {
+  margin: 1rem 0;
+}
+
+.bins-table {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.bins-header, .bins-row {
+  display: grid;
+  grid-template-columns: 50px 100px 80px 80px 100px;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  align-items: center;
+}
+
+.bins-header {
+  background: rgba(255, 255, 255, 0.05);
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
+.bins-row {
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  font-size: 0.85rem;
+}
+
+.bins-row.bin-highlight {
+  background: rgba(9, 194, 133, 0.1);
+}
+
+.bin-edge.positive {
+  color: #09C285;
+}
+
+.bin-edge.negative {
+  color: #ff6b6b;
+}
+
+.side-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 1rem;
+  font-size: 0.85rem;
+}
+
+.side-badge.side-no {
+  background: rgba(255, 107, 107, 0.2);
+  color: #ff6b6b;
+}
+
+.side-badge.side-yes {
+  background: rgba(9, 194, 133, 0.2);
+  color: #09C285;
+}
+
+.predictions-summary {
+  margin: 1rem 0;
+  padding: 0.75rem;
+  background: rgba(9, 194, 133, 0.08);
+  border-radius: 0.5rem;
+  border: 1px solid rgba(9, 194, 133, 0.2);
+}
+
+.prediction-item {
+  padding: 0.25rem 0;
+  font-size: 0.95rem;
+}
+
+@media (max-width: 600px) {
+  .bins-header, .bins-row {
+    grid-template-columns: 40px 80px 60px 60px 80px;
+    font-size: 0.75rem;
+  }
+
+  .metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

@@ -522,33 +522,30 @@
           updateBetSizing(index);
         });
 
-        // Add summary
-        if (data.summary.totalBets && parseInt(data.summary.totalBets) > 0) {
-          const summaryHtml = `
-            <div class="portfolio-summary">
-              <h3 class="inter-semibold">📊 Portfolio Summary</h3>
-              <div class="summary-grid">
-                <div class="summary-item">
-                  <span class="inter-medium">Total Bets</span>
-                  <span class="inter-semibold">${data.summary.totalBets}</span>
-                </div>
-                ${data.summary.totalWager ? `
-                  <div class="summary-item">
-                    <span class="inter-medium">Total Wager</span>
-                    <span class="inter-semibold">$${data.summary.totalWager} (${data.summary.wagerPercent}%)</span>
-                  </div>
-                ` : ''}
-                ${data.summary.totalProfit ? `
-                  <div class="summary-item">
-                    <span class="inter-medium">Potential Profit</span>
-                    <span class="inter-semibold success">$${data.summary.totalProfit}</span>
-                  </div>
-                ` : ''}
+        // Add dynamic summary
+        const summaryHtml = `
+          <div class="portfolio-summary" id="portfolioSummary">
+            <h3 class="inter-semibold">📊 Portfolio Summary</h3>
+            <div class="summary-grid">
+              <div class="summary-item">
+                <span class="inter-medium">Total Bets</span>
+                <span class="inter-semibold">${data.bets.length}</span>
+              </div>
+              <div class="summary-item">
+                <span class="inter-medium">Total Wager</span>
+                <span class="inter-semibold" id="summaryTotalWager">$0.00 (0.0%)</span>
+              </div>
+              <div class="summary-item">
+                <span class="inter-medium">Potential Profit</span>
+                <span class="inter-semibold success" id="summaryTotalProfit">$0.00</span>
               </div>
             </div>
-          `;
-          betsSection.innerHTML += summaryHtml;
-        }
+          </div>
+        `;
+        betsSection.innerHTML += summaryHtml;
+
+        // Update summary after all bets initialized
+        updatePortfolioSummary();
       } else {
         // Build prediction summary from forecast data, including top predicted bin
         let predictionSummary = '';
@@ -623,9 +620,36 @@
       // Calculate ROI
       const roi = betAmount > 0 ? (potentialProfit / betAmount) * 100 : 0;
 
+      // Store for portfolio summary
+      bet._currentBetAmount = betAmount;
+      bet._currentProfit = potentialProfit;
+
       // Update display
       betAmountEl.textContent = `$${betAmount.toFixed(2)}`;
       betProfitEl.textContent = `$${potentialProfit.toFixed(2)} (${roi.toFixed(0)}% ROI)`;
+
+      // Update portfolio summary
+      updatePortfolioSummary();
+    }
+
+    function updatePortfolioSummary() {
+      const totalWagerEl = document.getElementById('summaryTotalWager');
+      const totalProfitEl = document.getElementById('summaryTotalProfit');
+
+      if (!totalWagerEl) return;
+
+      let totalWager = 0;
+      let totalProfit = 0;
+
+      globalBetsData.forEach(bet => {
+        totalWager += bet._currentBetAmount || 0;
+        totalProfit += bet._currentProfit || 0;
+      });
+
+      const wagerPercent = globalBankroll > 0 ? (totalWager / globalBankroll * 100).toFixed(1) : '0.0';
+
+      totalWagerEl.textContent = `$${totalWager.toFixed(2)} (${wagerPercent}%)`;
+      totalProfitEl.textContent = `$${totalProfit.toFixed(2)}`;
     }
 
     function runModel() {
@@ -708,132 +732,6 @@ Try:
         });
     }
   </script>
-
-  <style>
-    /* Additional styles for weather bins specific elements */
-    .timing-note {
-      margin-top: 0.5rem;
-      font-size: 0.85rem;
-      color: #f0c040;
-      opacity: 0.9;
-    }
-
-    .conf-badge {
-      font-size: 0.8em;
-      opacity: 0.7;
-    }
-
-    .distribution-metrics {
-      margin: 1rem 0;
-      padding: 0.75rem;
-      background: rgba(255, 255, 255, 0.03);
-      border-radius: 0.5rem;
-    }
-
-    .metrics-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 0.75rem;
-      margin-top: 0.5rem;
-    }
-
-    .metric-item {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 0.25rem;
-    }
-
-    .metric-label {
-      font-size: 0.75rem;
-      opacity: 0.7;
-    }
-
-    .metric-value {
-      font-weight: 600;
-    }
-
-    .bins-section {
-      margin: 1rem 0;
-    }
-
-    .bins-table {
-      background: rgba(0, 0, 0, 0.2);
-      border-radius: 0.5rem;
-      overflow: hidden;
-    }
-
-    .bins-header, .bins-row {
-      display: grid;
-      grid-template-columns: 50px 100px 80px 80px 100px;
-      gap: 0.5rem;
-      padding: 0.5rem 0.75rem;
-      align-items: center;
-    }
-
-    .bins-header {
-      background: rgba(255, 255, 255, 0.05);
-      font-size: 0.75rem;
-      opacity: 0.7;
-    }
-
-    .bins-row {
-      border-top: 1px solid rgba(255, 255, 255, 0.05);
-      font-size: 0.85rem;
-    }
-
-    .bins-row.bin-highlight {
-      background: rgba(9, 194, 133, 0.1);
-    }
-
-    .bin-edge.positive {
-      color: #09C285;
-    }
-
-    .bin-edge.negative {
-      color: #ff6b6b;
-    }
-
-    .side-badge {
-      padding: 0.25rem 0.75rem;
-      border-radius: 1rem;
-      font-size: 0.85rem;
-    }
-
-    .side-badge.side-no {
-      background: rgba(255, 107, 107, 0.2);
-      color: #ff6b6b;
-    }
-
-    .side-badge.side-yes {
-      background: rgba(9, 194, 133, 0.2);
-      color: #09C285;
-    }
-
-    .predictions-summary {
-      margin: 1rem 0;
-      padding: 0.75rem;
-      background: rgba(9, 194, 133, 0.08);
-      border-radius: 0.5rem;
-      border: 1px solid rgba(9, 194, 133, 0.2);
-    }
-
-    .prediction-item {
-      padding: 0.25rem 0;
-      font-size: 0.95rem;
-    }
-
-    @media (max-width: 600px) {
-      .bins-header, .bins-row {
-        grid-template-columns: 40px 80px 60px 60px 80px;
-        font-size: 0.75rem;
-      }
-
-      .metrics-grid {
-        grid-template-columns: repeat(2, 1fr);
-      }
-    }
-  </style>
 
 </body>
 </html>
