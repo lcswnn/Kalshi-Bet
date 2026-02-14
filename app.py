@@ -171,8 +171,8 @@ def run_weather_bins_model():
     custom_date = request.args.get("customDate", "")
     city_filter = request.args.get("city", "all")
 
-    # Path to ensemble_v10-2.py
-    script_path = os.path.join(os.path.dirname(__file__), "ensemble_v10-2.py")
+    # Path to ensemble_v10-3.py
+    script_path = os.path.join(os.path.dirname(__file__), "ensemble_v10-3.py")
 
     # Build command with date arguments
     cmd = [sys.executable, script_path, "--bankroll", starting_bankroll]

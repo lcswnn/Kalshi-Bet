@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
-  <title>Kalshi Bets - Weather Bins v10.2</title>
+  <title>Kalshi Bets - Weather Bins v10.3</title>
 </head>
 <body>
   <nav class="navbar">
@@ -18,7 +18,8 @@
 
   <div class="titles-container">
     <h1 class="inter-semibold"><span class="title-kalshi">Kalshi</span> <span class="title-weather-bets">Weather Bins</span></h1>
-    <h3 class="inter-medium">Bin-Based Model v.10.2</h3>
+    <h3 class="inter-medium">Bin-Based Model v.10.3</h3>
+    <p class="inter-medium timing-note">For best results, run this model between 4-8 PM ET</p>
   </div>
 
   <div class="content-container">
@@ -549,12 +550,16 @@
           betsSection.innerHTML += summaryHtml;
         }
       } else {
-        // Build prediction summary from forecast data
+        // Build prediction summary from forecast data, including top predicted bin
         let predictionSummary = '';
         if (data.forecasts.length > 0) {
           const cityPredictions = data.forecasts
             .filter(city => city.latentForecast)
-            .map(city => `<div class="prediction-item"><span class="inter-medium">${city.name}:</span> <span class="inter-semibold">${city.latentForecast}</span></div>`)
+            .map(city => {
+              const topBin = city.bins.length > 0 ? city.bins[0] : null;
+              const binText = topBin ? ` — predicted bin: <span class="inter-semibold">${topBin.label}</span> (${topBin.calProb}%)` : '';
+              return `<div class="prediction-item"><span class="inter-medium">${city.name}:</span> <span class="inter-semibold">${city.latentForecast}</span>${binText}</div>`;
+            })
             .join('');
           if (cityPredictions) {
             predictionSummary = `
@@ -706,6 +711,13 @@ Try:
 
   <style>
     /* Additional styles for weather bins specific elements */
+    .timing-note {
+      margin-top: 0.5rem;
+      font-size: 0.85rem;
+      color: #f0c040;
+      opacity: 0.9;
+    }
+
     .conf-badge {
       font-size: 0.8em;
       opacity: 0.7;
