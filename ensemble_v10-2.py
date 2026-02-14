@@ -943,6 +943,49 @@ def print_header(target_date):
     print("=" * 70)
 
 
+def print_forecasts_only(city_key: str, forecasts: List[Forecast]):
+    """Print city forecast info without bin distribution (when markets aren't available)."""
+    city = CITIES[city_key]
+    city_mult = CITY_CONFIDENCE_MULTIPLIER.get(city_key, 1.0)
+    bias = STATION_BIAS.get(city_key, 0.0)
+
+    emoji = "✅" if city_mult >= 1.0 else "⚠️"
+    print(f"\n{'─'*70}")
+    print(f"📍 {city['name'].upper()} {emoji} (conf: {city_mult:.2f}x)")
+    print(f"{'─'*70}")
+
+    print(f"\n  📡 FORECASTS (bias: {bias:+.1f}°F):")
+    adjusted_temps = []
+    for f in forecasts:
+        adjusted = f.temperature + bias
+        adjusted_temps.append((f, adjusted))
+        marker = "⭐" if f.source == "NWS" else ""
+        print(f"      {f.source:<12} {f.temperature:>5.1f}°F → {adjusted:>5.1f}°F {marker}")
+
+    # Simple weighted average for latent forecast
+    total_weight = sum(f.weight for f, _ in adjusted_temps)
+    if total_weight > 0:
+        latent = sum(adj * f.weight for f, adj in adjusted_temps) / total_weight
+    else:
+        latent = adjusted_temps[0][1] if adjusted_temps else 0
+
+    temps = [adj for _, adj in adjusted_temps]
+    model_spread = max(temps) - min(temps) if len(temps) >= 2 else 0
+    base_sigma = CITY_BASE_UNCERTAINTY.get(city_key, 3.0)
+    spread_sigma = model_spread / 2.0
+    if model_spread <= 2.0:
+        uncertainty_mult = 0.85
+    elif model_spread <= 4.0:
+        uncertainty_mult = 1.0
+    else:
+        uncertainty_mult = 1.25
+    effective_sigma = (base_sigma**2 + spread_sigma**2)**0.5 * uncertainty_mult
+
+    print(f"\n  🎯 LATENT FORECAST: {latent:.1f}°F")
+    print(f"     Uncertainty: {effective_sigma:.1f}°F | Model Spread: {model_spread:.1f}°F")
+    print(f"\n  ⚠️ No market data available — bin distribution not computed")
+
+
 def print_distribution(city_key: str, distribution: BinDistribution, forecasts: List[Forecast]):
     city = CITIES[city_key]
     city_mult = CITY_CONFIDENCE_MULTIPLIER.get(city_key, 1.0)
@@ -1048,12 +1091,14 @@ def analyze_city(city_key: str, target_date, bankroll: float) -> Tuple[Optional[
     markets = fetch_kalshi_markets(city["kalshi_series"], target_date)
     if not markets:
         print(f"     ❌ No markets found")
+        print_forecasts_only(city_key, forecasts)
         return None, []
     print(f"     ✅ Found {len(markets)} contracts")
-    
+
     bins = parse_kalshi_bins(markets)
     if not bins:
         print(f"     ❌ Could not parse bins")
+        print_forecasts_only(city_key, forecasts)
         return None, []
     
     spread_warnings = sum(1 for b in bins if b.spread_warning)

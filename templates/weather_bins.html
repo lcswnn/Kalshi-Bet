@@ -549,15 +549,33 @@
           betsSection.innerHTML += summaryHtml;
         }
       } else {
+        // Build prediction summary from forecast data
+        let predictionSummary = '';
+        if (data.forecasts.length > 0) {
+          const cityPredictions = data.forecasts
+            .filter(city => city.latentForecast)
+            .map(city => `<div class="prediction-item"><span class="inter-medium">${city.name}:</span> <span class="inter-semibold">${city.latentForecast}</span></div>`)
+            .join('');
+          if (cityPredictions) {
+            predictionSummary = `
+              <div class="predictions-summary">
+                <p class="inter-semibold subsection-label">🎯 Model Predictions</p>
+                ${cityPredictions}
+              </div>
+            `;
+          }
+        }
+
         betsSection.innerHTML += `
           <div class="no-bets-message">
-            <h3 class="inter-semibold">🛑 No Bets Recommended Today</h3>
+            <h3 class="inter-semibold">No Bets Recommended Today</h3>
+            ${predictionSummary}
             <p class="inter-medium">No qualifying bin opportunities found. This could mean:</p>
             <ul class="inter-medium">
               <li>High entropy (too much uncertainty in bin probabilities)</li>
               <li>No bins with sufficient edge after calibration</li>
               <li>Wide bid-ask spreads filtering out opportunities</li>
-              <li>Market is efficiently priced</li>
+              <li>Market is efficiently priced or not yet available</li>
             </ul>
             <p class="inter-medium">💡 Sitting out is a valid strategy!</p>
           </div>
@@ -778,6 +796,19 @@ Try:
     .side-badge.side-yes {
       background: rgba(9, 194, 133, 0.2);
       color: #09C285;
+    }
+
+    .predictions-summary {
+      margin: 1rem 0;
+      padding: 0.75rem;
+      background: rgba(9, 194, 133, 0.08);
+      border-radius: 0.5rem;
+      border: 1px solid rgba(9, 194, 133, 0.2);
+    }
+
+    .prediction-item {
+      padding: 0.25rem 0;
+      font-size: 0.95rem;
     }
 
     @media (max-width: 600px) {

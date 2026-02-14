@@ -1,0 +1,2176 @@
+{
+  "station": "KMIA",
+  "analysis_time": "2026-02-08T19:26:22.738016+00:00",
+  "max_displayed": {
+    "time": "2026-02-07T21:53:00+00:00",
+    "raw_celsius": 25.6,
+    "raw_fahrenheit": 78.08,
+    "displayed_fahrenheit": 78.8,
+    "actual_rounded_fahrenheit": 78
+  },
+  "max_actual": {
+    "time": "2026-02-07T21:50:00+00:00",
+    "raw_celsius": 26,
+    "raw_fahrenheit": 78.8,
+    "displayed_fahrenheit": 78.8,
+    "actual_rounded_fahrenheit": 79
+  },
+  "all_observations": [
+    {
+      "time": "2026-02-08T19:05:00+00:00",
+      "raw_celsius": 23,
+      "raw_fahrenheit": 73.4,
+      "displayed_fahrenheit": 73.4,
+      "actual_rounded_fahrenheit": 73
+    },
+    {
+      "time": "2026-02-08T19:00:00+00:00",
+      "raw_celsius": 23,
+      "raw_fahrenheit": 73.4,
+      "displayed_fahrenheit": 73.4,
+      "actual_rounded_fahrenheit": 73
+    },
+    {
+      "time": "2026-02-08T18:55:00+00:00",
+      "raw_celsius": 23,
+      "raw_fahrenheit": 73.4,
+      "displayed_fahrenheit": 73.4,
+      "actual_rounded_fahrenheit": 73
+    },
+    {
+      "time": "2026-02-08T18:53:00+00:00",
+      "raw_celsius": 22.8,
+      "raw_fahrenheit": 73.04,
+      "displayed_fahrenheit": 73.4,
+      "actual_rounded_fahrenheit": 73
+    },
+    {
+      "time": "2026-02-08T18:50:00+00:00",
+      "raw_celsius": 23,
+      "raw_fahrenheit": 73.4,
+      "displayed_fahrenheit": 73.4,
+      "actual_rounded_fahrenheit": 73
+    },
+    {
+      "time": "2026-02-08T18:45:00+00:00",
+      "raw_celsius": 23,
+      "raw_fahrenheit": 73.4,
+      "displayed_fahrenheit": 73.4,
+      "actual_rounded_fahrenheit": 73
+    },
+    {
+      "time": "2026-02-08T18:40:00+00:00",
+      "raw_celsius": 22,
+      "raw_fahrenheit": 71.6,
+      "displayed_fahrenheit": 71.6,
+      "actual_rounded_fahrenheit": 72
+    },
+    {
+      "time": "2026-02-08T18:35:00+00:00",
+      "raw_celsius": 23,
+      "raw_fahrenheit": 73.4,
+      "displayed_fahrenheit": 73.4,
+      "actual_rounded_fahrenheit": 73
+    },
+    {
+      "time": "2026-02-08T18:30:00+00:00",
+      "raw_celsius": 22,
+      "raw_fahrenheit": 71.6,
+      "displayed_fahrenheit": 71.6,
+      "actual_rounded_fahrenheit": 72
+    },
+    {
+      "time": "2026-02-08T18:25:00+00:00",
+      "raw_celsius": 23,
+      "raw_fahrenheit": 73.4,
+      "displayed_fahrenheit": 73.4,
+      "actual_rounded_fahrenheit": 73
+    },
+    {
+      "time": "2026-02-08T18:20:00+00:00",
+      "raw_celsius": 23,
+      "raw_fahrenheit": 73.4,
+      "displayed_fahrenheit": 73.4,
+      "actual_rounded_fahrenheit": 73
+    },
+    {
+      "time": "2026-02-08T18:15:00+00:00",
+      "raw_celsius": 23,
+      "raw_fahrenheit": 73.4,
+      "displayed_fahrenheit": 73.4,
+      "actual_rounded_fahrenheit": 73
+    },
+    {
+      "time": "2026-02-08T18:10:00+00:00",
+      "raw_celsius": 22,
+      "raw_fahrenheit": 71.6,
+      "displayed_fahrenheit": 71.6,
+      "actual_rounded_fahrenheit": 72
+    },
+    {
+      "time": "2026-02-08T18:05:00+00:00",
+      "raw_celsius": 23,
+      "raw_fahrenheit": 73.4,
+      "displayed_fahrenheit": 73.4,
+      "actual_rounded_fahrenheit": 73
+    },
+    {
+      "time": "2026-02-08T18:00:00+00:00",
+      "raw_celsius": 23,
+      "raw_fahrenheit": 73.4,
+      "displayed_fahrenheit": 73.4,
+      "actual_rounded_fahrenheit": 73
+    },
+    {
+      "time": "2026-02-08T17:55:00+00:00",
+      "raw_celsius": 22,
+      "raw_fahrenheit": 71.6,
+      "displayed_fahrenheit": 71.6,
+      "actual_rounded_fahrenheit": 72
+    },
+    {
+      "time": "2026-02-08T17:53:00+00:00",
+      "raw_celsius": 22.8,
+      "raw_fahrenheit": 73.04,
+      "displayed_fahrenheit": 73.4,
+      "actual_rounded_fahrenheit": 73
+    },
+    {
+      "time": "2026-02-08T17:50:00+00:00",
+      "raw_celsius": 23,
+      "raw_fahrenheit": 73.4,
+      "displayed_fahrenheit": 73.4,
+      "actual_rounded_fahrenheit": 73
+    },
+    {
+      "time": "2026-02-08T17:45:00+00:00",
+      "raw_celsius": 23,
+      "raw_fahrenheit": 73.4,
+      "displayed_fahrenheit": 73.4,
+      "actual_rounded_fahrenheit": 73
+    },
+    {
+      "time": "2026-02-08T17:40:00+00:00",
+      "raw_celsius": 23,
+      "raw_fahrenheit": 73.4,
+      "displayed_fahrenheit": 73.4,
+      "actual_rounded_fahrenheit": 73
+    },
+    {
+      "time": "2026-02-08T17:35:00+00:00",
+      "raw_celsius": 22,
+      "raw_fahrenheit": 71.6,
+      "displayed_fahrenheit": 71.6,
+      "actual_rounded_fahrenheit": 72
+    },
+    {
+      "time": "2026-02-08T17:30:00+00:00",
+      "raw_celsius": 22,
+      "raw_fahrenheit": 71.6,
+      "displayed_fahrenheit": 71.6,
+      "actual_rounded_fahrenheit": 72
+    },
+    {
+      "time": "2026-02-08T17:25:00+00:00",
+      "raw_celsius": 23,
+      "raw_fahrenheit": 73.4,
+      "displayed_fahrenheit": 73.4,
+      "actual_rounded_fahrenheit": 73
+    },
+    {
+      "time": "2026-02-08T17:20:00+00:00",
+      "raw_celsius": 22,
+      "raw_fahrenheit": 71.6,
+      "displayed_fahrenheit": 71.6,
+      "actual_rounded_fahrenheit": 72
+    },
+    {
+      "time": "2026-02-08T17:15:00+00:00",
+      "raw_celsius": 22,
+      "raw_fahrenheit": 71.6,
+      "displayed_fahrenheit": 71.6,
+      "actual_rounded_fahrenheit": 72
+    },
+    {
+      "time": "2026-02-08T17:10:00+00:00",
+      "raw_celsius": 22,
+      "raw_fahrenheit": 71.6,
+      "displayed_fahrenheit": 71.6,
+      "actual_rounded_fahrenheit": 72
+    },
+    {
+      "time": "2026-02-08T17:05:00+00:00",
+      "raw_celsius": 22,
+      "raw_fahrenheit": 71.6,
+      "displayed_fahrenheit": 71.6,
+      "actual_rounded_fahrenheit": 72
+    },
+    {
+      "time": "2026-02-08T17:00:00+00:00",
+      "raw_celsius": 22,
+      "raw_fahrenheit": 71.6,
+      "displayed_fahrenheit": 71.6,
+      "actual_rounded_fahrenheit": 72
+    },
+    {
+      "time": "2026-02-08T16:55:00+00:00",
+      "raw_celsius": 22,
+      "raw_fahrenheit": 71.6,
+      "displayed_fahrenheit": 71.6,
+      "actual_rounded_fahrenheit": 72
+    },
+    {
+      "time": "2026-02-08T16:53:00+00:00",
+      "raw_celsius": 21.7,
+      "raw_fahrenheit": 71.06,
+      "displayed_fahrenheit": 71.6,
+      "actual_rounded_fahrenheit": 71
+    },
+    {
+      "time": "2026-02-08T16:50:00+00:00",
+      "raw_celsius": 22,
+      "raw_fahrenheit": 71.6,
+      "displayed_fahrenheit": 71.6,
+      "actual_rounded_fahrenheit": 72
+    },
+    {
+      "time": "2026-02-08T16:45:00+00:00",
+      "raw_celsius": 22,
+      "raw_fahrenheit": 71.6,
+      "displayed_fahrenheit": 71.6,
+      "actual_rounded_fahrenheit": 72
+    },
+    {
+      "time": "2026-02-08T16:40:00+00:00",
+      "raw_celsius": 21,
+      "raw_fahrenheit": 69.8,
+      "displayed_fahrenheit": 69.8,
+      "actual_rounded_fahrenheit": 70
+    },
+    {
+      "time": "2026-02-08T16:35:00+00:00",
+      "raw_celsius": 21,
+      "raw_fahrenheit": 69.8,
+      "displayed_fahrenheit": 69.8,
+      "actual_rounded_fahrenheit": 70
+    },
+    {
+      "time": "2026-02-08T16:30:00+00:00",
+      "raw_celsius": 21,
+      "raw_fahrenheit": 69.8,
+      "displayed_fahrenheit": 69.8,
+      "actual_rounded_fahrenheit": 70
+    },
+    {
+      "time": "2026-02-08T16:25:00+00:00",
+      "raw_celsius": 21,
+      "raw_fahrenheit": 69.8,
+      "displayed_fahrenheit": 69.8,
+      "actual_rounded_fahrenheit": 70
+    },
+    {
+      "time": "2026-02-08T16:20:00+00:00",
+      "raw_celsius": 22,
+      "raw_fahrenheit": 71.6,
+      "displayed_fahrenheit": 71.6,
+      "actual_rounded_fahrenheit": 72
+    },
+    {
+      "time": "2026-02-08T16:15:00+00:00",
+      "raw_celsius": 22,
+      "raw_fahrenheit": 71.6,
+      "displayed_fahrenheit": 71.6,
+      "actual_rounded_fahrenheit": 72
+    },
+    {
+      "time": "2026-02-08T16:10:00+00:00",
+      "raw_celsius": 21,
+      "raw_fahrenheit": 69.8,
+      "displayed_fahrenheit": 69.8,
+      "actual_rounded_fahrenheit": 70
+    },
+    {
+      "time": "2026-02-08T16:05:00+00:00",
+      "raw_celsius": 22,
+      "raw_fahrenheit": 71.6,
+      "displayed_fahrenheit": 71.6,
+      "actual_rounded_fahrenheit": 72
+    },
+    {
+      "time": "2026-02-08T16:00:00+00:00",
+      "raw_celsius": 21,
+      "raw_fahrenheit": 69.8,
+      "displayed_fahrenheit": 69.8,
+      "actual_rounded_fahrenheit": 70
+    },
+    {
+      "time": "2026-02-08T15:55:00+00:00",
+      "raw_celsius": 21,
+      "raw_fahrenheit": 69.8,
+      "displayed_fahrenheit": 69.8,
+      "actual_rounded_fahrenheit": 70
+    },
+    {
+      "time": "2026-02-08T15:53:00+00:00",
+      "raw_celsius": 21.1,
+      "raw_fahrenheit": 69.98,
+      "displayed_fahrenheit": 69.8,
+      "actual_rounded_fahrenheit": 70
+    },
+    {
+      "time": "2026-02-08T15:50:00+00:00",
+      "raw_celsius": 21,
+      "raw_fahrenheit": 69.8,
+      "displayed_fahrenheit": 69.8,
+      "actual_rounded_fahrenheit": 70
+    },
+    {
+      "time": "2026-02-08T15:45:00+00:00",
+      "raw_celsius": 21,
+      "raw_fahrenheit": 69.8,
+      "displayed_fahrenheit": 69.8,
+      "actual_rounded_fahrenheit": 70
+    },
+    {
+      "time": "2026-02-08T15:40:00+00:00",
+      "raw_celsius": 22,
+      "raw_fahrenheit": 71.6,
+      "displayed_fahrenheit": 71.6,
+      "actual_rounded_fahrenheit": 72
+    },
+    {
+      "time": "2026-02-08T15:35:00+00:00",
+      "raw_celsius": 21,
+      "raw_fahrenheit": 69.8,
+      "displayed_fahrenheit": 69.8,
+      "actual_rounded_fahrenheit": 70
+    },
+    {
+      "time": "2026-02-08T15:30:00+00:00",
+      "raw_celsius": 21,
+      "raw_fahrenheit": 69.8,
+      "displayed_fahrenheit": 69.8,
+      "actual_rounded_fahrenheit": 70
+    },
+    {
+      "time": "2026-02-08T15:25:00+00:00",
+      "raw_celsius": 21,
+      "raw_fahrenheit": 69.8,
+      "displayed_fahrenheit": 69.8,
+      "actual_rounded_fahrenheit": 70
+    },
+    {
+      "time": "2026-02-08T15:20:00+00:00",
+      "raw_celsius": 21,
+      "raw_fahrenheit": 69.8,
+      "displayed_fahrenheit": 69.8,
+      "actual_rounded_fahrenheit": 70
+    },
+    {
+      "time": "2026-02-08T15:15:00+00:00",
+      "raw_celsius": 21,
+      "raw_fahrenheit": 69.8,
+      "displayed_fahrenheit": 69.8,
+      "actual_rounded_fahrenheit": 70
+    },
+    {
+      "time": "2026-02-08T15:10:00+00:00",
+      "raw_celsius": 20,
+      "raw_fahrenheit": 68.0,
+      "displayed_fahrenheit": 68.0,
+      "actual_rounded_fahrenheit": 68
+    },
+    {
+      "time": "2026-02-08T15:05:00+00:00",
+      "raw_celsius": 20,
+      "raw_fahrenheit": 68.0,
+      "displayed_fahrenheit": 68.0,
+      "actual_rounded_fahrenheit": 68
+    },
+    {
+      "time": "2026-02-08T15:00:00+00:00",
+      "raw_celsius": 20,
+      "raw_fahrenheit": 68.0,
+      "displayed_fahrenheit": 68.0,
+      "actual_rounded_fahrenheit": 68
+    },
+    {
+      "time": "2026-02-08T14:55:00+00:00",
+      "raw_celsius": 20,
+      "raw_fahrenheit": 68.0,
+      "displayed_fahrenheit": 68.0,
+      "actual_rounded_fahrenheit": 68
+    },
+    {
+      "time": "2026-02-08T14:53:00+00:00",
+      "raw_celsius": 20,
+      "raw_fahrenheit": 68.0,
+      "displayed_fahrenheit": 68.0,
+      "actual_rounded_fahrenheit": 68
+    },
+    {
+      "time": "2026-02-08T14:50:00+00:00",
+      "raw_celsius": 19,
+      "raw_fahrenheit": 66.2,
+      "displayed_fahrenheit": 66.2,
+      "actual_rounded_fahrenheit": 66
+    },
+    {
+      "time": "2026-02-08T14:45:00+00:00",
+      "raw_celsius": 19,
+      "raw_fahrenheit": 66.2,
+      "displayed_fahrenheit": 66.2,
+      "actual_rounded_fahrenheit": 66
+    },
+    {
+      "time": "2026-02-08T14:40:00+00:00",
+      "raw_celsius": 19,
+      "raw_fahrenheit": 66.2,
+      "displayed_fahrenheit": 66.2,
+      "actual_rounded_fahrenheit": 66
+    },
+    {
+      "time": "2026-02-08T14:35:00+00:00",
+      "raw_celsius": 19,
+      "raw_fahrenheit": 66.2,
+      "displayed_fahrenheit": 66.2,
+      "actual_rounded_fahrenheit": 66
+    },
+    {
+      "time": "2026-02-08T14:30:00+00:00",
+      "raw_celsius": 18,
+      "raw_fahrenheit": 64.4,
+      "displayed_fahrenheit": 64.4,
+      "actual_rounded_fahrenheit": 64
+    },
+    {
+      "time": "2026-02-08T14:25:00+00:00",
+      "raw_celsius": 18,
+      "raw_fahrenheit": 64.4,
+      "displayed_fahrenheit": 64.4,
+      "actual_rounded_fahrenheit": 64
+    },
+    {
+      "time": "2026-02-08T14:20:00+00:00",
+      "raw_celsius": 18,
+      "raw_fahrenheit": 64.4,
+      "displayed_fahrenheit": 64.4,
+      "actual_rounded_fahrenheit": 64
+    },
+    {
+      "time": "2026-02-08T14:15:00+00:00",
+      "raw_celsius": 18,
+      "raw_fahrenheit": 64.4,
+      "displayed_fahrenheit": 64.4,
+      "actual_rounded_fahrenheit": 64
+    },
+    {
+      "time": "2026-02-08T14:10:00+00:00",
+      "raw_celsius": 17,
+      "raw_fahrenheit": 62.6,
+      "displayed_fahrenheit": 62.6,
+      "actual_rounded_fahrenheit": 63
+    },
+    {
+      "time": "2026-02-08T14:05:00+00:00",
+      "raw_celsius": 17,
+      "raw_fahrenheit": 62.6,
+      "displayed_fahrenheit": 62.6,
+      "actual_rounded_fahrenheit": 63
+    },
+    {
+      "time": "2026-02-08T14:00:00+00:00",
+      "raw_celsius": 17,
+      "raw_fahrenheit": 62.6,
+      "displayed_fahrenheit": 62.6,
+      "actual_rounded_fahrenheit": 63
+    },
+    {
+      "time": "2026-02-08T13:55:00+00:00",
+      "raw_celsius": 17,
+      "raw_fahrenheit": 62.6,
+      "displayed_fahrenheit": 62.6,
+      "actual_rounded_fahrenheit": 63
+    },
+    {
+      "time": "2026-02-08T13:53:00+00:00",
+      "raw_celsius": 16.7,
+      "raw_fahrenheit": 62.059999999999995,
+      "displayed_fahrenheit": 62.6,
+      "actual_rounded_fahrenheit": 62
+    },
+    {
+      "time": "2026-02-08T13:50:00+00:00",
+      "raw_celsius": 16,
+      "raw_fahrenheit": 60.8,
+      "displayed_fahrenheit": 60.8,
+      "actual_rounded_fahrenheit": 61
+    },
+    {
+      "time": "2026-02-08T13:45:00+00:00",
+      "raw_celsius": 16,
+      "raw_fahrenheit": 60.8,
+      "displayed_fahrenheit": 60.8,
+      "actual_rounded_fahrenheit": 61
+    },
+    {
+      "time": "2026-02-08T13:40:00+00:00",
+      "raw_celsius": 16,
+      "raw_fahrenheit": 60.8,
+      "displayed_fahrenheit": 60.8,
+      "actual_rounded_fahrenheit": 61
+    },
+    {
+      "time": "2026-02-08T13:35:00+00:00",
+      "raw_celsius": 16,
+      "raw_fahrenheit": 60.8,
+      "displayed_fahrenheit": 60.8,
+      "actual_rounded_fahrenheit": 61
+    },
+    {
+      "time": "2026-02-08T13:30:00+00:00",
+      "raw_celsius": 15,
+      "raw_fahrenheit": 59.0,
+      "displayed_fahrenheit": 59.0,
+      "actual_rounded_fahrenheit": 59
+    },
+    {
+      "time": "2026-02-08T13:25:00+00:00",
+      "raw_celsius": 15,
+      "raw_fahrenheit": 59.0,
+      "displayed_fahrenheit": 59.0,
+      "actual_rounded_fahrenheit": 59
+    },
+    {
+      "time": "2026-02-08T13:20:00+00:00",
+      "raw_celsius": 15,
+      "raw_fahrenheit": 59.0,
+      "displayed_fahrenheit": 59.0,
+      "actual_rounded_fahrenheit": 59
+    },
+    {
+      "time": "2026-02-08T13:15:00+00:00",
+      "raw_celsius": 14,
+      "raw_fahrenheit": 57.2,
+      "displayed_fahrenheit": 57.2,
+      "actual_rounded_fahrenheit": 57
+    },
+    {
+      "time": "2026-02-08T13:10:00+00:00",
+      "raw_celsius": 14,
+      "raw_fahrenheit": 57.2,
+      "displayed_fahrenheit": 57.2,
+      "actual_rounded_fahrenheit": 57
+    },
+    {
+      "time": "2026-02-08T13:05:00+00:00",
+      "raw_celsius": 14,
+      "raw_fahrenheit": 57.2,
+      "displayed_fahrenheit": 57.2,
+      "actual_rounded_fahrenheit": 57
+    },
+    {
+      "time": "2026-02-08T13:00:00+00:00",
+      "raw_celsius": 13,
+      "raw_fahrenheit": 55.4,
+      "displayed_fahrenheit": 55.4,
+      "actual_rounded_fahrenheit": 55
+    },
+    {
+      "time": "2026-02-08T12:55:00+00:00",
+      "raw_celsius": 13,
+      "raw_fahrenheit": 55.4,
+      "displayed_fahrenheit": 55.4,
+      "actual_rounded_fahrenheit": 55
+    },
+    {
+      "time": "2026-02-08T12:53:00+00:00",
+      "raw_celsius": 13.3,
+      "raw_fahrenheit": 55.94,
+      "displayed_fahrenheit": 55.4,
+      "actual_rounded_fahrenheit": 56
+    },
+    {
+      "time": "2026-02-08T12:50:00+00:00",
+      "raw_celsius": 13,
+      "raw_fahrenheit": 55.4,
+      "displayed_fahrenheit": 55.4,
+      "actual_rounded_fahrenheit": 55
+    },
+    {
+      "time": "2026-02-08T12:45:00+00:00",
+      "raw_celsius": 13,
+      "raw_fahrenheit": 55.4,
+      "displayed_fahrenheit": 55.4,
+      "actual_rounded_fahrenheit": 55
+    },
+    {
+      "time": "2026-02-08T12:40:00+00:00",
+      "raw_celsius": 13,
+      "raw_fahrenheit": 55.4,
+      "displayed_fahrenheit": 55.4,
+      "actual_rounded_fahrenheit": 55
+    },
+    {
+      "time": "2026-02-08T12:35:00+00:00",
+      "raw_celsius": 13,
+      "raw_fahrenheit": 55.4,
+      "displayed_fahrenheit": 55.4,
+      "actual_rounded_fahrenheit": 55
+    },
+    {
+      "time": "2026-02-08T12:30:00+00:00",
+      "raw_celsius": 12,
+      "raw_fahrenheit": 53.6,
+      "displayed_fahrenheit": 53.6,
+      "actual_rounded_fahrenheit": 54
+    },
+    {
+      "time": "2026-02-08T12:25:00+00:00",
+      "raw_celsius": 12,
+      "raw_fahrenheit": 53.6,
+      "displayed_fahrenheit": 53.6,
+      "actual_rounded_fahrenheit": 54
+    },
+    {
+      "time": "2026-02-08T12:20:00+00:00",
+      "raw_celsius": 12,
+      "raw_fahrenheit": 53.6,
+      "displayed_fahrenheit": 53.6,
+      "actual_rounded_fahrenheit": 54
+    },
+    {
+      "time": "2026-02-08T12:15:00+00:00",
+      "raw_celsius": 12,
+      "raw_fahrenheit": 53.6,
+      "displayed_fahrenheit": 53.6,
+      "actual_rounded_fahrenheit": 54
+    },
+    {
+      "time": "2026-02-08T12:10:00+00:00",
+      "raw_celsius": 12,
+      "raw_fahrenheit": 53.6,
+      "displayed_fahrenheit": 53.6,
+      "actual_rounded_fahrenheit": 54
+    },
+    {
+      "time": "2026-02-08T12:05:00+00:00",
+      "raw_celsius": 12,
+      "raw_fahrenheit": 53.6,
+      "displayed_fahrenheit": 53.6,
+      "actual_rounded_fahrenheit": 54
+    },
+    {
+      "time": "2026-02-08T12:00:00+00:00",
+      "raw_celsius": 12,
+      "raw_fahrenheit": 53.6,
+      "displayed_fahrenheit": 53.6,
+      "actual_rounded_fahrenheit": 54
+    },
+    {
+      "time": "2026-02-08T11:55:00+00:00",
+      "raw_celsius": 12,
+      "raw_fahrenheit": 53.6,
+      "displayed_fahrenheit": 53.6,
+      "actual_rounded_fahrenheit": 54
+    },
+    {
+      "time": "2026-02-08T11:53:00+00:00",
+      "raw_celsius": 12.2,
+      "raw_fahrenheit": 53.96,
+      "displayed_fahrenheit": 53.6,
+      "actual_rounded_fahrenheit": 54
+    },
+    {
+      "time": "2026-02-08T11:50:00+00:00",
+      "raw_celsius": 12,
+      "raw_fahrenheit": 53.6,
+      "displayed_fahrenheit": 53.6,
+      "actual_rounded_fahrenheit": 54
+    },
+    {
+      "time": "2026-02-08T11:45:00+00:00",
+      "raw_celsius": 12,
+      "raw_fahrenheit": 53.6,
+      "displayed_fahrenheit": 53.6,
+      "actual_rounded_fahrenheit": 54
+    },
+    {
+      "time": "2026-02-08T11:40:00+00:00",
+      "raw_celsius": 12,
+      "raw_fahrenheit": 53.6,
+      "displayed_fahrenheit": 53.6,
+      "actual_rounded_fahrenheit": 54
+    },
+    {
+      "time": "2026-02-08T11:35:00+00:00",
+      "raw_celsius": 12,
+      "raw_fahrenheit": 53.6,
+      "displayed_fahrenheit": 53.6,
+      "actual_rounded_fahrenheit": 54
+    },
+    {
+      "time": "2026-02-08T11:30:00+00:00",
+      "raw_celsius": 12,
+      "raw_fahrenheit": 53.6,
+      "displayed_fahrenheit": 53.6,
+      "actual_rounded_fahrenheit": 54
+    },
+    {
+      "time": "2026-02-08T11:25:00+00:00",
+      "raw_celsius": 12,
+      "raw_fahrenheit": 53.6,
+      "displayed_fahrenheit": 53.6,
+      "actual_rounded_fahrenheit": 54
+    },
+    {
+      "time": "2026-02-08T11:20:00+00:00",
+      "raw_celsius": 12,
+      "raw_fahrenheit": 53.6,
+      "displayed_fahrenheit": 53.6,
+      "actual_rounded_fahrenheit": 54
+    },
+    {
+      "time": "2026-02-08T11:15:00+00:00",
+      "raw_celsius": 12,
+      "raw_fahrenheit": 53.6,
+      "displayed_fahrenheit": 53.6,
+      "actual_rounded_fahrenheit": 54
+    },
+    {
+      "time": "2026-02-08T11:10:00+00:00",
+      "raw_celsius": 12,
+      "raw_fahrenheit": 53.6,
+      "displayed_fahrenheit": 53.6,
+      "actual_rounded_fahrenheit": 54
+    },
+    {
+      "time": "2026-02-08T11:05:00+00:00",
+      "raw_celsius": 12,
+      "raw_fahrenheit": 53.6,
+      "displayed_fahrenheit": 53.6,
+      "actual_rounded_fahrenheit": 54
+    },
+    {
+      "time": "2026-02-08T11:00:00+00:00",
+      "raw_celsius": 12,
+      "raw_fahrenheit": 53.6,
+      "displayed_fahrenheit": 53.6,
+      "actual_rounded_fahrenheit": 54
+    },
+    {
+      "time": "2026-02-08T10:55:00+00:00",
+      "raw_celsius": 12,
+      "raw_fahrenheit": 53.6,
+      "displayed_fahrenheit": 53.6,
+      "actual_rounded_fahrenheit": 54
+    },
+    {
+      "time": "2026-02-08T10:53:00+00:00",
+      "raw_celsius": 12.2,
+      "raw_fahrenheit": 53.96,
+      "displayed_fahrenheit": 53.6,
+      "actual_rounded_fahrenheit": 54
+    },
+    {
+      "time": "2026-02-08T10:50:00+00:00",
+      "raw_celsius": 12,
+      "raw_fahrenheit": 53.6,
+      "displayed_fahrenheit": 53.6,
+      "actual_rounded_fahrenheit": 54
+    },
+    {
+      "time": "2026-02-08T10:45:00+00:00",
+      "raw_celsius": 13,
+      "raw_fahrenheit": 55.4,
+      "displayed_fahrenheit": 55.4,
+      "actual_rounded_fahrenheit": 55
+    },
+    {
+      "time": "2026-02-08T10:40:00+00:00",
+      "raw_celsius": 12,
+      "raw_fahrenheit": 53.6,
+      "displayed_fahrenheit": 53.6,
+      "actual_rounded_fahrenheit": 54
+    },
+    {
+      "time": "2026-02-08T10:35:00+00:00",
+      "raw_celsius": 12,
+      "raw_fahrenheit": 53.6,
+      "displayed_fahrenheit": 53.6,
+      "actual_rounded_fahrenheit": 54
+    },
+    {
+      "time": "2026-02-08T10:30:00+00:00",
+      "raw_celsius": 12,
+      "raw_fahrenheit": 53.6,
+      "displayed_fahrenheit": 53.6,
+      "actual_rounded_fahrenheit": 54
+    },
+    {
+      "time": "2026-02-08T10:25:00+00:00",
+      "raw_celsius": 12,
+      "raw_fahrenheit": 53.6,
+      "displayed_fahrenheit": 53.6,
+      "actual_rounded_fahrenheit": 54
+    },
+    {
+      "time": "2026-02-08T10:20:00+00:00",
+      "raw_celsius": 12,
+      "raw_fahrenheit": 53.6,
+      "displayed_fahrenheit": 53.6,
+      "actual_rounded_fahrenheit": 54
+    },
+    {
+      "time": "2026-02-08T10:15:00+00:00",
+      "raw_celsius": 12,
+      "raw_fahrenheit": 53.6,
+      "displayed_fahrenheit": 53.6,
+      "actual_rounded_fahrenheit": 54
+    },
+    {
+      "time": "2026-02-08T10:10:00+00:00",
+      "raw_celsius": 12,
+      "raw_fahrenheit": 53.6,
+      "displayed_fahrenheit": 53.6,
+      "actual_rounded_fahrenheit": 54
+    },
+    {
+      "time": "2026-02-08T10:05:00+00:00",
+      "raw_celsius": 12,
+      "raw_fahrenheit": 53.6,
+      "displayed_fahrenheit": 53.6,
+      "actual_rounded_fahrenheit": 54
+    },
+    {
+      "time": "2026-02-08T10:00:00+00:00",
+      "raw_celsius": 12,
+      "raw_fahrenheit": 53.6,
+      "displayed_fahrenheit": 53.6,
+      "actual_rounded_fahrenheit": 54
+    },
+    {
+      "time": "2026-02-08T09:55:00+00:00",
+      "raw_celsius": 12,
+      "raw_fahrenheit": 53.6,
+      "displayed_fahrenheit": 53.6,
+      "actual_rounded_fahrenheit": 54
+    },
+    {
+      "time": "2026-02-08T09:53:00+00:00",
+      "raw_celsius": 12.8,
+      "raw_fahrenheit": 55.04,
+      "displayed_fahrenheit": 55.4,
+      "actual_rounded_fahrenheit": 55
+    },
+    {
+      "time": "2026-02-08T09:50:00+00:00",
+      "raw_celsius": 13,
+      "raw_fahrenheit": 55.4,
+      "displayed_fahrenheit": 55.4,
+      "actual_rounded_fahrenheit": 55
+    },
+    {
+      "time": "2026-02-08T09:45:00+00:00",
+      "raw_celsius": 13,
+      "raw_fahrenheit": 55.4,
+      "displayed_fahrenheit": 55.4,
+      "actual_rounded_fahrenheit": 55
+    },
+    {
+      "time": "2026-02-08T09:40:00+00:00",
+      "raw_celsius": 13,
+      "raw_fahrenheit": 55.4,
+      "displayed_fahrenheit": 55.4,
+      "actual_rounded_fahrenheit": 55
+    },
+    {
+      "time": "2026-02-08T09:35:00+00:00",
+      "raw_celsius": 13,
+      "raw_fahrenheit": 55.4,
+      "displayed_fahrenheit": 55.4,
+      "actual_rounded_fahrenheit": 55
+    },
+    {
+      "time": "2026-02-08T09:30:00+00:00",
+      "raw_celsius": 13,
+      "raw_fahrenheit": 55.4,
+      "displayed_fahrenheit": 55.4,
+      "actual_rounded_fahrenheit": 55
+    },
+    {
+      "time": "2026-02-08T09:25:00+00:00",
+      "raw_celsius": 13,
+      "raw_fahrenheit": 55.4,
+      "displayed_fahrenheit": 55.4,
+      "actual_rounded_fahrenheit": 55
+    },
+    {
+      "time": "2026-02-08T09:20:00+00:00",
+      "raw_celsius": 13,
+      "raw_fahrenheit": 55.4,
+      "displayed_fahrenheit": 55.4,
+      "actual_rounded_fahrenheit": 55
+    },
+    {
+      "time": "2026-02-08T09:15:00+00:00",
+      "raw_celsius": 13,
+      "raw_fahrenheit": 55.4,
+      "displayed_fahrenheit": 55.4,
+      "actual_rounded_fahrenheit": 55
+    },
+    {
+      "time": "2026-02-08T09:10:00+00:00",
+      "raw_celsius": 13,
+      "raw_fahrenheit": 55.4,
+      "displayed_fahrenheit": 55.4,
+      "actual_rounded_fahrenheit": 55
+    },
+    {
+      "time": "2026-02-08T09:05:00+00:00",
+      "raw_celsius": 13,
+      "raw_fahrenheit": 55.4,
+      "displayed_fahrenheit": 55.4,
+      "actual_rounded_fahrenheit": 55
+    },
+    {
+      "time": "2026-02-08T09:00:00+00:00",
+      "raw_celsius": 13,
+      "raw_fahrenheit": 55.4,
+      "displayed_fahrenheit": 55.4,
+      "actual_rounded_fahrenheit": 55
+    },
+    {
+      "time": "2026-02-08T08:55:00+00:00",
+      "raw_celsius": 13,
+      "raw_fahrenheit": 55.4,
+      "displayed_fahrenheit": 55.4,
+      "actual_rounded_fahrenheit": 55
+    },
+    {
+      "time": "2026-02-08T08:53:00+00:00",
+      "raw_celsius": 13.3,
+      "raw_fahrenheit": 55.94,
+      "displayed_fahrenheit": 55.4,
+      "actual_rounded_fahrenheit": 56
+    },
+    {
+      "time": "2026-02-08T08:50:00+00:00",
+      "raw_celsius": 13,
+      "raw_fahrenheit": 55.4,
+      "displayed_fahrenheit": 55.4,
+      "actual_rounded_fahrenheit": 55
+    },
+    {
+      "time": "2026-02-08T08:45:00+00:00",
+      "raw_celsius": 13,
+      "raw_fahrenheit": 55.4,
+      "displayed_fahrenheit": 55.4,
+      "actual_rounded_fahrenheit": 55
+    },
+    {
+      "time": "2026-02-08T08:40:00+00:00",
+      "raw_celsius": 13,
+      "raw_fahrenheit": 55.4,
+      "displayed_fahrenheit": 55.4,
+      "actual_rounded_fahrenheit": 55
+    },
+    {
+      "time": "2026-02-08T08:35:00+00:00",
+      "raw_celsius": 13,
+      "raw_fahrenheit": 55.4,
+      "displayed_fahrenheit": 55.4,
+      "actual_rounded_fahrenheit": 55
+    },
+    {
+      "time": "2026-02-08T08:30:00+00:00",
+      "raw_celsius": 13,
+      "raw_fahrenheit": 55.4,
+      "displayed_fahrenheit": 55.4,
+      "actual_rounded_fahrenheit": 55
+    },
+    {
+      "time": "2026-02-08T08:25:00+00:00",
+      "raw_celsius": 13,
+      "raw_fahrenheit": 55.4,
+      "displayed_fahrenheit": 55.4,
+      "actual_rounded_fahrenheit": 55
+    },
+    {
+      "time": "2026-02-08T08:20:00+00:00",
+      "raw_celsius": 13,
+      "raw_fahrenheit": 55.4,
+      "displayed_fahrenheit": 55.4,
+      "actual_rounded_fahrenheit": 55
+    },
+    {
+      "time": "2026-02-08T08:15:00+00:00",
+      "raw_celsius": 14,
+      "raw_fahrenheit": 57.2,
+      "displayed_fahrenheit": 57.2,
+      "actual_rounded_fahrenheit": 57
+    },
+    {
+      "time": "2026-02-08T08:10:00+00:00",
+      "raw_celsius": 14,
+      "raw_fahrenheit": 57.2,
+      "displayed_fahrenheit": 57.2,
+      "actual_rounded_fahrenheit": 57
+    },
+    {
+      "time": "2026-02-08T08:05:00+00:00",
+      "raw_celsius": 14,
+      "raw_fahrenheit": 57.2,
+      "displayed_fahrenheit": 57.2,
+      "actual_rounded_fahrenheit": 57
+    },
+    {
+      "time": "2026-02-08T08:00:00+00:00",
+      "raw_celsius": 14,
+      "raw_fahrenheit": 57.2,
+      "displayed_fahrenheit": 57.2,
+      "actual_rounded_fahrenheit": 57
+    },
+    {
+      "time": "2026-02-08T07:55:00+00:00",
+      "raw_celsius": 14,
+      "raw_fahrenheit": 57.2,
+      "displayed_fahrenheit": 57.2,
+      "actual_rounded_fahrenheit": 57
+    },
+    {
+      "time": "2026-02-08T07:53:00+00:00",
+      "raw_celsius": 13.9,
+      "raw_fahrenheit": 57.02,
+      "displayed_fahrenheit": 57.2,
+      "actual_rounded_fahrenheit": 57
+    },
+    {
+      "time": "2026-02-08T07:50:00+00:00",
+      "raw_celsius": 14,
+      "raw_fahrenheit": 57.2,
+      "displayed_fahrenheit": 57.2,
+      "actual_rounded_fahrenheit": 57
+    },
+    {
+      "time": "2026-02-08T07:45:00+00:00",
+      "raw_celsius": 14,
+      "raw_fahrenheit": 57.2,
+      "displayed_fahrenheit": 57.2,
+      "actual_rounded_fahrenheit": 57
+    },
+    {
+      "time": "2026-02-08T07:40:00+00:00",
+      "raw_celsius": 14,
+      "raw_fahrenheit": 57.2,
+      "displayed_fahrenheit": 57.2,
+      "actual_rounded_fahrenheit": 57
+    },
+    {
+      "time": "2026-02-08T07:35:00+00:00",
+      "raw_celsius": 15,
+      "raw_fahrenheit": 59.0,
+      "displayed_fahrenheit": 59.0,
+      "actual_rounded_fahrenheit": 59
+    },
+    {
+      "time": "2026-02-08T07:30:00+00:00",
+      "raw_celsius": 15,
+      "raw_fahrenheit": 59.0,
+      "displayed_fahrenheit": 59.0,
+      "actual_rounded_fahrenheit": 59
+    },
+    {
+      "time": "2026-02-08T07:25:00+00:00",
+      "raw_celsius": 15,
+      "raw_fahrenheit": 59.0,
+      "displayed_fahrenheit": 59.0,
+      "actual_rounded_fahrenheit": 59
+    },
+    {
+      "time": "2026-02-08T07:20:00+00:00",
+      "raw_celsius": 15,
+      "raw_fahrenheit": 59.0,
+      "displayed_fahrenheit": 59.0,
+      "actual_rounded_fahrenheit": 59
+    },
+    {
+      "time": "2026-02-08T07:15:00+00:00",
+      "raw_celsius": 15,
+      "raw_fahrenheit": 59.0,
+      "displayed_fahrenheit": 59.0,
+      "actual_rounded_fahrenheit": 59
+    },
+    {
+      "time": "2026-02-08T07:10:00+00:00",
+      "raw_celsius": 15,
+      "raw_fahrenheit": 59.0,
+      "displayed_fahrenheit": 59.0,
+      "actual_rounded_fahrenheit": 59
+    },
+    {
+      "time": "2026-02-08T07:05:00+00:00",
+      "raw_celsius": 16,
+      "raw_fahrenheit": 60.8,
+      "displayed_fahrenheit": 60.8,
+      "actual_rounded_fahrenheit": 61
+    },
+    {
+      "time": "2026-02-08T07:00:00+00:00",
+      "raw_celsius": 16,
+      "raw_fahrenheit": 60.8,
+      "displayed_fahrenheit": 60.8,
+      "actual_rounded_fahrenheit": 61
+    },
+    {
+      "time": "2026-02-08T06:55:00+00:00",
+      "raw_celsius": 16,
+      "raw_fahrenheit": 60.8,
+      "displayed_fahrenheit": 60.8,
+      "actual_rounded_fahrenheit": 61
+    },
+    {
+      "time": "2026-02-08T06:53:00+00:00",
+      "raw_celsius": 15.6,
+      "raw_fahrenheit": 60.08,
+      "displayed_fahrenheit": 60.8,
+      "actual_rounded_fahrenheit": 60
+    },
+    {
+      "time": "2026-02-08T06:50:00+00:00",
+      "raw_celsius": 16,
+      "raw_fahrenheit": 60.8,
+      "displayed_fahrenheit": 60.8,
+      "actual_rounded_fahrenheit": 61
+    },
+    {
+      "time": "2026-02-08T06:45:00+00:00",
+      "raw_celsius": 16,
+      "raw_fahrenheit": 60.8,
+      "displayed_fahrenheit": 60.8,
+      "actual_rounded_fahrenheit": 61
+    },
+    {
+      "time": "2026-02-08T06:40:00+00:00",
+      "raw_celsius": 16,
+      "raw_fahrenheit": 60.8,
+      "displayed_fahrenheit": 60.8,
+      "actual_rounded_fahrenheit": 61
+    },
+    {
+      "time": "2026-02-08T06:35:00+00:00",
+      "raw_celsius": 16,
+      "raw_fahrenheit": 60.8,
+      "displayed_fahrenheit": 60.8,
+      "actual_rounded_fahrenheit": 61
+    },
+    {
+      "time": "2026-02-08T06:30:00+00:00",
+      "raw_celsius": 16,
+      "raw_fahrenheit": 60.8,
+      "displayed_fahrenheit": 60.8,
+      "actual_rounded_fahrenheit": 61
+    },
+    {
+      "time": "2026-02-08T06:25:00+00:00",
+      "raw_celsius": 16,
+      "raw_fahrenheit": 60.8,
+      "displayed_fahrenheit": 60.8,
+      "actual_rounded_fahrenheit": 61
+    },
+    {
+      "time": "2026-02-08T06:20:00+00:00",
+      "raw_celsius": 16,
+      "raw_fahrenheit": 60.8,
+      "displayed_fahrenheit": 60.8,
+      "actual_rounded_fahrenheit": 61
+    },
+    {
+      "time": "2026-02-08T06:15:00+00:00",
+      "raw_celsius": 16,
+      "raw_fahrenheit": 60.8,
+      "displayed_fahrenheit": 60.8,
+      "actual_rounded_fahrenheit": 61
+    },
+    {
+      "time": "2026-02-08T06:10:00+00:00",
+      "raw_celsius": 16,
+      "raw_fahrenheit": 60.8,
+      "displayed_fahrenheit": 60.8,
+      "actual_rounded_fahrenheit": 61
+    },
+    {
+      "time": "2026-02-08T06:05:00+00:00",
+      "raw_celsius": 16,
+      "raw_fahrenheit": 60.8,
+      "displayed_fahrenheit": 60.8,
+      "actual_rounded_fahrenheit": 61
+    },
+    {
+      "time": "2026-02-08T06:00:00+00:00",
+      "raw_celsius": 16,
+      "raw_fahrenheit": 60.8,
+      "displayed_fahrenheit": 60.8,
+      "actual_rounded_fahrenheit": 61
+    },
+    {
+      "time": "2026-02-08T05:55:00+00:00",
+      "raw_celsius": 16,
+      "raw_fahrenheit": 60.8,
+      "displayed_fahrenheit": 60.8,
+      "actual_rounded_fahrenheit": 61
+    },
+    {
+      "time": "2026-02-08T05:53:00+00:00",
+      "raw_celsius": 16.1,
+      "raw_fahrenheit": 60.980000000000004,
+      "displayed_fahrenheit": 60.8,
+      "actual_rounded_fahrenheit": 61
+    },
+    {
+      "time": "2026-02-08T05:50:00+00:00",
+      "raw_celsius": 16,
+      "raw_fahrenheit": 60.8,
+      "displayed_fahrenheit": 60.8,
+      "actual_rounded_fahrenheit": 61
+    },
+    {
+      "time": "2026-02-08T05:45:00+00:00",
+      "raw_celsius": 16,
+      "raw_fahrenheit": 60.8,
+      "displayed_fahrenheit": 60.8,
+      "actual_rounded_fahrenheit": 61
+    },
+    {
+      "time": "2026-02-08T05:40:00+00:00",
+      "raw_celsius": 17,
+      "raw_fahrenheit": 62.6,
+      "displayed_fahrenheit": 62.6,
+      "actual_rounded_fahrenheit": 63
+    },
+    {
+      "time": "2026-02-08T05:35:00+00:00",
+      "raw_celsius": 16,
+      "raw_fahrenheit": 60.8,
+      "displayed_fahrenheit": 60.8,
+      "actual_rounded_fahrenheit": 61
+    },
+    {
+      "time": "2026-02-08T05:30:00+00:00",
+      "raw_celsius": 17,
+      "raw_fahrenheit": 62.6,
+      "displayed_fahrenheit": 62.6,
+      "actual_rounded_fahrenheit": 63
+    },
+    {
+      "time": "2026-02-08T05:25:00+00:00",
+      "raw_celsius": 17,
+      "raw_fahrenheit": 62.6,
+      "displayed_fahrenheit": 62.6,
+      "actual_rounded_fahrenheit": 63
+    },
+    {
+      "time": "2026-02-08T05:20:00+00:00",
+      "raw_celsius": 17,
+      "raw_fahrenheit": 62.6,
+      "displayed_fahrenheit": 62.6,
+      "actual_rounded_fahrenheit": 63
+    },
+    {
+      "time": "2026-02-08T05:15:00+00:00",
+      "raw_celsius": 17,
+      "raw_fahrenheit": 62.6,
+      "displayed_fahrenheit": 62.6,
+      "actual_rounded_fahrenheit": 63
+    },
+    {
+      "time": "2026-02-08T05:10:00+00:00",
+      "raw_celsius": 17,
+      "raw_fahrenheit": 62.6,
+      "displayed_fahrenheit": 62.6,
+      "actual_rounded_fahrenheit": 63
+    },
+    {
+      "time": "2026-02-08T05:05:00+00:00",
+      "raw_celsius": 17,
+      "raw_fahrenheit": 62.6,
+      "displayed_fahrenheit": 62.6,
+      "actual_rounded_fahrenheit": 63
+    },
+    {
+      "time": "2026-02-08T05:00:00+00:00",
+      "raw_celsius": 17,
+      "raw_fahrenheit": 62.6,
+      "displayed_fahrenheit": 62.6,
+      "actual_rounded_fahrenheit": 63
+    },
+    {
+      "time": "2026-02-08T04:55:00+00:00",
+      "raw_celsius": 17,
+      "raw_fahrenheit": 62.6,
+      "displayed_fahrenheit": 62.6,
+      "actual_rounded_fahrenheit": 63
+    },
+    {
+      "time": "2026-02-08T04:53:00+00:00",
+      "raw_celsius": 16.7,
+      "raw_fahrenheit": 62.059999999999995,
+      "displayed_fahrenheit": 62.6,
+      "actual_rounded_fahrenheit": 62
+    },
+    {
+      "time": "2026-02-08T04:50:00+00:00",
+      "raw_celsius": 17,
+      "raw_fahrenheit": 62.6,
+      "displayed_fahrenheit": 62.6,
+      "actual_rounded_fahrenheit": 63
+    },
+    {
+      "time": "2026-02-08T04:45:00+00:00",
+      "raw_celsius": 17,
+      "raw_fahrenheit": 62.6,
+      "displayed_fahrenheit": 62.6,
+      "actual_rounded_fahrenheit": 63
+    },
+    {
+      "time": "2026-02-08T04:40:00+00:00",
+      "raw_celsius": 17,
+      "raw_fahrenheit": 62.6,
+      "displayed_fahrenheit": 62.6,
+      "actual_rounded_fahrenheit": 63
+    },
+    {
+      "time": "2026-02-08T04:35:00+00:00",
+      "raw_celsius": 17,
+      "raw_fahrenheit": 62.6,
+      "displayed_fahrenheit": 62.6,
+      "actual_rounded_fahrenheit": 63
+    },
+    {
+      "time": "2026-02-08T04:30:00+00:00",
+      "raw_celsius": 17,
+      "raw_fahrenheit": 62.6,
+      "displayed_fahrenheit": 62.6,
+      "actual_rounded_fahrenheit": 63
+    },
+    {
+      "time": "2026-02-08T04:25:00+00:00",
+      "raw_celsius": 17,
+      "raw_fahrenheit": 62.6,
+      "displayed_fahrenheit": 62.6,
+      "actual_rounded_fahrenheit": 63
+    },
+    {
+      "time": "2026-02-08T04:20:00+00:00",
+      "raw_celsius": 17,
+      "raw_fahrenheit": 62.6,
+      "displayed_fahrenheit": 62.6,
+      "actual_rounded_fahrenheit": 63
+    },
+    {
+      "time": "2026-02-08T04:15:00+00:00",
+      "raw_celsius": 17,
+      "raw_fahrenheit": 62.6,
+      "displayed_fahrenheit": 62.6,
+      "actual_rounded_fahrenheit": 63
+    },
+    {
+      "time": "2026-02-08T04:10:00+00:00",
+      "raw_celsius": 17,
+      "raw_fahrenheit": 62.6,
+      "displayed_fahrenheit": 62.6,
+      "actual_rounded_fahrenheit": 63
+    },
+    {
+      "time": "2026-02-08T04:05:00+00:00",
+      "raw_celsius": 17,
+      "raw_fahrenheit": 62.6,
+      "displayed_fahrenheit": 62.6,
+      "actual_rounded_fahrenheit": 63
+    },
+    {
+      "time": "2026-02-08T04:00:00+00:00",
+      "raw_celsius": 17,
+      "raw_fahrenheit": 62.6,
+      "displayed_fahrenheit": 62.6,
+      "actual_rounded_fahrenheit": 63
+    },
+    {
+      "time": "2026-02-08T03:55:00+00:00",
+      "raw_celsius": 17,
+      "raw_fahrenheit": 62.6,
+      "displayed_fahrenheit": 62.6,
+      "actual_rounded_fahrenheit": 63
+    },
+    {
+      "time": "2026-02-08T03:53:00+00:00",
+      "raw_celsius": 17.2,
+      "raw_fahrenheit": 62.959999999999994,
+      "displayed_fahrenheit": 62.6,
+      "actual_rounded_fahrenheit": 63
+    },
+    {
+      "time": "2026-02-08T03:50:00+00:00",
+      "raw_celsius": 17,
+      "raw_fahrenheit": 62.6,
+      "displayed_fahrenheit": 62.6,
+      "actual_rounded_fahrenheit": 63
+    },
+    {
+      "time": "2026-02-08T03:45:00+00:00",
+      "raw_celsius": 17,
+      "raw_fahrenheit": 62.6,
+      "displayed_fahrenheit": 62.6,
+      "actual_rounded_fahrenheit": 63
+    },
+    {
+      "time": "2026-02-08T03:40:00+00:00",
+      "raw_celsius": 17,
+      "raw_fahrenheit": 62.6,
+      "displayed_fahrenheit": 62.6,
+      "actual_rounded_fahrenheit": 63
+    },
+    {
+      "time": "2026-02-08T03:35:00+00:00",
+      "raw_celsius": 17,
+      "raw_fahrenheit": 62.6,
+      "displayed_fahrenheit": 62.6,
+      "actual_rounded_fahrenheit": 63
+    },
+    {
+      "time": "2026-02-08T03:30:00+00:00",
+      "raw_celsius": 17,
+      "raw_fahrenheit": 62.6,
+      "displayed_fahrenheit": 62.6,
+      "actual_rounded_fahrenheit": 63
+    },
+    {
+      "time": "2026-02-08T03:25:00+00:00",
+      "raw_celsius": 17,
+      "raw_fahrenheit": 62.6,
+      "displayed_fahrenheit": 62.6,
+      "actual_rounded_fahrenheit": 63
+    },
+    {
+      "time": "2026-02-08T03:20:00+00:00",
+      "raw_celsius": 17,
+      "raw_fahrenheit": 62.6,
+      "displayed_fahrenheit": 62.6,
+      "actual_rounded_fahrenheit": 63
+    },
+    {
+      "time": "2026-02-08T03:15:00+00:00",
+      "raw_celsius": 17,
+      "raw_fahrenheit": 62.6,
+      "displayed_fahrenheit": 62.6,
+      "actual_rounded_fahrenheit": 63
+    },
+    {
+      "time": "2026-02-08T03:10:00+00:00",
+      "raw_celsius": 17,
+      "raw_fahrenheit": 62.6,
+      "displayed_fahrenheit": 62.6,
+      "actual_rounded_fahrenheit": 63
+    },
+    {
+      "time": "2026-02-08T03:05:00+00:00",
+      "raw_celsius": 17,
+      "raw_fahrenheit": 62.6,
+      "displayed_fahrenheit": 62.6,
+      "actual_rounded_fahrenheit": 63
+    },
+    {
+      "time": "2026-02-08T03:00:00+00:00",
+      "raw_celsius": 17,
+      "raw_fahrenheit": 62.6,
+      "displayed_fahrenheit": 62.6,
+      "actual_rounded_fahrenheit": 63
+    },
+    {
+      "time": "2026-02-08T02:55:00+00:00",
+      "raw_celsius": 17,
+      "raw_fahrenheit": 62.6,
+      "displayed_fahrenheit": 62.6,
+      "actual_rounded_fahrenheit": 63
+    },
+    {
+      "time": "2026-02-08T02:53:00+00:00",
+      "raw_celsius": 17.2,
+      "raw_fahrenheit": 62.959999999999994,
+      "displayed_fahrenheit": 62.6,
+      "actual_rounded_fahrenheit": 63
+    },
+    {
+      "time": "2026-02-08T02:50:00+00:00",
+      "raw_celsius": 17,
+      "raw_fahrenheit": 62.6,
+      "displayed_fahrenheit": 62.6,
+      "actual_rounded_fahrenheit": 63
+    },
+    {
+      "time": "2026-02-08T02:45:00+00:00",
+      "raw_celsius": 17,
+      "raw_fahrenheit": 62.6,
+      "displayed_fahrenheit": 62.6,
+      "actual_rounded_fahrenheit": 63
+    },
+    {
+      "time": "2026-02-08T02:40:00+00:00",
+      "raw_celsius": 17,
+      "raw_fahrenheit": 62.6,
+      "displayed_fahrenheit": 62.6,
+      "actual_rounded_fahrenheit": 63
+    },
+    {
+      "time": "2026-02-08T02:35:00+00:00",
+      "raw_celsius": 17,
+      "raw_fahrenheit": 62.6,
+      "displayed_fahrenheit": 62.6,
+      "actual_rounded_fahrenheit": 63
+    },
+    {
+      "time": "2026-02-08T02:30:00+00:00",
+      "raw_celsius": 17,
+      "raw_fahrenheit": 62.6,
+      "displayed_fahrenheit": 62.6,
+      "actual_rounded_fahrenheit": 63
+    },
+    {
+      "time": "2026-02-08T02:25:00+00:00",
+      "raw_celsius": 17,
+      "raw_fahrenheit": 62.6,
+      "displayed_fahrenheit": 62.6,
+      "actual_rounded_fahrenheit": 63
+    },
+    {
+      "time": "2026-02-08T02:20:00+00:00",
+      "raw_celsius": 17,
+      "raw_fahrenheit": 62.6,
+      "displayed_fahrenheit": 62.6,
+      "actual_rounded_fahrenheit": 63
+    },
+    {
+      "time": "2026-02-08T02:15:00+00:00",
+      "raw_celsius": 17,
+      "raw_fahrenheit": 62.6,
+      "displayed_fahrenheit": 62.6,
+      "actual_rounded_fahrenheit": 63
+    },
+    {
+      "time": "2026-02-08T02:10:00+00:00",
+      "raw_celsius": 18,
+      "raw_fahrenheit": 64.4,
+      "displayed_fahrenheit": 64.4,
+      "actual_rounded_fahrenheit": 64
+    },
+    {
+      "time": "2026-02-08T02:05:00+00:00",
+      "raw_celsius": 18,
+      "raw_fahrenheit": 64.4,
+      "displayed_fahrenheit": 64.4,
+      "actual_rounded_fahrenheit": 64
+    },
+    {
+      "time": "2026-02-08T02:00:00+00:00",
+      "raw_celsius": 18,
+      "raw_fahrenheit": 64.4,
+      "displayed_fahrenheit": 64.4,
+      "actual_rounded_fahrenheit": 64
+    },
+    {
+      "time": "2026-02-08T01:55:00+00:00",
+      "raw_celsius": 18,
+      "raw_fahrenheit": 64.4,
+      "displayed_fahrenheit": 64.4,
+      "actual_rounded_fahrenheit": 64
+    },
+    {
+      "time": "2026-02-08T01:53:00+00:00",
+      "raw_celsius": 18.3,
+      "raw_fahrenheit": 64.94,
+      "displayed_fahrenheit": 64.4,
+      "actual_rounded_fahrenheit": 65
+    },
+    {
+      "time": "2026-02-08T01:50:00+00:00",
+      "raw_celsius": 18,
+      "raw_fahrenheit": 64.4,
+      "displayed_fahrenheit": 64.4,
+      "actual_rounded_fahrenheit": 64
+    },
+    {
+      "time": "2026-02-08T01:45:00+00:00",
+      "raw_celsius": 18,
+      "raw_fahrenheit": 64.4,
+      "displayed_fahrenheit": 64.4,
+      "actual_rounded_fahrenheit": 64
+    },
+    {
+      "time": "2026-02-08T01:40:00+00:00",
+      "raw_celsius": 18,
+      "raw_fahrenheit": 64.4,
+      "displayed_fahrenheit": 64.4,
+      "actual_rounded_fahrenheit": 64
+    },
+    {
+      "time": "2026-02-08T01:35:00+00:00",
+      "raw_celsius": 19,
+      "raw_fahrenheit": 66.2,
+      "displayed_fahrenheit": 66.2,
+      "actual_rounded_fahrenheit": 66
+    },
+    {
+      "time": "2026-02-08T01:30:00+00:00",
+      "raw_celsius": 19,
+      "raw_fahrenheit": 66.2,
+      "displayed_fahrenheit": 66.2,
+      "actual_rounded_fahrenheit": 66
+    },
+    {
+      "time": "2026-02-08T01:25:00+00:00",
+      "raw_celsius": 19,
+      "raw_fahrenheit": 66.2,
+      "displayed_fahrenheit": 66.2,
+      "actual_rounded_fahrenheit": 66
+    },
+    {
+      "time": "2026-02-08T01:20:00+00:00",
+      "raw_celsius": 19,
+      "raw_fahrenheit": 66.2,
+      "displayed_fahrenheit": 66.2,
+      "actual_rounded_fahrenheit": 66
+    },
+    {
+      "time": "2026-02-08T01:15:00+00:00",
+      "raw_celsius": 19,
+      "raw_fahrenheit": 66.2,
+      "displayed_fahrenheit": 66.2,
+      "actual_rounded_fahrenheit": 66
+    },
+    {
+      "time": "2026-02-08T01:10:00+00:00",
+      "raw_celsius": 19,
+      "raw_fahrenheit": 66.2,
+      "displayed_fahrenheit": 66.2,
+      "actual_rounded_fahrenheit": 66
+    },
+    {
+      "time": "2026-02-08T01:05:00+00:00",
+      "raw_celsius": 19,
+      "raw_fahrenheit": 66.2,
+      "displayed_fahrenheit": 66.2,
+      "actual_rounded_fahrenheit": 66
+    },
+    {
+      "time": "2026-02-08T01:00:00+00:00",
+      "raw_celsius": 19,
+      "raw_fahrenheit": 66.2,
+      "displayed_fahrenheit": 66.2,
+      "actual_rounded_fahrenheit": 66
+    },
+    {
+      "time": "2026-02-08T00:55:00+00:00",
+      "raw_celsius": 19,
+      "raw_fahrenheit": 66.2,
+      "displayed_fahrenheit": 66.2,
+      "actual_rounded_fahrenheit": 66
+    },
+    {
+      "time": "2026-02-08T00:53:00+00:00",
+      "raw_celsius": 19.4,
+      "raw_fahrenheit": 66.92,
+      "displayed_fahrenheit": 66.2,
+      "actual_rounded_fahrenheit": 67
+    },
+    {
+      "time": "2026-02-08T00:50:00+00:00",
+      "raw_celsius": 19,
+      "raw_fahrenheit": 66.2,
+      "displayed_fahrenheit": 66.2,
+      "actual_rounded_fahrenheit": 66
+    },
+    {
+      "time": "2026-02-08T00:45:00+00:00",
+      "raw_celsius": 19,
+      "raw_fahrenheit": 66.2,
+      "displayed_fahrenheit": 66.2,
+      "actual_rounded_fahrenheit": 66
+    },
+    {
+      "time": "2026-02-08T00:40:00+00:00",
+      "raw_celsius": 19,
+      "raw_fahrenheit": 66.2,
+      "displayed_fahrenheit": 66.2,
+      "actual_rounded_fahrenheit": 66
+    },
+    {
+      "time": "2026-02-08T00:35:00+00:00",
+      "raw_celsius": 19,
+      "raw_fahrenheit": 66.2,
+      "displayed_fahrenheit": 66.2,
+      "actual_rounded_fahrenheit": 66
+    },
+    {
+      "time": "2026-02-08T00:30:00+00:00",
+      "raw_celsius": 19,
+      "raw_fahrenheit": 66.2,
+      "displayed_fahrenheit": 66.2,
+      "actual_rounded_fahrenheit": 66
+    },
+    {
+      "time": "2026-02-08T00:25:00+00:00",
+      "raw_celsius": 20,
+      "raw_fahrenheit": 68.0,
+      "displayed_fahrenheit": 68.0,
+      "actual_rounded_fahrenheit": 68
+    },
+    {
+      "time": "2026-02-08T00:20:00+00:00",
+      "raw_celsius": 20,
+      "raw_fahrenheit": 68.0,
+      "displayed_fahrenheit": 68.0,
+      "actual_rounded_fahrenheit": 68
+    },
+    {
+      "time": "2026-02-08T00:15:00+00:00",
+      "raw_celsius": 19,
+      "raw_fahrenheit": 66.2,
+      "displayed_fahrenheit": 66.2,
+      "actual_rounded_fahrenheit": 66
+    },
+    {
+      "time": "2026-02-08T00:10:00+00:00",
+      "raw_celsius": 19,
+      "raw_fahrenheit": 66.2,
+      "displayed_fahrenheit": 66.2,
+      "actual_rounded_fahrenheit": 66
+    },
+    {
+      "time": "2026-02-08T00:05:00+00:00",
+      "raw_celsius": 20,
+      "raw_fahrenheit": 68.0,
+      "displayed_fahrenheit": 68.0,
+      "actual_rounded_fahrenheit": 68
+    },
+    {
+      "time": "2026-02-08T00:00:00+00:00",
+      "raw_celsius": 20,
+      "raw_fahrenheit": 68.0,
+      "displayed_fahrenheit": 68.0,
+      "actual_rounded_fahrenheit": 68
+    },
+    {
+      "time": "2026-02-07T23:55:00+00:00",
+      "raw_celsius": 20,
+      "raw_fahrenheit": 68.0,
+      "displayed_fahrenheit": 68.0,
+      "actual_rounded_fahrenheit": 68
+    },
+    {
+      "time": "2026-02-07T23:53:00+00:00",
+      "raw_celsius": 20,
+      "raw_fahrenheit": 68.0,
+      "displayed_fahrenheit": 68.0,
+      "actual_rounded_fahrenheit": 68
+    },
+    {
+      "time": "2026-02-07T23:50:00+00:00",
+      "raw_celsius": 20,
+      "raw_fahrenheit": 68.0,
+      "displayed_fahrenheit": 68.0,
+      "actual_rounded_fahrenheit": 68
+    },
+    {
+      "time": "2026-02-07T23:45:00+00:00",
+      "raw_celsius": 21,
+      "raw_fahrenheit": 69.8,
+      "displayed_fahrenheit": 69.8,
+      "actual_rounded_fahrenheit": 70
+    },
+    {
+      "time": "2026-02-07T23:40:00+00:00",
+      "raw_celsius": 21,
+      "raw_fahrenheit": 69.8,
+      "displayed_fahrenheit": 69.8,
+      "actual_rounded_fahrenheit": 70
+    },
+    {
+      "time": "2026-02-07T23:35:00+00:00",
+      "raw_celsius": 21,
+      "raw_fahrenheit": 69.8,
+      "displayed_fahrenheit": 69.8,
+      "actual_rounded_fahrenheit": 70
+    },
+    {
+      "time": "2026-02-07T23:30:00+00:00",
+      "raw_celsius": 21,
+      "raw_fahrenheit": 69.8,
+      "displayed_fahrenheit": 69.8,
+      "actual_rounded_fahrenheit": 70
+    },
+    {
+      "time": "2026-02-07T23:25:00+00:00",
+      "raw_celsius": 22,
+      "raw_fahrenheit": 71.6,
+      "displayed_fahrenheit": 71.6,
+      "actual_rounded_fahrenheit": 72
+    },
+    {
+      "time": "2026-02-07T23:20:00+00:00",
+      "raw_celsius": 23,
+      "raw_fahrenheit": 73.4,
+      "displayed_fahrenheit": 73.4,
+      "actual_rounded_fahrenheit": 73
+    },
+    {
+      "time": "2026-02-07T23:15:00+00:00",
+      "raw_celsius": 23,
+      "raw_fahrenheit": 73.4,
+      "displayed_fahrenheit": 73.4,
+      "actual_rounded_fahrenheit": 73
+    },
+    {
+      "time": "2026-02-07T23:10:00+00:00",
+      "raw_celsius": 23,
+      "raw_fahrenheit": 73.4,
+      "displayed_fahrenheit": 73.4,
+      "actual_rounded_fahrenheit": 73
+    },
+    {
+      "time": "2026-02-07T23:05:00+00:00",
+      "raw_celsius": 23,
+      "raw_fahrenheit": 73.4,
+      "displayed_fahrenheit": 73.4,
+      "actual_rounded_fahrenheit": 73
+    },
+    {
+      "time": "2026-02-07T23:00:00+00:00",
+      "raw_celsius": 23,
+      "raw_fahrenheit": 73.4,
+      "displayed_fahrenheit": 73.4,
+      "actual_rounded_fahrenheit": 73
+    },
+    {
+      "time": "2026-02-07T22:55:00+00:00",
+      "raw_celsius": 24,
+      "raw_fahrenheit": 75.2,
+      "displayed_fahrenheit": 75.2,
+      "actual_rounded_fahrenheit": 75
+    },
+    {
+      "time": "2026-02-07T22:53:00+00:00",
+      "raw_celsius": 23.9,
+      "raw_fahrenheit": 75.02,
+      "displayed_fahrenheit": 75.2,
+      "actual_rounded_fahrenheit": 75
+    },
+    {
+      "time": "2026-02-07T22:50:00+00:00",
+      "raw_celsius": 24,
+      "raw_fahrenheit": 75.2,
+      "displayed_fahrenheit": 75.2,
+      "actual_rounded_fahrenheit": 75
+    },
+    {
+      "time": "2026-02-07T22:45:00+00:00",
+      "raw_celsius": 24,
+      "raw_fahrenheit": 75.2,
+      "displayed_fahrenheit": 75.2,
+      "actual_rounded_fahrenheit": 75
+    },
+    {
+      "time": "2026-02-07T22:40:00+00:00",
+      "raw_celsius": 24,
+      "raw_fahrenheit": 75.2,
+      "displayed_fahrenheit": 75.2,
+      "actual_rounded_fahrenheit": 75
+    },
+    {
+      "time": "2026-02-07T22:35:00+00:00",
+      "raw_celsius": 24,
+      "raw_fahrenheit": 75.2,
+      "displayed_fahrenheit": 75.2,
+      "actual_rounded_fahrenheit": 75
+    },
+    {
+      "time": "2026-02-07T22:30:00+00:00",
+      "raw_celsius": 24,
+      "raw_fahrenheit": 75.2,
+      "displayed_fahrenheit": 75.2,
+      "actual_rounded_fahrenheit": 75
+    },
+    {
+      "time": "2026-02-07T22:25:00+00:00",
+      "raw_celsius": 24,
+      "raw_fahrenheit": 75.2,
+      "displayed_fahrenheit": 75.2,
+      "actual_rounded_fahrenheit": 75
+    },
+    {
+      "time": "2026-02-07T22:20:00+00:00",
+      "raw_celsius": 24,
+      "raw_fahrenheit": 75.2,
+      "displayed_fahrenheit": 75.2,
+      "actual_rounded_fahrenheit": 75
+    },
+    {
+      "time": "2026-02-07T22:15:00+00:00",
+      "raw_celsius": 25,
+      "raw_fahrenheit": 77.0,
+      "displayed_fahrenheit": 77.0,
+      "actual_rounded_fahrenheit": 77
+    },
+    {
+      "time": "2026-02-07T22:10:00+00:00",
+      "raw_celsius": 25,
+      "raw_fahrenheit": 77.0,
+      "displayed_fahrenheit": 77.0,
+      "actual_rounded_fahrenheit": 77
+    },
+    {
+      "time": "2026-02-07T22:05:00+00:00",
+      "raw_celsius": 25,
+      "raw_fahrenheit": 77.0,
+      "displayed_fahrenheit": 77.0,
+      "actual_rounded_fahrenheit": 77
+    },
+    {
+      "time": "2026-02-07T22:00:00+00:00",
+      "raw_celsius": 25,
+      "raw_fahrenheit": 77.0,
+      "displayed_fahrenheit": 77.0,
+      "actual_rounded_fahrenheit": 77
+    },
+    {
+      "time": "2026-02-07T21:55:00+00:00",
+      "raw_celsius": 25,
+      "raw_fahrenheit": 77.0,
+      "displayed_fahrenheit": 77.0,
+      "actual_rounded_fahrenheit": 77
+    },
+    {
+      "time": "2026-02-07T21:53:00+00:00",
+      "raw_celsius": 25.6,
+      "raw_fahrenheit": 78.08,
+      "displayed_fahrenheit": 78.8,
+      "actual_rounded_fahrenheit": 78
+    },
+    {
+      "time": "2026-02-07T21:50:00+00:00",
+      "raw_celsius": 26,
+      "raw_fahrenheit": 78.8,
+      "displayed_fahrenheit": 78.8,
+      "actual_rounded_fahrenheit": 79
+    },
+    {
+      "time": "2026-02-07T21:45:00+00:00",
+      "raw_celsius": 26,
+      "raw_fahrenheit": 78.8,
+      "displayed_fahrenheit": 78.8,
+      "actual_rounded_fahrenheit": 79
+    },
+    {
+      "time": "2026-02-07T21:40:00+00:00",
+      "raw_celsius": 26,
+      "raw_fahrenheit": 78.8,
+      "displayed_fahrenheit": 78.8,
+      "actual_rounded_fahrenheit": 79
+    },
+    {
+      "time": "2026-02-07T21:35:00+00:00",
+      "raw_celsius": 26,
+      "raw_fahrenheit": 78.8,
+      "displayed_fahrenheit": 78.8,
+      "actual_rounded_fahrenheit": 79
+    },
+    {
+      "time": "2026-02-07T21:30:00+00:00",
+      "raw_celsius": 26,
+      "raw_fahrenheit": 78.8,
+      "displayed_fahrenheit": 78.8,
+      "actual_rounded_fahrenheit": 79
+    },
+    {
+      "time": "2026-02-07T21:25:00+00:00",
+      "raw_celsius": 26,
+      "raw_fahrenheit": 78.8,
+      "displayed_fahrenheit": 78.8,
+      "actual_rounded_fahrenheit": 79
+    },
+    {
+      "time": "2026-02-07T21:20:00+00:00",
+      "raw_celsius": 26,
+      "raw_fahrenheit": 78.8,
+      "displayed_fahrenheit": 78.8,
+      "actual_rounded_fahrenheit": 79
+    },
+    {
+      "time": "2026-02-07T21:15:00+00:00",
+      "raw_celsius": 26,
+      "raw_fahrenheit": 78.8,
+      "displayed_fahrenheit": 78.8,
+      "actual_rounded_fahrenheit": 79
+    },
+    {
+      "time": "2026-02-07T21:10:00+00:00",
+      "raw_celsius": 26,
+      "raw_fahrenheit": 78.8,
+      "displayed_fahrenheit": 78.8,
+      "actual_rounded_fahrenheit": 79
+    },
+    {
+      "time": "2026-02-07T21:05:00+00:00",
+      "raw_celsius": 26,
+      "raw_fahrenheit": 78.8,
+      "displayed_fahrenheit": 78.8,
+      "actual_rounded_fahrenheit": 79
+    },
+    {
+      "time": "2026-02-07T21:00:00+00:00",
+      "raw_celsius": 26,
+      "raw_fahrenheit": 78.8,
+      "displayed_fahrenheit": 78.8,
+      "actual_rounded_fahrenheit": 79
+    },
+    {
+      "time": "2026-02-07T20:55:00+00:00",
+      "raw_celsius": 26,
+      "raw_fahrenheit": 78.8,
+      "displayed_fahrenheit": 78.8,
+      "actual_rounded_fahrenheit": 79
+    },
+    {
+      "time": "2026-02-07T20:53:00+00:00",
+      "raw_celsius": 26.1,
+      "raw_fahrenheit": 78.98,
+      "displayed_fahrenheit": 78.8,
+      "actual_rounded_fahrenheit": 79
+    },
+    {
+      "time": "2026-02-07T20:50:00+00:00",
+      "raw_celsius": 26,
+      "raw_fahrenheit": 78.8,
+      "displayed_fahrenheit": 78.8,
+      "actual_rounded_fahrenheit": 79
+    },
+    {
+      "time": "2026-02-07T20:45:00+00:00",
+      "raw_celsius": 26,
+      "raw_fahrenheit": 78.8,
+      "displayed_fahrenheit": 78.8,
+      "actual_rounded_fahrenheit": 79
+    },
+    {
+      "time": "2026-02-07T20:40:00+00:00",
+      "raw_celsius": 26,
+      "raw_fahrenheit": 78.8,
+      "displayed_fahrenheit": 78.8,
+      "actual_rounded_fahrenheit": 79
+    },
+    {
+      "time": "2026-02-07T20:35:00+00:00",
+      "raw_celsius": 26,
+      "raw_fahrenheit": 78.8,
+      "displayed_fahrenheit": 78.8,
+      "actual_rounded_fahrenheit": 79
+    },
+    {
+      "time": "2026-02-07T20:30:00+00:00",
+      "raw_celsius": 26,
+      "raw_fahrenheit": 78.8,
+      "displayed_fahrenheit": 78.8,
+      "actual_rounded_fahrenheit": 79
+    },
+    {
+      "time": "2026-02-07T20:25:00+00:00",
+      "raw_celsius": 26,
+      "raw_fahrenheit": 78.8,
+      "displayed_fahrenheit": 78.8,
+      "actual_rounded_fahrenheit": 79
+    },
+    {
+      "time": "2026-02-07T20:20:00+00:00",
+      "raw_celsius": 26,
+      "raw_fahrenheit": 78.8,
+      "displayed_fahrenheit": 78.8,
+      "actual_rounded_fahrenheit": 79
+    },
+    {
+      "time": "2026-02-07T20:15:00+00:00",
+      "raw_celsius": 26,
+      "raw_fahrenheit": 78.8,
+      "displayed_fahrenheit": 78.8,
+      "actual_rounded_fahrenheit": 79
+    },
+    {
+      "time": "2026-02-07T20:10:00+00:00",
+      "raw_celsius": 26,
+      "raw_fahrenheit": 78.8,
+      "displayed_fahrenheit": 78.8,
+      "actual_rounded_fahrenheit": 79
+    },
+    {
+      "time": "2026-02-07T20:05:00+00:00",
+      "raw_celsius": 26,
+      "raw_fahrenheit": 78.8,
+      "displayed_fahrenheit": 78.8,
+      "actual_rounded_fahrenheit": 79
+    },
+    {
+      "time": "2026-02-07T20:00:00+00:00",
+      "raw_celsius": 26,
+      "raw_fahrenheit": 78.8,
+      "displayed_fahrenheit": 78.8,
+      "actual_rounded_fahrenheit": 79
+    },
+    {
+      "time": "2026-02-07T19:55:00+00:00",
+      "raw_celsius": 26,
+      "raw_fahrenheit": 78.8,
+      "displayed_fahrenheit": 78.8,
+      "actual_rounded_fahrenheit": 79
+    },
+    {
+      "time": "2026-02-07T19:53:00+00:00",
+      "raw_celsius": 25.6,
+      "raw_fahrenheit": 78.08,
+      "displayed_fahrenheit": 78.8,
+      "actual_rounded_fahrenheit": 78
+    },
+    {
+      "time": "2026-02-07T19:50:00+00:00",
+      "raw_celsius": 26,
+      "raw_fahrenheit": 78.8,
+      "displayed_fahrenheit": 78.8,
+      "actual_rounded_fahrenheit": 79
+    },
+    {
+      "time": "2026-02-07T19:45:00+00:00",
+      "raw_celsius": 26,
+      "raw_fahrenheit": 78.8,
+      "displayed_fahrenheit": 78.8,
+      "actual_rounded_fahrenheit": 79
+    },
+    {
+      "time": "2026-02-07T19:40:00+00:00",
+      "raw_celsius": 26,
+      "raw_fahrenheit": 78.8,
+      "displayed_fahrenheit": 78.8,
+      "actual_rounded_fahrenheit": 79
+    },
+    {
+      "time": "2026-02-07T19:35:00+00:00",
+      "raw_celsius": 26,
+      "raw_fahrenheit": 78.8,
+      "displayed_fahrenheit": 78.8,
+      "actual_rounded_fahrenheit": 79
+    },
+    {
+      "time": "2026-02-07T19:30:00+00:00",
+      "raw_celsius": 26,
+      "raw_fahrenheit": 78.8,
+      "displayed_fahrenheit": 78.8,
+      "actual_rounded_fahrenheit": 79
+    }
+  ]
+}
