@@ -44,14 +44,18 @@ KALSHI_MARKETS_ENDPOINT = f"{KALSHI_API_BASE}/markets"
 
 class EloSystem:
     """MLB Elo with staggered K-factor."""
-    
+
+    # Spring training: reduced K and home advantage (rotated lineups, neutral-ish sites)
+    SPRING_TRAINING_K = 8
+    SPRING_TRAINING_HOME_ADV = 12  # Half of regular season
+
     def __init__(self, home_advantage=24, mean_rating=1500, season_reversion=0.33):
         self.home_adv = home_advantage
         self.mean = mean_rating
         self.reversion = season_reversion
         self.ratings = {}
         self.last_season = None
-    
+
     def _k_factor(self, rating):
         if rating < 1450:
             return 32
@@ -59,13 +63,159 @@ class EloSystem:
             return 24
         else:
             return 16
-    
+
     def get_rating(self, team):
         return self.ratings.get(team, self.mean)
-    
+
     def expected_score(self, home_elo, away_elo):
         diff = home_elo + self.home_adv - away_elo
         return 1.0 / (1.0 + 10 ** (-diff / 400.0))
+
+    def update_rating(self, home_team, away_team, home_won, spring_training=False):
+        """Update Elo ratings after a game result.
+
+        Args:
+            home_team: Home team abbreviation
+            away_team: Away team abbreviation
+            home_won: True if home team won
+            spring_training: Use reduced K-factor for spring training
+        """
+        home_elo = self.get_rating(home_team)
+        away_elo = self.get_rating(away_team)
+
+        if spring_training:
+            k_home = self.SPRING_TRAINING_K
+            k_away = self.SPRING_TRAINING_K
+            home_adv = self.SPRING_TRAINING_HOME_ADV
+        else:
+            k_home = self._k_factor(home_elo)
+            k_away = self._k_factor(away_elo)
+            home_adv = self.home_adv
+
+        expected_home = 1.0 / (1.0 + 10 ** (-(home_elo + home_adv - away_elo) / 400.0))
+        actual_home = 1.0 if home_won else 0.0
+
+        self.ratings[home_team] = home_elo + k_home * (actual_home - expected_home)
+        self.ratings[away_team] = away_elo + k_away * (expected_home - actual_home)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# SPRING TRAINING RESULTS (MLB Stats API)
+# ═══════════════════════════════════════════════════════════════════════════
+
+MLB_STATS_API = "https://statsapi.mlb.com/api/v1"
+
+# MLB Stats API team ID -> standard abbreviation
+MLB_TEAM_ID_MAP = {
+    108: "LAA", 109: "ARI", 110: "BAL", 111: "BOS", 112: "CHC",
+    113: "CIN", 114: "CLE", 115: "COL", 116: "DET", 117: "HOU",
+    118: "KC",  119: "LAD", 120: "WSH", 121: "NYM", 133: "OAK",
+    134: "PIT", 135: "SD",  136: "SEA", 137: "SF",  138: "STL",
+    139: "TB",  140: "TEX", 141: "TOR", 142: "MIN", 143: "PHI",
+    144: "ATL", 145: "CHW", 146: "MIA", 147: "NYY", 158: "MIL",
+}
+
+
+def fetch_spring_training_results(quiet=False):
+    """Fetch completed spring training game results from MLB Stats API.
+
+    Returns list of dicts with: date, home_abbr, away_abbr, home_score, away_score, split_squad
+    """
+    # Spring training window: Feb 20 through today
+    eastern_now = datetime.now(EASTERN)
+    start_date = f"{eastern_now.year}-02-20"
+    end_date = eastern_now.strftime("%Y-%m-%d")
+
+    if not quiet:
+        print(f"\nFetching spring training results ({start_date} to {end_date})...")
+
+    try:
+        params = {
+            "sportId": 1,
+            "startDate": start_date,
+            "endDate": end_date,
+            "gameType": "S"
+        }
+        response = requests.get(f"{MLB_STATS_API}/schedule", params=params, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+
+        games = []
+        for date_obj in data.get("dates", []):
+            for game in date_obj.get("games", []):
+                # Only completed games
+                if game.get("status", {}).get("abstractGameState") != "Final":
+                    continue
+
+                away = game.get("teams", {}).get("away", {})
+                home = game.get("teams", {}).get("home", {})
+
+                away_id = away.get("team", {}).get("id")
+                home_id = home.get("team", {}).get("id")
+
+                away_abbr = MLB_TEAM_ID_MAP.get(away_id)
+                home_abbr = MLB_TEAM_ID_MAP.get(home_id)
+
+                if not away_abbr or not home_abbr:
+                    continue
+
+                home_score = home.get("score", 0) or 0
+                away_score = away.get("score", 0) or 0
+
+                split_squad = away.get("splitSquad", False) or home.get("splitSquad", False)
+
+                games.append({
+                    "date": game.get("officialDate", ""),
+                    "home_abbr": home_abbr,
+                    "away_abbr": away_abbr,
+                    "home_score": home_score,
+                    "away_score": away_score,
+                    "split_squad": split_squad,
+                })
+
+        # Sort by date
+        games.sort(key=lambda g: g["date"])
+
+        if not quiet:
+            print(f"  Found {len(games)} completed spring training games")
+            split_count = sum(1 for g in games if g["split_squad"])
+            if split_count:
+                print(f"  ({split_count} split-squad games)")
+
+        return games
+
+    except requests.exceptions.RequestException as e:
+        if not quiet:
+            print(f"  Failed to fetch spring training results: {e}")
+        return []
+
+
+def update_elo_with_spring_training(elo_system, quiet=False):
+    """Fetch spring training results and update Elo ratings."""
+    games = fetch_spring_training_results(quiet=quiet)
+
+    if not games:
+        return 0
+
+    updated = 0
+    for game in games:
+        home_won = game["home_score"] > game["away_score"]
+        # Ties in spring training: skip (no meaningful update)
+        if game["home_score"] == game["away_score"]:
+            continue
+
+        elo_system.update_rating(
+            game["home_abbr"],
+            game["away_abbr"],
+            home_won,
+            spring_training=True
+        )
+        updated += 1
+
+    if not quiet:
+        print(f"  Updated Elo with {updated} spring training results")
+
+    return updated
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -133,13 +283,17 @@ def load_model_and_elo(quiet=False):
     # Initialize Elo system with current ratings
     elo_system = EloSystem()
     elo_system.ratings = latest_elo
-    
+
     if not quiet:
-        print(f"  Loaded Elo ratings for {len(latest_elo)} teams")
-        
-        # Show sample ratings
-        sorted_teams = sorted(latest_elo.items(), key=lambda x: x[1], reverse=True)
-        print(f"  Top 3 teams: {', '.join([f'{t[0]}={t[1]:.0f}' for t in sorted_teams[:3]])}")
+        print(f"  Loaded base Elo ratings for {len(latest_elo)} teams")
+
+    # Update with spring training results
+    st_count = update_elo_with_spring_training(elo_system, quiet=quiet)
+
+    if not quiet:
+        sorted_teams = sorted(elo_system.ratings.items(), key=lambda x: x[1], reverse=True)
+        label = "Top 3 teams (with ST updates)" if st_count else "Top 3 teams"
+        print(f"  {label}: {', '.join([f'{t[0]}={t[1]:.0f}' for t in sorted_teams[:3]])}")
     
     # Try to load saved model if it exists
     model_path = os.path.join(BASE_DIR, "mlb_ensemble_model.pkl")
