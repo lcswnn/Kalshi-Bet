@@ -14,6 +14,7 @@ import os
 import sys
 import pickle
 import warnings
+from collections import defaultdict
 from datetime import datetime, timezone
 import numpy as np
 import pandas as pd
@@ -152,147 +153,193 @@ def load_model_and_elo(quiet=False):
 # FETCH KALSHI MARKETS
 # ═══════════════════════════════════════════════════════════════════════════
 
+def get_market_price(market):
+    """Get best available price for a market: last_price if traded, else midpoint."""
+    volume = market.get("volume", 0)
+    last_price = market.get("last_price", 0)
+    yes_bid = market.get("yes_bid", 0)
+    yes_ask = market.get("yes_ask", 100)
+
+    if volume and volume > 0 and last_price and last_price > 0:
+        return last_price
+    if yes_bid and yes_ask and yes_bid > 0:
+        return (yes_bid + yes_ask) // 2
+    return yes_ask if yes_ask else 50
+
+
 def fetch_kalshi_mlb_markets(quiet=False):
     """Fetch current MLB game markets from Kalshi API."""
-    
+
     if not quiet:
         print("\nFetching Kalshi MLB markets...")
-    
-    try:
-        # Search for MLB markets with KXMLB prefix
-        params = {
-            "series_ticker": "KXMLB",
-            "status": "open",
-            "limit": 200
-        }
-        
-        response = requests.get(KALSHI_MARKETS_ENDPOINT, params=params, timeout=10)
-        response.raise_for_status()
-        
-        data = response.json()
-        markets = data.get("markets", [])
-        
+
+    # Fetch from both regular season and spring training series
+    all_markets = []
+    series_tickers = ["KXMLB", "KXMLBSTGAME"]
+
+    for series in series_tickers:
+        try:
+            params = {
+                "series_ticker": series,
+                "status": "open",
+                "limit": 200
+            }
+            response = requests.get(KALSHI_MARKETS_ENDPOINT, params=params, timeout=10)
+            response.raise_for_status()
+            markets = response.json().get("markets", [])
+            if not quiet:
+                print(f"  {series}: {len(markets)} open markets")
+            all_markets.extend(markets)
+        except requests.exceptions.RequestException as e:
+            if not quiet:
+                print(f"  {series}: fetch failed ({e})")
+
+    if not all_markets:
         if not quiet:
-            print(f"  Found {len(markets)} open MLB markets")
-        
-        # Filter out championship/futures markets
-        game_markets = []
-        championship_markets = []
-        
-        for market in markets:
-            title = market.get("title", "")
-            # Championship markets have "Championship" in title and close in 2028
-            # Game markets have "beat" in title and close same day or next day
-            if "Championship" in title or "win the 20" in title:
-                championship_markets.append(market)
-            elif "beat" in title.lower():
-                game_markets.append(market)
-        
-        if not quiet:
-            print(f"  - {len(championship_markets)} championship/futures markets (filtered out)")
-            print(f"  - {len(game_markets)} game markets")
-        
-            # Debug: Print first few game market titles to see the format
-            if game_markets:
-                print(f"\n  Sample game market titles (first 3):")
-                for i, market in enumerate(game_markets[:3], 1):
-                    print(f"    {i}. {market.get('title', 'N/A')}")
-                    print(f"       Ticker: {market.get('ticker', 'N/A')}")
-        
-        # Parse game markets to extract game information
-        games = []
-        
-        for market in game_markets:
-            ticker = market.get("ticker", "")
-            title = market.get("title", "")
-            subtitle = market.get("subtitle", "")
-            
-            # Try multiple parsing patterns for game markets
-            home_team = None
-            away_team = None
-            
-            # Pattern 1: "Will the [Team] beat the [Opponent]?"
-            if "Will the " in title and " beat the " in title:
-                try:
-                    parts = title.replace("Will the ", "").split(" beat the ")
-                    if len(parts) == 2:
-                        home_team = parts[0].strip()
-                        away_team = parts[1].strip().rstrip("?")
-                except:
-                    pass
-            
-            # Pattern 2: "Will [Team] beat the [Opponent]?"
-            elif "Will " in title and " beat the " in title:
-                try:
-                    parts = title.replace("Will ", "").split(" beat the ")
-                    if len(parts) == 2:
-                        home_team = parts[0].strip()
-                        away_team = parts[1].strip().rstrip("?")
-                except:
-                    pass
-            
-            # Pattern 3: "Will [Team] beat [Opponent]?" (no "the")
-            elif "Will " in title and " beat " in title:
-                try:
-                    parts = title.replace("Will ", "").split(" beat ")
-                    if len(parts) == 2:
-                        home_team = parts[0].strip()
-                        away_team = parts[1].strip().rstrip("?")
-                except:
-                    pass
-            
-            # Pattern 4: Check subtitle for team names
-            elif subtitle:
-                # Subtitle might have format like "LAD vs SD"
-                if " vs " in subtitle or " @ " in subtitle:
-                    separator = " vs " if " vs " in subtitle else " @ "
-                    parts = subtitle.split(separator)
-                    if len(parts) == 2:
-                        if separator == " @ ":
-                            away_team = parts[0].strip()
-                            home_team = parts[1].strip()
-                        else:
-                            home_team = parts[0].strip()
-                            away_team = parts[1].strip()
-            
-            if home_team and away_team:
-                # Get market prices from yes/no ask prices (actual market prices)
-                yes_ask = market.get("yes_ask", 50)
-                no_ask = market.get("no_ask", 50)
-                
-                games.append({
-                    "ticker": ticker,
-                    "home_team": home_team,
-                    "away_team": away_team,
-                    "yes_price": yes_ask,
-                    "no_price": no_ask,
-                    "close_time": market.get("close_time", ""),
-                    "title": title
-                })
-        
-        if not quiet:
-            print(f"  Parsed {len(games)} MLB games")
-            
-            if len(games) == 0 and len(game_markets) > 0:
-                print("\n  WARNING: Found game markets but couldn't parse any games.")
-                print("  This means the market title format might have changed.")
-                print("  Please check the sample titles above and report the format.")
-        
-        return games
-        
-    except requests.exceptions.RequestException as e:
-        if not quiet:
-            print(f"ERROR fetching Kalshi markets: {e}")
+            print("  No markets found from any series.")
         return []
+
+    # Group all markets by event_ticker
+    events = defaultdict(list)
+    for market in all_markets:
+        events[market.get("event_ticker", "")].append(market)
+
+    games = []
+    skipped_futures = 0
+
+    for event_ticker, market_group in events.items():
+        # Skip championship/futures markets
+        sample_title = market_group[0].get("title", "")
+        if "Championship" in sample_title or "win the 20" in sample_title:
+            skipped_futures += len(market_group)
+            continue
+
+        # ── Spring training paired markets ("Team A vs Team B Winner?") ──
+        if "KXMLBSTGAME" in event_ticker and len(market_group) == 2:
+            # Extract team abbreviations from ticker suffixes
+            team_markets = {}
+            for m in market_group:
+                ticker = m.get("ticker", "")
+                team_suffix = ticker.rsplit("-", 1)[-1]
+                std_abbr = normalize_ticker_abbr(team_suffix)
+                team_markets[std_abbr] = m
+
+            if len(team_markets) != 2:
+                continue
+
+            teams = list(team_markets.keys())
+
+            # Determine home/away from event_ticker
+            # Event ticker ends with concatenated team abbrs (e.g., ...ATLMIN)
+            # First team = away, second team = home (baseball convention)
+            # Find which ordering matches the event_ticker suffix
+            team_a, team_b = teams[0], teams[1]
+            # Check original ticker suffixes (before normalization) for matching
+            raw_suffixes = []
+            for m in market_group:
+                raw_suffixes.append(m.get("ticker", "").rsplit("-", 1)[-1])
+
+            # Try both orderings against event_ticker
+            suffix_concat_ab = raw_suffixes[0] + raw_suffixes[1]
+            suffix_concat_ba = raw_suffixes[1] + raw_suffixes[0]
+            event_end = event_ticker.split("-")[1] if "-" in event_ticker else ""
+
+            if suffix_concat_ab in event_end:
+                away_abbr, home_abbr = team_a, team_b
+            elif suffix_concat_ba in event_end:
+                away_abbr, home_abbr = team_b, team_a
+            else:
+                # Can't determine order; just pick one
+                home_abbr, away_abbr = team_a, team_b
+
+            home_market = team_markets[home_abbr]
+            away_market = team_markets[away_abbr]
+
+            home_name = ABBR_TO_FULL_NAME.get(home_abbr, home_abbr)
+            away_name = ABBR_TO_FULL_NAME.get(away_abbr, away_abbr)
+
+            # Use the home team's market ticker for the bet
+            # yes_price = cost to buy "home wins", no_price = cost to buy "away wins"
+            home_price = get_market_price(home_market)
+            away_price = get_market_price(away_market)
+
+            games.append({
+                "ticker": home_market.get("ticker", ""),
+                "ticker_away": away_market.get("ticker", ""),
+                "home_team": home_name,
+                "away_team": away_name,
+                "yes_price": home_price,
+                "no_price": away_price,
+                "close_time": home_market.get("close_time", ""),
+                "title": sample_title,
+                "source": "spring_training"
+            })
+
+        # ── Regular season single markets ("Will X beat Y?") ──
+        else:
+            for market in market_group:
+                title = market.get("title", "")
+                subtitle = market.get("subtitle", "")
+
+                home_team = None
+                away_team = None
+
+                # Pattern: "Will (the) [Team] beat (the) [Opponent]?"
+                if " beat " in title.lower():
+                    cleaned = title.replace("Will the ", "Will ").replace(" beat the ", " beat ")
+                    if "Will " in cleaned and " beat " in cleaned:
+                        try:
+                            parts = cleaned.replace("Will ", "").split(" beat ")
+                            if len(parts) == 2:
+                                home_team = parts[0].strip()
+                                away_team = parts[1].strip().rstrip("?")
+                        except:
+                            pass
+
+                # Fallback: subtitle parsing
+                if not home_team and subtitle:
+                    for sep in [" @ ", " vs "]:
+                        if sep in subtitle:
+                            parts = subtitle.split(sep)
+                            if len(parts) == 2:
+                                if sep == " @ ":
+                                    away_team, home_team = parts[0].strip(), parts[1].strip()
+                                else:
+                                    home_team, away_team = parts[0].strip(), parts[1].strip()
+                            break
+
+                if home_team and away_team:
+                    games.append({
+                        "ticker": market.get("ticker", ""),
+                        "home_team": home_team,
+                        "away_team": away_team,
+                        "yes_price": market.get("yes_ask", 50),
+                        "no_price": market.get("no_ask", 50),
+                        "close_time": market.get("close_time", ""),
+                        "title": title,
+                        "source": "regular_season"
+                    })
+
+    if not quiet:
+        print(f"  Skipped {skipped_futures} championship/futures markets")
+        print(f"  Parsed {len(games)} MLB games")
+        if games:
+            sources = defaultdict(int)
+            for g in games:
+                sources[g.get("source", "unknown")] += 1
+            for src, count in sources.items():
+                print(f"    - {src}: {count} games")
+
+    return games
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 # TEAM NAME MAPPING
 # ═══════════════════════════════════════════════════════════════════════════
 
-# Map Kalshi team names to historical data team abbreviations
+# Map Kalshi team names (nicknames) to standard abbreviations
 TEAM_NAME_MAP = {
-    "Athletics": "OAK",
+    "Athletics": "OAK", "A's": "OAK",
     "Angels": "LAA",
     "Astros": "HOU",
     "Blue Jays": "TOR",
@@ -300,7 +347,7 @@ TEAM_NAME_MAP = {
     "Brewers": "MIL",
     "Cardinals": "STL",
     "Cubs": "CHC",
-    "Diamondbacks": "ARI",
+    "Diamondbacks": "ARI", "D-backs": "ARI",
     "Dodgers": "LAD",
     "Giants": "SF",
     "Guardians": "CLE",
@@ -323,6 +370,35 @@ TEAM_NAME_MAP = {
     "White Sox": "CHW",
     "Yankees": "NYY"
 }
+
+# Map ticker abbreviations (used in KXMLBSTGAME tickers) to standard abbreviations
+TICKER_ABBR_MAP = {
+    "ATH": "OAK",
+    "ARI": "ARI", "AZ": "ARI",
+    "CHC": "CHC", "CHW": "CHW", "CWS": "CHW",
+    "KC": "KC", "KCR": "KC",
+    "LAA": "LAA", "LAD": "LAD",
+    "SD": "SD", "SDP": "SD",
+    "SF": "SF", "SFG": "SF",
+    "TB": "TB", "TBR": "TB",
+    "WSH": "WSH", "WAS": "WSH",
+}
+
+# Standard abbreviation to full team name
+ABBR_TO_FULL_NAME = {
+    "OAK": "Athletics", "LAA": "Angels", "HOU": "Astros", "TOR": "Blue Jays",
+    "ATL": "Braves", "MIL": "Brewers", "STL": "Cardinals", "CHC": "Cubs",
+    "ARI": "Diamondbacks", "LAD": "Dodgers", "SF": "Giants", "CLE": "Guardians",
+    "SEA": "Mariners", "MIA": "Marlins", "NYM": "Mets", "WSH": "Nationals",
+    "BAL": "Orioles", "SD": "Padres", "PHI": "Phillies", "PIT": "Pirates",
+    "TEX": "Rangers", "TB": "Rays", "BOS": "Red Sox", "CIN": "Reds",
+    "COL": "Rockies", "KC": "Royals", "DET": "Tigers", "MIN": "Twins",
+    "CHW": "White Sox", "NYY": "Yankees",
+}
+
+def normalize_ticker_abbr(ticker_abbr):
+    """Convert ticker abbreviation to standard MLB abbreviation."""
+    return TICKER_ABBR_MAP.get(ticker_abbr, ticker_abbr)
 
 def map_team_name(kalshi_name):
     """Map Kalshi team name to abbreviation."""
@@ -369,6 +445,7 @@ def generate_predictions(games, elo_system, model_data=None, quiet=False):
         
         predictions.append({
             "ticker": game["ticker"],
+            "ticker_away": game.get("ticker_away", game["ticker"]),
             "title": game["title"],
             "home_team": game["home_team"],
             "away_team": game["away_team"],
@@ -486,7 +563,7 @@ def generate_betting_recommendations(predictions, bankroll, kelly_fraction, min_
                     "bet_amount": round(bet_amount, 2),
                     "potential_profit": round(potential_profit, 2),
                     "expected_value": round(expected_value, 2),
-                    "ticker": pred["ticker"],
+                    "ticker": pred.get("ticker_away", pred["ticker"]),
                     "title": pred["title"],
                     "close_time": pred["close_time"]
                 })
@@ -609,6 +686,7 @@ def get_json_output(predictions, bets, bankroll, elo_system):
                 "home_edge": p["home_edge"],
                 "away_edge": p["away_edge"],
                 "ticker": p["ticker"],
+                "ticker_away": p.get("ticker_away", p["ticker"]),
                 "close_time": p["close_time"],
                 "title": p["title"]
             }
@@ -663,14 +741,12 @@ def main():
             print("\n" + "=" * 70)
             print("NO MLB GAME MARKETS FOUND")
             print("=" * 70)
-            print("\nIt's currently the MLB off-season (February).")
-            print("Championship/futures markets are available, but no daily game markets.")
-            print("\nMLB regular season typically:")
-            print("  • Spring Training: Late February - March")
-            print("  • Regular Season: Late March/Early April - Late September")
-            print("  • Playoffs: October")
-            print("  • World Series: Late October - Early November")
-            print("\nCheck back when the season starts for daily game betting markets!")
+            print("\nNo daily game markets found on Kalshi.")
+            print("Checked both regular season (KXMLB) and spring training (KXMLBSTGAME).")
+            print("\nThis could mean:")
+            print("  • No games scheduled today")
+            print("  • It's the off-season")
+            print("  • Markets haven't been posted yet")
             print("=" * 70)
         else:
             # JSON output for no games

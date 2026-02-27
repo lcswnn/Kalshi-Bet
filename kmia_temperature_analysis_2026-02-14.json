@@ -1,7 +1,7 @@
 {
   "station": "KMIA",
   "date": "2026-02-14",
-  "analysis_time": "2026-02-14T17:39:04.344922+00:00",
+  "analysis_time": "2026-02-14T22:10:16.977348+00:00",
   "max_displayed": {
     "time": "2026-02-14T16:40:00+00:00",
     "time_eastern": "2026-02-14T11:40:00-05:00",
@@ -1314,6 +1314,462 @@
       "raw_fahrenheit": 78.8,
       "displayed_fahrenheit": 78.8,
       "actual_rounded_fahrenheit": 79
+    },
+    {
+      "time": "2026-02-14T17:30:00+00:00",
+      "time_eastern": "2026-02-14T12:30:00-05:00",
+      "raw_celsius": 26,
+      "raw_fahrenheit": 78.8,
+      "displayed_fahrenheit": 78.8,
+      "actual_rounded_fahrenheit": 79
+    },
+    {
+      "time": "2026-02-14T17:35:00+00:00",
+      "time_eastern": "2026-02-14T12:35:00-05:00",
+      "raw_celsius": 24,
+      "raw_fahrenheit": 75.2,
+      "displayed_fahrenheit": 75.2,
+      "actual_rounded_fahrenheit": 75
+    },
+    {
+      "time": "2026-02-14T17:40:00+00:00",
+      "time_eastern": "2026-02-14T12:40:00-05:00",
+      "raw_celsius": 26,
+      "raw_fahrenheit": 78.8,
+      "displayed_fahrenheit": 78.8,
+      "actual_rounded_fahrenheit": 79
+    },
+    {
+      "time": "2026-02-14T17:45:00+00:00",
+      "time_eastern": "2026-02-14T12:45:00-05:00",
+      "raw_celsius": 26,
+      "raw_fahrenheit": 78.8,
+      "displayed_fahrenheit": 78.8,
+      "actual_rounded_fahrenheit": 79
+    },
+    {
+      "time": "2026-02-14T17:50:00+00:00",
+      "time_eastern": "2026-02-14T12:50:00-05:00",
+      "raw_celsius": 26,
+      "raw_fahrenheit": 78.8,
+      "displayed_fahrenheit": 78.8,
+      "actual_rounded_fahrenheit": 79
+    },
+    {
+      "time": "2026-02-14T17:53:00+00:00",
+      "time_eastern": "2026-02-14T12:53:00-05:00",
+      "raw_celsius": 25.6,
+      "raw_fahrenheit": 78.08,
+      "displayed_fahrenheit": 78.8,
+      "actual_rounded_fahrenheit": 78
+    },
+    {
+      "time": "2026-02-14T17:55:00+00:00",
+      "time_eastern": "2026-02-14T12:55:00-05:00",
+      "raw_celsius": 26,
+      "raw_fahrenheit": 78.8,
+      "displayed_fahrenheit": 78.8,
+      "actual_rounded_fahrenheit": 79
+    },
+    {
+      "time": "2026-02-14T18:00:00+00:00",
+      "time_eastern": "2026-02-14T13:00:00-05:00",
+      "raw_celsius": 26,
+      "raw_fahrenheit": 78.8,
+      "displayed_fahrenheit": 78.8,
+      "actual_rounded_fahrenheit": 79
+    },
+    {
+      "time": "2026-02-14T18:05:00+00:00",
+      "time_eastern": "2026-02-14T13:05:00-05:00",
+      "raw_celsius": 26,
+      "raw_fahrenheit": 78.8,
+      "displayed_fahrenheit": 78.8,
+      "actual_rounded_fahrenheit": 79
+    },
+    {
+      "time": "2026-02-14T18:10:00+00:00",
+      "time_eastern": "2026-02-14T13:10:00-05:00",
+      "raw_celsius": 26,
+      "raw_fahrenheit": 78.8,
+      "displayed_fahrenheit": 78.8,
+      "actual_rounded_fahrenheit": 79
+    },
+    {
+      "time": "2026-02-14T18:15:00+00:00",
+      "time_eastern": "2026-02-14T13:15:00-05:00",
+      "raw_celsius": 26,
+      "raw_fahrenheit": 78.8,
+      "displayed_fahrenheit": 78.8,
+      "actual_rounded_fahrenheit": 79
+    },
+    {
+      "time": "2026-02-14T18:20:00+00:00",
+      "time_eastern": "2026-02-14T13:20:00-05:00",
+      "raw_celsius": 26,
+      "raw_fahrenheit": 78.8,
+      "displayed_fahrenheit": 78.8,
+      "actual_rounded_fahrenheit": 79
+    },
+    {
+      "time": "2026-02-14T18:25:00+00:00",
+      "time_eastern": "2026-02-14T13:25:00-05:00",
+      "raw_celsius": 26,
+      "raw_fahrenheit": 78.8,
+      "displayed_fahrenheit": 78.8,
+      "actual_rounded_fahrenheit": 79
+    },
+    {
+      "time": "2026-02-14T18:30:00+00:00",
+      "time_eastern": "2026-02-14T13:30:00-05:00",
+      "raw_celsius": 26,
+      "raw_fahrenheit": 78.8,
+      "displayed_fahrenheit": 78.8,
+      "actual_rounded_fahrenheit": 79
+    },
+    {
+      "time": "2026-02-14T18:35:00+00:00",
+      "time_eastern": "2026-02-14T13:35:00-05:00",
+      "raw_celsius": 26,
+      "raw_fahrenheit": 78.8,
+      "displayed_fahrenheit": 78.8,
+      "actual_rounded_fahrenheit": 79
+    },
+    {
+      "time": "2026-02-14T18:40:00+00:00",
+      "time_eastern": "2026-02-14T13:40:00-05:00",
+      "raw_celsius": 24,
+      "raw_fahrenheit": 75.2,
+      "displayed_fahrenheit": 75.2,
+      "actual_rounded_fahrenheit": 75
+    },
+    {
+      "time": "2026-02-14T18:45:00+00:00",
+      "time_eastern": "2026-02-14T13:45:00-05:00",
+      "raw_celsius": 24,
+      "raw_fahrenheit": 75.2,
+      "displayed_fahrenheit": 75.2,
+      "actual_rounded_fahrenheit": 75
+    },
+    {
+      "time": "2026-02-14T18:50:00+00:00",
+      "time_eastern": "2026-02-14T13:50:00-05:00",
+      "raw_celsius": 24,
+      "raw_fahrenheit": 75.2,
+      "displayed_fahrenheit": 75.2,
+      "actual_rounded_fahrenheit": 75
+    },
+    {
+      "time": "2026-02-14T18:53:00+00:00",
+      "time_eastern": "2026-02-14T13:53:00-05:00",
+      "raw_celsius": 25,
+      "raw_fahrenheit": 77.0,
+      "displayed_fahrenheit": 77.0,
+      "actual_rounded_fahrenheit": 77
+    },
+    {
+      "time": "2026-02-14T18:55:00+00:00",
+      "time_eastern": "2026-02-14T13:55:00-05:00",
+      "raw_celsius": 25,
+      "raw_fahrenheit": 77.0,
+      "displayed_fahrenheit": 77.0,
+      "actual_rounded_fahrenheit": 77
+    },
+    {
+      "time": "2026-02-14T19:00:00+00:00",
+      "time_eastern": "2026-02-14T14:00:00-05:00",
+      "raw_celsius": 26,
+      "raw_fahrenheit": 78.8,
+      "displayed_fahrenheit": 78.8,
+      "actual_rounded_fahrenheit": 79
+    },
+    {
+      "time": "2026-02-14T19:05:00+00:00",
+      "time_eastern": "2026-02-14T14:05:00-05:00",
+      "raw_celsius": 26,
+      "raw_fahrenheit": 78.8,
+      "displayed_fahrenheit": 78.8,
+      "actual_rounded_fahrenheit": 79
+    },
+    {
+      "time": "2026-02-14T19:10:00+00:00",
+      "time_eastern": "2026-02-14T14:10:00-05:00",
+      "raw_celsius": 26,
+      "raw_fahrenheit": 78.8,
+      "displayed_fahrenheit": 78.8,
+      "actual_rounded_fahrenheit": 79
+    },
+    {
+      "time": "2026-02-14T19:15:00+00:00",
+      "time_eastern": "2026-02-14T14:15:00-05:00",
+      "raw_celsius": 26,
+      "raw_fahrenheit": 78.8,
+      "displayed_fahrenheit": 78.8,
+      "actual_rounded_fahrenheit": 79
+    },
+    {
+      "time": "2026-02-14T19:20:00+00:00",
+      "time_eastern": "2026-02-14T14:20:00-05:00",
+      "raw_celsius": 26,
+      "raw_fahrenheit": 78.8,
+      "displayed_fahrenheit": 78.8,
+      "actual_rounded_fahrenheit": 79
+    },
+    {
+      "time": "2026-02-14T19:25:00+00:00",
+      "time_eastern": "2026-02-14T14:25:00-05:00",
+      "raw_celsius": 25,
+      "raw_fahrenheit": 77.0,
+      "displayed_fahrenheit": 77.0,
+      "actual_rounded_fahrenheit": 77
+    },
+    {
+      "time": "2026-02-14T19:30:00+00:00",
+      "time_eastern": "2026-02-14T14:30:00-05:00",
+      "raw_celsius": 26,
+      "raw_fahrenheit": 78.8,
+      "displayed_fahrenheit": 78.8,
+      "actual_rounded_fahrenheit": 79
+    },
+    {
+      "time": "2026-02-14T19:35:00+00:00",
+      "time_eastern": "2026-02-14T14:35:00-05:00",
+      "raw_celsius": 26,
+      "raw_fahrenheit": 78.8,
+      "displayed_fahrenheit": 78.8,
+      "actual_rounded_fahrenheit": 79
+    },
+    {
+      "time": "2026-02-14T19:40:00+00:00",
+      "time_eastern": "2026-02-14T14:40:00-05:00",
+      "raw_celsius": 26,
+      "raw_fahrenheit": 78.8,
+      "displayed_fahrenheit": 78.8,
+      "actual_rounded_fahrenheit": 79
+    },
+    {
+      "time": "2026-02-14T19:45:00+00:00",
+      "time_eastern": "2026-02-14T14:45:00-05:00",
+      "raw_celsius": 26,
+      "raw_fahrenheit": 78.8,
+      "displayed_fahrenheit": 78.8,
+      "actual_rounded_fahrenheit": 79
+    },
+    {
+      "time": "2026-02-14T19:50:00+00:00",
+      "time_eastern": "2026-02-14T14:50:00-05:00",
+      "raw_celsius": 25,
+      "raw_fahrenheit": 77.0,
+      "displayed_fahrenheit": 77.0,
+      "actual_rounded_fahrenheit": 77
+    },
+    {
+      "time": "2026-02-14T19:53:00+00:00",
+      "time_eastern": "2026-02-14T14:53:00-05:00",
+      "raw_celsius": 25,
+      "raw_fahrenheit": 77.0,
+      "displayed_fahrenheit": 77.0,
+      "actual_rounded_fahrenheit": 77
+    },
+    {
+      "time": "2026-02-14T19:55:00+00:00",
+      "time_eastern": "2026-02-14T14:55:00-05:00",
+      "raw_celsius": 25,
+      "raw_fahrenheit": 77.0,
+      "displayed_fahrenheit": 77.0,
+      "actual_rounded_fahrenheit": 77
+    },
+    {
+      "time": "2026-02-14T20:00:00+00:00",
+      "time_eastern": "2026-02-14T15:00:00-05:00",
+      "raw_celsius": 25,
+      "raw_fahrenheit": 77.0,
+      "displayed_fahrenheit": 77.0,
+      "actual_rounded_fahrenheit": 77
+    },
+    {
+      "time": "2026-02-14T20:05:00+00:00",
+      "time_eastern": "2026-02-14T15:05:00-05:00",
+      "raw_celsius": 25,
+      "raw_fahrenheit": 77.0,
+      "displayed_fahrenheit": 77.0,
+      "actual_rounded_fahrenheit": 77
+    },
+    {
+      "time": "2026-02-14T20:10:00+00:00",
+      "time_eastern": "2026-02-14T15:10:00-05:00",
+      "raw_celsius": 25,
+      "raw_fahrenheit": 77.0,
+      "displayed_fahrenheit": 77.0,
+      "actual_rounded_fahrenheit": 77
+    },
+    {
+      "time": "2026-02-14T20:15:00+00:00",
+      "time_eastern": "2026-02-14T15:15:00-05:00",
+      "raw_celsius": 25,
+      "raw_fahrenheit": 77.0,
+      "displayed_fahrenheit": 77.0,
+      "actual_rounded_fahrenheit": 77
+    },
+    {
+      "time": "2026-02-14T20:20:00+00:00",
+      "time_eastern": "2026-02-14T15:20:00-05:00",
+      "raw_celsius": 25,
+      "raw_fahrenheit": 77.0,
+      "displayed_fahrenheit": 77.0,
+      "actual_rounded_fahrenheit": 77
+    },
+    {
+      "time": "2026-02-14T20:25:00+00:00",
+      "time_eastern": "2026-02-14T15:25:00-05:00",
+      "raw_celsius": 24,
+      "raw_fahrenheit": 75.2,
+      "displayed_fahrenheit": 75.2,
+      "actual_rounded_fahrenheit": 75
+    },
+    {
+      "time": "2026-02-14T20:30:00+00:00",
+      "time_eastern": "2026-02-14T15:30:00-05:00",
+      "raw_celsius": 24,
+      "raw_fahrenheit": 75.2,
+      "displayed_fahrenheit": 75.2,
+      "actual_rounded_fahrenheit": 75
+    },
+    {
+      "time": "2026-02-14T20:35:00+00:00",
+      "time_eastern": "2026-02-14T15:35:00-05:00",
+      "raw_celsius": 25,
+      "raw_fahrenheit": 77.0,
+      "displayed_fahrenheit": 77.0,
+      "actual_rounded_fahrenheit": 77
+    },
+    {
+      "time": "2026-02-14T20:40:00+00:00",
+      "time_eastern": "2026-02-14T15:40:00-05:00",
+      "raw_celsius": 25,
+      "raw_fahrenheit": 77.0,
+      "displayed_fahrenheit": 77.0,
+      "actual_rounded_fahrenheit": 77
+    },
+    {
+      "time": "2026-02-14T20:45:00+00:00",
+      "time_eastern": "2026-02-14T15:45:00-05:00",
+      "raw_celsius": 25,
+      "raw_fahrenheit": 77.0,
+      "displayed_fahrenheit": 77.0,
+      "actual_rounded_fahrenheit": 77
+    },
+    {
+      "time": "2026-02-14T20:50:00+00:00",
+      "time_eastern": "2026-02-14T15:50:00-05:00",
+      "raw_celsius": 24,
+      "raw_fahrenheit": 75.2,
+      "displayed_fahrenheit": 75.2,
+      "actual_rounded_fahrenheit": 75
+    },
+    {
+      "time": "2026-02-14T20:53:00+00:00",
+      "time_eastern": "2026-02-14T15:53:00-05:00",
+      "raw_celsius": 25,
+      "raw_fahrenheit": 77.0,
+      "displayed_fahrenheit": 77.0,
+      "actual_rounded_fahrenheit": 77
+    },
+    {
+      "time": "2026-02-14T20:55:00+00:00",
+      "time_eastern": "2026-02-14T15:55:00-05:00",
+      "raw_celsius": 25,
+      "raw_fahrenheit": 77.0,
+      "displayed_fahrenheit": 77.0,
+      "actual_rounded_fahrenheit": 77
+    },
+    {
+      "time": "2026-02-14T21:00:00+00:00",
+      "time_eastern": "2026-02-14T16:00:00-05:00",
+      "raw_celsius": 25,
+      "raw_fahrenheit": 77.0,
+      "displayed_fahrenheit": 77.0,
+      "actual_rounded_fahrenheit": 77
+    },
+    {
+      "time": "2026-02-14T21:05:00+00:00",
+      "time_eastern": "2026-02-14T16:05:00-05:00",
+      "raw_celsius": 24,
+      "raw_fahrenheit": 75.2,
+      "displayed_fahrenheit": 75.2,
+      "actual_rounded_fahrenheit": 75
+    },
+    {
+      "time": "2026-02-14T21:10:00+00:00",
+      "time_eastern": "2026-02-14T16:10:00-05:00",
+      "raw_celsius": 24,
+      "raw_fahrenheit": 75.2,
+      "displayed_fahrenheit": 75.2,
+      "actual_rounded_fahrenheit": 75
+    },
+    {
+      "time": "2026-02-14T21:15:00+00:00",
+      "time_eastern": "2026-02-14T16:15:00-05:00",
+      "raw_celsius": 25,
+      "raw_fahrenheit": 77.0,
+      "displayed_fahrenheit": 77.0,
+      "actual_rounded_fahrenheit": 77
+    },
+    {
+      "time": "2026-02-14T21:20:00+00:00",
+      "time_eastern": "2026-02-14T16:20:00-05:00",
+      "raw_celsius": 24,
+      "raw_fahrenheit": 75.2,
+      "displayed_fahrenheit": 75.2,
+      "actual_rounded_fahrenheit": 75
+    },
+    {
+      "time": "2026-02-14T21:25:00+00:00",
+      "time_eastern": "2026-02-14T16:25:00-05:00",
+      "raw_celsius": 24,
+      "raw_fahrenheit": 75.2,
+      "displayed_fahrenheit": 75.2,
+      "actual_rounded_fahrenheit": 75
+    },
+    {
+      "time": "2026-02-14T21:30:00+00:00",
+      "time_eastern": "2026-02-14T16:30:00-05:00",
+      "raw_celsius": 24,
+      "raw_fahrenheit": 75.2,
+      "displayed_fahrenheit": 75.2,
+      "actual_rounded_fahrenheit": 75
+    },
+    {
+      "time": "2026-02-14T21:35:00+00:00",
+      "time_eastern": "2026-02-14T16:35:00-05:00",
+      "raw_celsius": 24,
+      "raw_fahrenheit": 75.2,
+      "displayed_fahrenheit": 75.2,
+      "actual_rounded_fahrenheit": 75
+    },
+    {
+      "time": "2026-02-14T21:40:00+00:00",
+      "time_eastern": "2026-02-14T16:40:00-05:00",
+      "raw_celsius": 24,
+      "raw_fahrenheit": 75.2,
+      "displayed_fahrenheit": 75.2,
+      "actual_rounded_fahrenheit": 75
+    },
+    {
+      "time": "2026-02-14T21:45:00+00:00",
+      "time_eastern": "2026-02-14T16:45:00-05:00",
+      "raw_celsius": 24,
+      "raw_fahrenheit": 75.2,
+      "displayed_fahrenheit": 75.2,
+      "actual_rounded_fahrenheit": 75
+    },
+    {
+      "time": "2026-02-14T21:50:00+00:00",
+      "time_eastern": "2026-02-14T16:50:00-05:00",
+      "raw_celsius": 24,
+      "raw_fahrenheit": 75.2,
+      "displayed_fahrenheit": 75.2,
+      "actual_rounded_fahrenheit": 75
     }
   ]
 }
