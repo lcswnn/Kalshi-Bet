@@ -119,12 +119,26 @@ def run_sports_model():
     # Get parameters from query string
     starting_bankroll = request.args.get("bankroll", "100")
     min_edge = request.args.get("minEdge", "5.0")
+    date_option = request.args.get("dateOption", "auto")
+    custom_date = request.args.get("customDate", "")
 
     # Path to kalshi_mlb_predictor.py
     script_path = os.path.join(os.path.dirname(__file__), "kalshi_mlb_predictor.py")
 
     # Use kelly=1.0 and --json so frontend handles per-bet Kelly sizing
     cmd = [sys.executable, script_path, "--kelly", "1.0", "--bankroll", starting_bankroll, "--min-edge", min_edge, "--json"]
+
+    # Add date filter
+    if date_option == "today":
+        cmd.append("--today")
+    elif date_option == "tomorrow":
+        cmd.append("--tomorrow")
+    elif date_option == "custom" and custom_date:
+        cmd.extend(["--date", custom_date])
+    # "auto" = no date flag, shows all available games
+
+    # Calculate the prediction date to return in the response
+    prediction_date = get_prediction_date(date_option, custom_date)
 
     # Run the script and capture output with timeout
     try:
@@ -142,7 +156,8 @@ def run_sports_model():
             return jsonify({
                 "success": True,
                 "data": data,
-                "error": result.stderr
+                "error": result.stderr,
+                "prediction_date": prediction_date
             })
         except json_mod.JSONDecodeError:
             return jsonify({

@@ -15,13 +15,20 @@ import sys
 import pickle
 import warnings
 from collections import defaultdict
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import numpy as np
 import pandas as pd
 import requests
 from sklearn.preprocessing import StandardScaler
 
 warnings.filterwarnings("ignore")
+
+try:
+    from zoneinfo import ZoneInfo
+except ImportError:
+    from backports.zoneinfo import ZoneInfo  # type: ignore
+
+EASTERN = ZoneInfo("America/New_York")
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(BASE_DIR, "mlb_historical_data")
@@ -167,11 +174,18 @@ def get_market_price(market):
     return yes_ask if yes_ask else 50
 
 
-def fetch_kalshi_mlb_markets(quiet=False):
-    """Fetch current MLB game markets from Kalshi API."""
+def fetch_kalshi_mlb_markets(quiet=False, target_date=None):
+    """Fetch current MLB game markets from Kalshi API.
+
+    Args:
+        quiet: Suppress print output
+        target_date: Optional date object to filter games (by expected_expiration_time)
+    """
 
     if not quiet:
         print("\nFetching Kalshi MLB markets...")
+        if target_date:
+            print(f"  Filtering for date: {target_date}")
 
     # Fetch from both regular season and spring training series
     all_markets = []
@@ -258,10 +272,26 @@ def fetch_kalshi_mlb_markets(quiet=False):
             home_name = ABBR_TO_FULL_NAME.get(home_abbr, home_abbr)
             away_name = ABBR_TO_FULL_NAME.get(away_abbr, away_abbr)
 
+            # Date filtering using expected_expiration_time
+            exp_time = home_market.get("expected_expiration_time", "")
+            if target_date and exp_time:
+                try:
+                    game_dt = datetime.fromisoformat(exp_time.replace("Z", "+00:00"))
+                    game_date = game_dt.astimezone(EASTERN).date()
+                    if game_date != target_date:
+                        continue
+                except (ValueError, TypeError):
+                    pass  # Can't parse date; include the game
+
             # Use the home team's market ticker for the bet
             # yes_price = cost to buy "home wins", no_price = cost to buy "away wins"
             home_price = get_market_price(home_market)
             away_price = get_market_price(away_market)
+
+            # Volume = sum of both sides
+            home_vol = home_market.get("volume", 0) or 0
+            away_vol = away_market.get("volume", 0) or 0
+            total_volume = home_vol + away_vol
 
             games.append({
                 "ticker": home_market.get("ticker", ""),
@@ -271,7 +301,9 @@ def fetch_kalshi_mlb_markets(quiet=False):
                 "yes_price": home_price,
                 "no_price": away_price,
                 "close_time": home_market.get("close_time", ""),
+                "expected_expiration_time": exp_time,
                 "title": sample_title,
+                "volume": total_volume,
                 "source": "spring_training"
             })
 
@@ -309,6 +341,17 @@ def fetch_kalshi_mlb_markets(quiet=False):
                             break
 
                 if home_team and away_team:
+                    # Date filtering
+                    exp_time = market.get("expected_expiration_time", "")
+                    if target_date and exp_time:
+                        try:
+                            game_dt = datetime.fromisoformat(exp_time.replace("Z", "+00:00"))
+                            game_date = game_dt.astimezone(EASTERN).date()
+                            if game_date != target_date:
+                                continue
+                        except (ValueError, TypeError):
+                            pass
+
                     games.append({
                         "ticker": market.get("ticker", ""),
                         "home_team": home_team,
@@ -316,7 +359,9 @@ def fetch_kalshi_mlb_markets(quiet=False):
                         "yes_price": market.get("yes_ask", 50),
                         "no_price": market.get("no_ask", 50),
                         "close_time": market.get("close_time", ""),
+                        "expected_expiration_time": exp_time,
                         "title": title,
+                        "volume": market.get("volume", 0) or 0,
                         "source": "regular_season"
                     })
 
@@ -460,7 +505,8 @@ def generate_predictions(games, elo_system, model_data=None, quiet=False):
             "no_implied": round(no_implied * 100, 2),
             "home_edge": round(home_edge * 100, 2),
             "away_edge": round(away_edge * 100, 2),
-            "close_time": game["close_time"]
+            "close_time": game["close_time"],
+            "volume": game.get("volume", 0)
         })
     
     return predictions
@@ -530,9 +576,10 @@ def generate_betting_recommendations(predictions, bankroll, kelly_fraction, min_
                     "expected_value": round(expected_value, 2),
                     "ticker": pred["ticker"],
                     "title": pred["title"],
-                    "close_time": pred["close_time"]
+                    "close_time": pred["close_time"],
+                    "volume": pred.get("volume", 0)
                 })
-                
+
         elif away_edge > home_edge and away_edge > min_edge:
             # Bet on away team
             win_prob = (100 - pred["model_prob_home"]) / 100.0
@@ -565,7 +612,8 @@ def generate_betting_recommendations(predictions, bankroll, kelly_fraction, min_
                     "expected_value": round(expected_value, 2),
                     "ticker": pred.get("ticker_away", pred["ticker"]),
                     "title": pred["title"],
-                    "close_time": pred["close_time"]
+                    "close_time": pred["close_time"],
+                    "volume": pred.get("volume", 0)
                 })
     
     # Sort by edge (highest first)
@@ -688,7 +736,8 @@ def get_json_output(predictions, bets, bankroll, elo_system):
                 "ticker": p["ticker"],
                 "ticker_away": p.get("ticker_away", p["ticker"]),
                 "close_time": p["close_time"],
-                "title": p["title"]
+                "title": p["title"],
+                "volume": p.get("volume", 0)
             }
             for p in predictions
         ],
@@ -717,9 +766,25 @@ def main():
                        help="Minimum edge percentage to bet (default: 5.0)")
     parser.add_argument("--json", action="store_true",
                        help="Output results as JSON instead of formatted text")
-    
+    parser.add_argument("--today", action="store_true",
+                       help="Only show games for today")
+    parser.add_argument("--tomorrow", action="store_true",
+                       help="Only show games for tomorrow")
+    parser.add_argument("--date", type=str, default=None,
+                       help="Only show games for a specific date (YYYY-MM-DD)")
+
     args = parser.parse_args()
-    
+
+    # Compute target date for filtering
+    target_date = None
+    eastern_now = datetime.now(EASTERN)
+    if args.today:
+        target_date = eastern_now.date()
+    elif args.tomorrow:
+        target_date = (eastern_now + timedelta(days=1)).date()
+    elif args.date:
+        target_date = datetime.strptime(args.date, "%Y-%m-%d").date()
+
     if not args.json:
         print("=" * 70)
         print("KALSHI MLB LIVE PREDICTOR")
@@ -728,13 +793,17 @@ def main():
         print(f"  Kelly Fraction: {args.kelly}")
         print(f"  Starting Bankroll: ${args.bankroll:.2f}")
         print(f"  Minimum Edge: {args.min_edge:.1f}%")
+        if target_date:
+            print(f"  Date Filter: {target_date.strftime('%A, %B %d, %Y')}")
+        else:
+            print(f"  Date Filter: All available games")
         print("=" * 70)
-    
+
     # Load model and Elo ratings
     elo_system, model_data = load_model_and_elo(quiet=args.json)
-    
+
     # Fetch Kalshi markets
-    games = fetch_kalshi_mlb_markets(quiet=args.json)
+    games = fetch_kalshi_mlb_markets(quiet=args.json, target_date=target_date)
     
     if not games:
         if not args.json:

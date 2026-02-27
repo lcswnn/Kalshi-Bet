@@ -987,6 +987,34 @@ h3 {
   color: rgba(255, 100, 100, 1);
 }
 
+.matchup-volume {
+  background-color: rgba(0, 0, 0, 0.03);
+}
+
+.matchup-volume.vol-high span:last-child {
+  color: var(--green);
+}
+
+.matchup-volume.vol-med span:last-child {
+  opacity: 0.7;
+}
+
+.matchup-volume.vol-low span:last-child {
+  color: rgba(255, 100, 100, 0.8);
+}
+
+.volume-info {
+  font-size: 0.85rem;
+}
+
+.volume-info.vol-high {
+  color: var(--green);
+}
+
+.volume-info.vol-low {
+  color: rgba(255, 100, 100, 0.8);
+}
+
 /* Mobile responsiveness for sports */
 @media (max-width: 768px) {
   .ranking-row {
